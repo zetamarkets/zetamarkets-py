@@ -24,6 +24,22 @@ MINTS = {
     Asset.ETH: Pubkey.from_string("FeGn77dhg1KXRRFeSwwMiykZnZPw5JXW6naf2aQgZDQf"),
 }
 
+# These are generated flexible PDAs and aren't reflective of an spl token mint.
+FLEXIBLE_MINTS = {
+    "localnet": {
+        Asset.APT: Pubkey.from_string("FbfkphUHaAd7c27RqhzKBRAPX8T5AzFBH259sbGmNuvG"),
+        Asset.ARB: Pubkey.from_string("w8h6r5ogLihfuWeCA1gs7boxNjzbwWeQbXMB3UATaC6"),
+    },
+    "devnet": {
+        Asset.APT: Pubkey.from_string("FbfkphUHaAd7c27RqhzKBRAPX8T5AzFBH259sbGmNuvG"),
+        Asset.ARB: Pubkey.from_string("w8h6r5ogLihfuWeCA1gs7boxNjzbwWeQbXMB3UATaC6"),
+    },
+    "mainnet_beta": {
+        Asset.APT: Pubkey.from_string("8z8oShLky1PauW9hxv6AsjnricLqoK9MfmNZJDQNNNPr"),
+        Asset.ARB: Pubkey.from_string("Ebd7aUFu3rtsZruCzTnG4tjBoxaJdWT8S3t4yC8hVpbo"),
+    },
+}
+
 ZETAGROUP_PUBKEY_ASSET_MAP = {
     # "localnet": {
     #     "HRobFXQ2HQvSgCLq2CU9ZG3DR2BxRaAffw5SvdNnvk97": Asset.SOL,

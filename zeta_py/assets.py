@@ -4,8 +4,8 @@ from zeta_py.constants import Asset
 def all_assets():
     all_assets = []
     for a in Asset:
-        if isinstance(a.name, str) and a != "UNDEFINED":
-            all_assets.append(a.value)
+        if isinstance(a.name, str) and a != Asset.UNDEFINED:
+            all_assets.append(a)
     return all_assets
 
 

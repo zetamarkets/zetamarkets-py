@@ -11,6 +11,7 @@ from zeta_py.exchange import Exchange
 from zeta_py import pda
 from zeta_py.types import LoadExchangeConfig
 from zeta_py.utils import cluster_endpoint
+from zeta_py.constants import Asset
 from zeta_py.zeta_client import accounts, program_id
 from solders.sysvar import CLOCK
 
@@ -63,9 +64,13 @@ async def setup_exchange(network: Cluster):
     print(zeta.is_loaded)
     for i in range(100):
         print(i)
-        print(zeta.accounts.pricing.account.mark_prices)
+        print("Mark Prices", zeta.accounts.pricing.account.mark_prices)
+        print(
+            "Perp Sync Queue Head",
+            zeta.markets[Asset.SOL].accounts.perp_sync_queue.account.head,
+        )
         await asyncio.sleep(1)
-        if i == 5:
+        if i == 50:
             await zeta.accounts.pricing.unsubscribe()
 
 

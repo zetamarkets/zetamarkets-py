@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from dataclasses import dataclass
 import statistics
 from typing import Any, Callable, Coroutine, Dict, List, Optional
 from anchorpy import Idl, Program, Provider, Wallet
@@ -31,6 +32,7 @@ from zeta_py.program_account import ProgramAccount
 from zeta_py.zeta_client.accounts.perp_sync_queue import PerpSyncQueue
 from zeta_py.zeta_client.accounts.pricing import Pricing
 from zeta_py.zeta_client.accounts.state import State
+from zeta_py.zeta_client.accounts.zeta_group import ZetaGroup
 
 # import zeta_client
 
@@ -45,17 +47,11 @@ with open(idl_path, "r") as f:
 # Change from instance to singleton?
 # https://stackoverflow.com/questions/6760685/creating-a-singleton-in-python
 class Exchange:
+    @dataclass
     class ExchangeAccounts:
-        @property
-        def is_loaded(self) -> bool:
-            return self._is_loaded
-
-        def __init__(
-            self, state: ProgramAccount[State], pricing: ProgramAccount[Pricing]
-        ) -> None:
-            self.state = state
-            self.pricing = pricing
-            self._is_loaded = False
+        state: ProgramAccount[State]
+        pricing: ProgramAccount[Pricing]
+        is_loaded = False
 
         async def load(self, connection: AsyncClient):
             if self.is_loaded:
@@ -63,7 +59,7 @@ class Exchange:
             await asyncio.gather(
                 self.state.load(connection), self.pricing.load(connection)
             )
-            self._is_loaded = True
+            self.is_loaded = True
 
     def __init__(
         self,
@@ -204,7 +200,7 @@ class Exchange:
         # TODO add risk
         #   self._riskCalculator = RiskCalculator(self.assets)
 
-        self._last_poll_timestamp = 0
+        # self._last_poll_timestamp = 0
         # Load Program accounts
         await self.accounts.load(self.connection)
 
@@ -215,8 +211,9 @@ class Exchange:
         # Load Clock
         await self.load_clock_data()
 
+        # TODO: Maybe disable polling/subscriptions by default and have helper to enable bulk
         # self.subscribe_clock(clock_data, callback)
-        self.accounts.pricing.subscribe()
+        self.accounts.pricing.subscribe(self.network)
 
         # self.update_exchange_state()
 
