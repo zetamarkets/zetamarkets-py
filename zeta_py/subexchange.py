@@ -52,11 +52,6 @@ class SubExchange:
         # Load zeta group.
         underlying_mint = utils.get_underlying_mint(asset)
 
-        # Grab zetagroupaddress manually because Pricing acc isnt loaded yet at this point
-        # self._zeta_group_address = utils.get_zeta_group(
-        #     self.exchange.program_id, underlying_mint
-        # )[0]
-
         self._perp_sync_queue_address = utils.get_perp_sync_queue(
             self.exchange.program_id, self._zeta_group_address
         )[0]
@@ -67,7 +62,6 @@ class SubExchange:
         self,
         asset: Asset,
         opts: TxOpts,
-        fetched_accs: List,
         load_from_store: bool,
         callback: Callable[[Asset, EventType, Any], Any] = None,
     ) -> None:
@@ -79,6 +73,7 @@ class SubExchange:
         if self._is_loaded:
             raise "SubExchange already loaded."
 
+        # TODO: Load PerpSyncQueue
         self._perp_sync_queue: PerpSyncQueue = fetched_accs[0]
 
         self._markets = await ZetaGroupMarkets.load(asset, opts, load_from_store)
@@ -106,22 +101,6 @@ class SubExchange:
     ) -> "SubExchange":
         obj = cls(asset, exchange)
         await obj.load(asset, opts, fetched_accs, load_from_store, callback)
-
-    # Refreshes serum markets cache
-    async def update_serum_markets(self):
-        print(f"Refreshing Serum markets for {self.asset.value} SubExchange.")
-
-        await asyncio.gather(
-            *[
-                m.serum_market.update_decoded(self.exchange.connection)
-                for m in self._markets.markets
-            ],
-            self._markets.perp_market.serum_market.update_decoded(
-                self.exchange.connection
-            ),
-        )
-
-        print(f"{self.asset.value} SubExchange Serum markets refreshed")
 
     def update_perp_serum_market_if_needed(self, epoch_delay: int):
         m = self._markets.perp_market

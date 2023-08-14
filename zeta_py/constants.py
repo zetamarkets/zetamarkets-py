@@ -12,9 +12,9 @@ class Asset(Enum):
 
 
 ZETA_PID = {
-    "localnet": Pubkey.from_string("BG3oRikW8d16YjUEmX3ZxHm9SiJzrGtMhsSR8aCw1Cd7"),
+    # "localnet": Pubkey.from_string("BG3oRikW8d16YjUEmX3ZxHm9SiJzrGtMhsSR8aCw1Cd7"),
     "devnet": Pubkey.from_string("BG3oRikW8d16YjUEmX3ZxHm9SiJzrGtMhsSR8aCw1Cd7"),
-    "mainnet": Pubkey.from_string("ZETAxsqBRek56DhiGXrn75yj2NHU3aYUnxvHXpkf3aD"),
+    "mainnet_beta": Pubkey.from_string("ZETAxsqBRek56DhiGXrn75yj2NHU3aYUnxvHXpkf3aD"),
 }
 
 # Asset keys are wormhole from mainnet.
@@ -25,13 +25,13 @@ MINTS = {
 }
 
 ZETAGROUP_PUBKEY_ASSET_MAP = {
-    "localnet": {
-        "HRobFXQ2HQvSgCLq2CU9ZG3DR2BxRaAffw5SvdNnvk97": Asset.SOL,
-        "CcLF7qQbgRQqUDmQeEkTSP2UbX82N9G91THjV5uRGCMW": Asset.BTC,
-        "8Ccch7LW5hd5j2NW8HdhUbDqB1yUN4dULVMNNHtfbPbV": Asset.ETH,
-        "5QyPHfnRttz4Tq7W7U5XEpKpvj7g3FTvMpE1BzL9w2Qi": Asset.APT,
-        "4fecsFCi8Tx4aFxvc8rAYT74RBmknQ3kqidZTejoqiw7": Asset.ARB,
-    },
+    # "localnet": {
+    #     "HRobFXQ2HQvSgCLq2CU9ZG3DR2BxRaAffw5SvdNnvk97": Asset.SOL,
+    #     "CcLF7qQbgRQqUDmQeEkTSP2UbX82N9G91THjV5uRGCMW": Asset.BTC,
+    #     "8Ccch7LW5hd5j2NW8HdhUbDqB1yUN4dULVMNNHtfbPbV": Asset.ETH,
+    #     "5QyPHfnRttz4Tq7W7U5XEpKpvj7g3FTvMpE1BzL9w2Qi": Asset.APT,
+    #     "4fecsFCi8Tx4aFxvc8rAYT74RBmknQ3kqidZTejoqiw7": Asset.ARB,
+    # },
     "devnet": {
         "HRobFXQ2HQvSgCLq2CU9ZG3DR2BxRaAffw5SvdNnvk97": Asset.SOL,
         "CcLF7qQbgRQqUDmQeEkTSP2UbX82N9G91THjV5uRGCMW": Asset.BTC,
@@ -39,7 +39,7 @@ ZETAGROUP_PUBKEY_ASSET_MAP = {
         "5QyPHfnRttz4Tq7W7U5XEpKpvj7g3FTvMpE1BzL9w2Qi": Asset.APT,
         "4fecsFCi8Tx4aFxvc8rAYT74RBmknQ3kqidZTejoqiw7": Asset.ARB,
     },
-    "mainnet": {
+    "mainnet_beta": {
         "CoGhjFdyqzMFr5xVgznuBjULvoFbFtNN4bCdQzRArNK2": Asset.SOL,
         "5XC7JWvLGGds4tjaawgY8FwMdotUb5rrEUmxcmyp5ZiW": Asset.BTC,
         "HPnqfiRSVvuBjfHN9ah4Kecb6J9et2UTnNgUwtAJdV26": Asset.ETH,
@@ -49,9 +49,9 @@ ZETAGROUP_PUBKEY_ASSET_MAP = {
 }
 
 DEX_PID = {
-    "localnet": Pubkey.from_string("5CmWtUihvSrJpaUrpJ3H1jUa9DRjYz4v2xs6c3EgQWMf"),
+    # "localnet": Pubkey.from_string("5CmWtUihvSrJpaUrpJ3H1jUa9DRjYz4v2xs6c3EgQWMf"),
     "devnet": Pubkey.from_string("5CmWtUihvSrJpaUrpJ3H1jUa9DRjYz4v2xs6c3EgQWMf"),
-    "mainnet": Pubkey.from_string("zDEXqXEG7gAyxb1Kg9mK5fPnUdENCGKzWrM21RMdWRq"),
+    "mainnet_beta": Pubkey.from_string("zDEXqXEG7gAyxb1Kg9mK5fPnUdENCGKzWrM21RMdWRq"),
 }
 
 CHAINLINK_PID = Pubkey.from_string("HEvSKofvBgfaexv23kMabbYqxasxU3mQ4ibBMEmJWHny")
@@ -87,7 +87,6 @@ MAX_ORDER_TAG_LENGTH = 4
 MARGIN_ACCOUNT_ASSET_OFFSET = 5764
 # 8 + 32 + 1 + 8 + 48 + 2208
 SPREAD_ACCOUNT_ASSET_OFFSET = 2305
-
 
 
 # These are fixed and shouldn't change in the future.
