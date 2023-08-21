@@ -1,7 +1,10 @@
 from __future__ import annotations
+
 import typing
+
+from solders.instruction import AccountMeta, Instruction
 from solders.pubkey import Pubkey
-from solders.instruction import Instruction, AccountMeta
+
 from ..program_id import PROGRAM_ID
 
 
@@ -22,12 +25,8 @@ def initialize_market_strikes(
         AccountMeta(pubkey=accounts["state"], is_signer=False, is_writable=False),
         AccountMeta(pubkey=accounts["zeta_group"], is_signer=False, is_writable=True),
         AccountMeta(pubkey=accounts["oracle"], is_signer=False, is_writable=False),
-        AccountMeta(
-            pubkey=accounts["oracle_backup_feed"], is_signer=False, is_writable=False
-        ),
-        AccountMeta(
-            pubkey=accounts["oracle_backup_program"], is_signer=False, is_writable=False
-        ),
+        AccountMeta(pubkey=accounts["oracle_backup_feed"], is_signer=False, is_writable=False),
+        AccountMeta(pubkey=accounts["oracle_backup_program"], is_signer=False, is_writable=False),
     ]
     if remaining_accounts is not None:
         keys += remaining_accounts

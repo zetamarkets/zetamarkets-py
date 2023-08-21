@@ -1,8 +1,11 @@
 from __future__ import annotations
+
 import typing
-from solders.pubkey import Pubkey
-from solders.instruction import Instruction, AccountMeta
+
 import borsh_construct as borsh
+from solders.instruction import AccountMeta, Instruction
+from solders.pubkey import Pubkey
+
 from ..program_id import PROGRAM_ID
 
 
@@ -36,17 +39,11 @@ def close_open_orders(
         AccountMeta(pubkey=accounts["zeta_group"], is_signer=False, is_writable=False),
         AccountMeta(pubkey=accounts["dex_program"], is_signer=False, is_writable=False),
         AccountMeta(pubkey=accounts["open_orders"], is_signer=False, is_writable=True),
-        AccountMeta(
-            pubkey=accounts["margin_account"], is_signer=False, is_writable=True
-        ),
+        AccountMeta(pubkey=accounts["margin_account"], is_signer=False, is_writable=True),
         AccountMeta(pubkey=accounts["authority"], is_signer=True, is_writable=True),
         AccountMeta(pubkey=accounts["market"], is_signer=False, is_writable=False),
-        AccountMeta(
-            pubkey=accounts["serum_authority"], is_signer=False, is_writable=False
-        ),
-        AccountMeta(
-            pubkey=accounts["open_orders_map"], is_signer=False, is_writable=True
-        ),
+        AccountMeta(pubkey=accounts["serum_authority"], is_signer=False, is_writable=False),
+        AccountMeta(pubkey=accounts["open_orders_map"], is_signer=False, is_writable=True),
     ]
     if remaining_accounts is not None:
         keys += remaining_accounts

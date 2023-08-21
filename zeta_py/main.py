@@ -1,21 +1,18 @@
 import asyncio
+import os
 from datetime import datetime
-import solana
-from solders.pubkey import Pubkey
-from solana.rpc.api import Client
-from solana.rpc.async_api import AsyncClient
-from solana.utils.cluster import Cluster
-from solana.rpc.websocket_api import connect
+
 from solana.rpc import commitment
+from solana.rpc.async_api import AsyncClient
+from solana.rpc.websocket_api import connect
+from solana.utils.cluster import Cluster
 
-
-from zeta_py.exchange import Exchange
 from zeta_py import pda
+from zeta_py.constants import Asset
+from zeta_py.exchange import Exchange
 from zeta_py.types import LoadExchangeConfig
 from zeta_py.utils import cluster_endpoint
-from zeta_py.constants import Asset
 from zeta_py.zeta_client import accounts, program_id
-from solders.sysvar import CLOCK
 
 
 async def test_anchorpy(connection: AsyncClient):
@@ -50,7 +47,8 @@ async def setup_exchange(network: Cluster):
         "skip_preflight": False,
         "preflight_commitment": commitment.Confirmed,
     }
-    endpoint = cluster_endpoint(network)
+    endpoint = os.environ.get("ENDPOINT", cluster_endpoint(network))
+    print(endpoint)
     config = LoadExchangeConfig(
         **{
             "network": network,
@@ -62,12 +60,11 @@ async def setup_exchange(network: Cluster):
     )
     # zeta = await Exchange.create(config)
     zeta = await Exchange.create(config, subscribe=True)
-    # print(zeta.is_loaded)
-    # await zeta.load(config, subscribe=False)
-    # print(zeta.is_loaded)
     for i in range(100000):
         # if i == 15:
         #     await zeta.accounts.pricing.unsubscribe()
+        print(datetime.fromtimestamp(zeta.clock.account.unix_timestamp))
+        print(datetime.now() - datetime.fromtimestamp(zeta.clock.account.unix_timestamp))
         print(zeta.clock.last_update_slot)
         zeta.markets[Asset.SOL].print_orderbook()
         await asyncio.sleep(0.4)
@@ -79,7 +76,7 @@ def main():
     # print(info)
 
     network = "mainnet_beta"
-    connection = AsyncClient(cluster_endpoint(network))
+    AsyncClient(cluster_endpoint(network))
     # connection = AsyncClient("http://localhost:8899")
 
     # print(zeta.is_initialized)

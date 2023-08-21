@@ -1,15 +1,17 @@
 import typing
 from dataclasses import dataclass
-from solders.pubkey import Pubkey
-from solana.rpc.async_api import AsyncClient
-from solana.rpc.commitment import Commitment
+
 import borsh_construct as borsh
+from anchorpy.borsh_extension import BorshPubkey
 from anchorpy.coder.accounts import ACCOUNT_DISCRIMINATOR_SIZE
 from anchorpy.error import AccountInvalidDiscriminator
 from anchorpy.utils.rpc import get_multiple_accounts
-from anchorpy.borsh_extension import BorshPubkey
-from ..program_id import PROGRAM_ID
+from solana.rpc.async_api import AsyncClient
+from solana.rpc.commitment import Commitment
+from solders.pubkey import Pubkey
+
 from .. import types
+from ..program_id import PROGRAM_ID
 
 
 class MarginAccountJSON(typing.TypedDict):
@@ -108,9 +110,7 @@ class MarginAccount:
     @classmethod
     def decode(cls, data: bytes) -> "MarginAccount":
         if data[:ACCOUNT_DISCRIMINATOR_SIZE] != cls.discriminator:
-            raise AccountInvalidDiscriminator(
-                "The discriminator for this account is invalid"
-            )
+            raise AccountInvalidDiscriminator("The discriminator for this account is invalid")
         dec = MarginAccount.layout.parse(data[ACCOUNT_DISCRIMINATOR_SIZE:])
         return cls(
             authority=dec.authority,
@@ -132,15 +132,11 @@ class MarginAccount:
                     dec.product_ledgers_padding,
                 )
             ),
-            perp_product_ledger=types.product_ledger.ProductLedger.from_decoded(
-                dec.perp_product_ledger
-            ),
+            perp_product_ledger=types.product_ledger.ProductLedger.from_decoded(dec.perp_product_ledger),
             rebalance_amount=dec.rebalance_amount,
             asset=types.asset.from_decoded(dec.asset),
             account_type=types.margin_account_type.from_decoded(dec.account_type),
-            last_funding_delta=types.anchor_decimal.AnchorDecimal.from_decoded(
-                dec.last_funding_delta
-            ),
+            last_funding_delta=types.anchor_decimal.AnchorDecimal.from_decoded(dec.last_funding_delta),
             delegated_pubkey=dec.delegated_pubkey,
             padding=dec.padding,
         )
@@ -154,12 +150,8 @@ class MarginAccount:
             "open_orders_nonce": self.open_orders_nonce,
             "series_expiry": self.series_expiry,
             "series_expiry_padding": self.series_expiry_padding,
-            "product_ledgers": list(
-                map(lambda item: item.to_json(), self.product_ledgers)
-            ),
-            "product_ledgers_padding": list(
-                map(lambda item: item.to_json(), self.product_ledgers_padding)
-            ),
+            "product_ledgers": list(map(lambda item: item.to_json(), self.product_ledgers)),
+            "product_ledgers_padding": list(map(lambda item: item.to_json(), self.product_ledgers_padding)),
             "perp_product_ledger": self.perp_product_ledger.to_json(),
             "rebalance_amount": self.rebalance_amount,
             "asset": self.asset.to_json(),
@@ -191,15 +183,11 @@ class MarginAccount:
                     obj["product_ledgers_padding"],
                 )
             ),
-            perp_product_ledger=types.product_ledger.ProductLedger.from_json(
-                obj["perp_product_ledger"]
-            ),
+            perp_product_ledger=types.product_ledger.ProductLedger.from_json(obj["perp_product_ledger"]),
             rebalance_amount=obj["rebalance_amount"],
             asset=types.asset.from_json(obj["asset"]),
             account_type=types.margin_account_type.from_json(obj["account_type"]),
-            last_funding_delta=types.anchor_decimal.AnchorDecimal.from_json(
-                obj["last_funding_delta"]
-            ),
+            last_funding_delta=types.anchor_decimal.AnchorDecimal.from_json(obj["last_funding_delta"]),
             delegated_pubkey=Pubkey.from_string(obj["delegated_pubkey"]),
             padding=obj["padding"],
         )

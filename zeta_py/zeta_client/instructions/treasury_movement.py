@@ -1,9 +1,12 @@
 from __future__ import annotations
+
 import typing
+
+import borsh_construct as borsh
+from solders.instruction import AccountMeta, Instruction
 from solders.pubkey import Pubkey
 from spl.token.constants import TOKEN_PROGRAM_ID
-from solders.instruction import Instruction, AccountMeta
-import borsh_construct as borsh
+
 from .. import types
 from ..program_id import PROGRAM_ID
 
@@ -13,9 +16,7 @@ class TreasuryMovementArgs(typing.TypedDict):
     amount: int
 
 
-layout = borsh.CStruct(
-    "treasury_movement_type" / types.treasury_movement_type.layout, "amount" / borsh.U64
-)
+layout = borsh.CStruct("treasury_movement_type" / types.treasury_movement_type.layout, "amount" / borsh.U64)
 
 
 class TreasuryMovementAccounts(typing.TypedDict):
@@ -34,12 +35,8 @@ def treasury_movement(
 ) -> Instruction:
     keys: list[AccountMeta] = [
         AccountMeta(pubkey=accounts["state"], is_signer=False, is_writable=False),
-        AccountMeta(
-            pubkey=accounts["insurance_vault"], is_signer=False, is_writable=True
-        ),
-        AccountMeta(
-            pubkey=accounts["treasury_wallet"], is_signer=False, is_writable=True
-        ),
+        AccountMeta(pubkey=accounts["insurance_vault"], is_signer=False, is_writable=True),
+        AccountMeta(pubkey=accounts["treasury_wallet"], is_signer=False, is_writable=True),
         AccountMeta(
             pubkey=accounts["referrals_rewards_wallet"],
             is_signer=False,

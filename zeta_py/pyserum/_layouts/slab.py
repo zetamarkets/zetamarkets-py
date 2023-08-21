@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from enum import IntEnum
 
-from construct import Bytes, Int16ul, Int8ul, Int32ul, Int64ul, Padding
+from construct import Bytes, Int8ul, Int16ul, Int32ul, Int64ul, Padding
 from construct import Struct as cStruct
 from construct import Switch
 

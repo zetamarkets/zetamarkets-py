@@ -1,11 +1,12 @@
 from __future__ import annotations
-from . import (
-    anchor_decimal,
-)
+
 import typing
 from dataclasses import dataclass
-from construct import Container
+
 import borsh_construct as borsh
+from construct import Container
+
+from . import anchor_decimal
 
 
 class ProductGreeksJSON(typing.TypedDict):

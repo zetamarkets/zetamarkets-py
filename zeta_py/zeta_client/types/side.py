@@ -1,8 +1,10 @@
 from __future__ import annotations
+
 import typing
 from dataclasses import dataclass
-from anchorpy.borsh_extension import EnumForCodegen
+
 import borsh_construct as borsh
+from anchorpy.borsh_extension import EnumForCodegen
 
 
 class UninitializedJSON(typing.TypedDict):
@@ -98,6 +100,4 @@ def from_json(obj: SideJSON) -> SideKind:
     raise ValueError(f"Unrecognized enum kind: {kind}")
 
 
-layout = EnumForCodegen(
-    "Uninitialized" / borsh.CStruct(), "Bid" / borsh.CStruct(), "Ask" / borsh.CStruct()
-)
+layout = EnumForCodegen("Uninitialized" / borsh.CStruct(), "Bid" / borsh.CStruct(), "Ask" / borsh.CStruct())

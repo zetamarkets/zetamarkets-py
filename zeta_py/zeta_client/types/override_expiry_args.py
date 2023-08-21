@@ -1,8 +1,10 @@
 from __future__ import annotations
+
 import typing
 from dataclasses import dataclass
-from construct import Container
+
 import borsh_construct as borsh
+from construct import Container
 
 
 class OverrideExpiryArgsJSON(typing.TypedDict):
@@ -13,9 +15,7 @@ class OverrideExpiryArgsJSON(typing.TypedDict):
 
 @dataclass
 class OverrideExpiryArgs:
-    layout: typing.ClassVar = borsh.CStruct(
-        "expiry_index" / borsh.U8, "active_ts" / borsh.U64, "expiry_ts" / borsh.U64
-    )
+    layout: typing.ClassVar = borsh.CStruct("expiry_index" / borsh.U8, "active_ts" / borsh.U64, "expiry_ts" / borsh.U64)
     expiry_index: int
     active_ts: int
     expiry_ts: int

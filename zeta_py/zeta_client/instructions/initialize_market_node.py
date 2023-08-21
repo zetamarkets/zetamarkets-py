@@ -1,9 +1,12 @@
 from __future__ import annotations
+
 import typing
+
+import borsh_construct as borsh
+from solders.instruction import AccountMeta, Instruction
 from solders.pubkey import Pubkey
 from solders.system_program import ID as SYS_PROGRAM_ID
-from solders.instruction import Instruction, AccountMeta
-import borsh_construct as borsh
+
 from .. import types
 from ..program_id import PROGRAM_ID
 
@@ -12,9 +15,7 @@ class InitializeMarketNodeArgs(typing.TypedDict):
     args: types.initialize_market_node_args.InitializeMarketNodeArgs
 
 
-layout = borsh.CStruct(
-    "args" / types.initialize_market_node_args.InitializeMarketNodeArgs.layout
-)
+layout = borsh.CStruct("args" / types.initialize_market_node_args.InitializeMarketNodeArgs.layout)
 
 
 class InitializeMarketNodeAccounts(typing.TypedDict):

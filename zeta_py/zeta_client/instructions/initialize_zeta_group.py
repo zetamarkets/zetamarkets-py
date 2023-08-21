@@ -1,11 +1,14 @@
 from __future__ import annotations
+
 import typing
+
+import borsh_construct as borsh
+from solders.instruction import AccountMeta, Instruction
 from solders.pubkey import Pubkey
 from solders.system_program import ID as SYS_PROGRAM_ID
 from solders.sysvar import RENT
 from spl.token.constants import TOKEN_PROGRAM_ID
-from solders.instruction import Instruction, AccountMeta
-import borsh_construct as borsh
+
 from .. import types
 from ..program_id import PROGRAM_ID
 
@@ -14,9 +17,7 @@ class InitializeZetaGroupArgs(typing.TypedDict):
     args: types.initialize_zeta_group_args.InitializeZetaGroupArgs
 
 
-layout = borsh.CStruct(
-    "args" / types.initialize_zeta_group_args.InitializeZetaGroupArgs.layout
-)
+layout = borsh.CStruct("args" / types.initialize_zeta_group_args.InitializeZetaGroupArgs.layout)
 
 
 class InitializeZetaGroupAccounts(typing.TypedDict):
@@ -47,29 +48,17 @@ def initialize_zeta_group(
         AccountMeta(pubkey=accounts["state"], is_signer=False, is_writable=True),
         AccountMeta(pubkey=accounts["admin"], is_signer=True, is_writable=True),
         AccountMeta(pubkey=SYS_PROGRAM_ID, is_signer=False, is_writable=False),
-        AccountMeta(
-            pubkey=accounts["underlying_mint"], is_signer=False, is_writable=False
-        ),
-        AccountMeta(
-            pubkey=accounts["zeta_program"], is_signer=False, is_writable=False
-        ),
+        AccountMeta(pubkey=accounts["underlying_mint"], is_signer=False, is_writable=False),
+        AccountMeta(pubkey=accounts["zeta_program"], is_signer=False, is_writable=False),
         AccountMeta(pubkey=accounts["oracle"], is_signer=False, is_writable=False),
-        AccountMeta(
-            pubkey=accounts["oracle_backup_feed"], is_signer=False, is_writable=False
-        ),
-        AccountMeta(
-            pubkey=accounts["oracle_backup_program"], is_signer=False, is_writable=False
-        ),
+        AccountMeta(pubkey=accounts["oracle_backup_feed"], is_signer=False, is_writable=False),
+        AccountMeta(pubkey=accounts["oracle_backup_program"], is_signer=False, is_writable=False),
         AccountMeta(pubkey=accounts["zeta_group"], is_signer=False, is_writable=True),
         AccountMeta(pubkey=accounts["greeks"], is_signer=False, is_writable=True),
-        AccountMeta(
-            pubkey=accounts["perp_sync_queue"], is_signer=False, is_writable=True
-        ),
+        AccountMeta(pubkey=accounts["perp_sync_queue"], is_signer=False, is_writable=True),
         AccountMeta(pubkey=accounts["underlying"], is_signer=False, is_writable=True),
         AccountMeta(pubkey=accounts["vault"], is_signer=False, is_writable=True),
-        AccountMeta(
-            pubkey=accounts["insurance_vault"], is_signer=False, is_writable=True
-        ),
+        AccountMeta(pubkey=accounts["insurance_vault"], is_signer=False, is_writable=True),
         AccountMeta(
             pubkey=accounts["socialized_loss_account"],
             is_signer=False,

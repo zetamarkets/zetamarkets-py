@@ -1,9 +1,12 @@
 from __future__ import annotations
+
 import typing
-from solders.pubkey import Pubkey
-from solders.instruction import Instruction, AccountMeta
-from anchorpy.borsh_extension import BorshPubkey
+
 import borsh_construct as borsh
+from anchorpy.borsh_extension import BorshPubkey
+from solders.instruction import AccountMeta, Instruction
+from solders.pubkey import Pubkey
+
 from ..program_id import PROGRAM_ID
 
 
@@ -26,9 +29,7 @@ def edit_delegated_pubkey(
     remaining_accounts: typing.Optional[typing.List[AccountMeta]] = None,
 ) -> Instruction:
     keys: list[AccountMeta] = [
-        AccountMeta(
-            pubkey=accounts["margin_account"], is_signer=False, is_writable=True
-        ),
+        AccountMeta(pubkey=accounts["margin_account"], is_signer=False, is_writable=True),
         AccountMeta(pubkey=accounts["authority"], is_signer=True, is_writable=False),
     ]
     if remaining_accounts is not None:

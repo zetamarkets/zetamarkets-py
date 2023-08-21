@@ -1,9 +1,12 @@
 from __future__ import annotations
+
 import typing
+
+import borsh_construct as borsh
+from solders.instruction import AccountMeta, Instruction
 from solders.pubkey import Pubkey
 from solders.system_program import ID as SYS_PROGRAM_ID
-from solders.instruction import Instruction, AccountMeta
-import borsh_construct as borsh
+
 from ..program_id import PROGRAM_ID
 
 
@@ -30,15 +33,11 @@ def initialize_underlying(
 ) -> Instruction:
     keys: list[AccountMeta] = [
         AccountMeta(pubkey=accounts["admin"], is_signer=True, is_writable=False),
-        AccountMeta(
-            pubkey=accounts["zeta_program"], is_signer=False, is_writable=False
-        ),
+        AccountMeta(pubkey=accounts["zeta_program"], is_signer=False, is_writable=False),
         AccountMeta(pubkey=accounts["state"], is_signer=False, is_writable=True),
         AccountMeta(pubkey=SYS_PROGRAM_ID, is_signer=False, is_writable=False),
         AccountMeta(pubkey=accounts["underlying"], is_signer=False, is_writable=True),
-        AccountMeta(
-            pubkey=accounts["underlying_mint"], is_signer=False, is_writable=False
-        ),
+        AccountMeta(pubkey=accounts["underlying_mint"], is_signer=False, is_writable=False),
     ]
     if remaining_accounts is not None:
         keys += remaining_accounts

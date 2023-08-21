@@ -1,8 +1,11 @@
 from __future__ import annotations
+
 import typing
-from solders.pubkey import Pubkey
-from solders.instruction import Instruction, AccountMeta
+
 import borsh_construct as borsh
+from solders.instruction import AccountMeta, Instruction
+from solders.pubkey import Pubkey
+
 from .. import types
 from ..program_id import PROGRAM_ID
 
@@ -35,12 +38,8 @@ def update_pricing_v2(
         AccountMeta(pubkey=accounts["state"], is_signer=False, is_writable=False),
         AccountMeta(pubkey=accounts["pricing"], is_signer=False, is_writable=True),
         AccountMeta(pubkey=accounts["oracle"], is_signer=False, is_writable=False),
-        AccountMeta(
-            pubkey=accounts["oracle_backup_feed"], is_signer=False, is_writable=False
-        ),
-        AccountMeta(
-            pubkey=accounts["oracle_backup_program"], is_signer=False, is_writable=False
-        ),
+        AccountMeta(pubkey=accounts["oracle_backup_feed"], is_signer=False, is_writable=False),
+        AccountMeta(pubkey=accounts["oracle_backup_program"], is_signer=False, is_writable=False),
         AccountMeta(pubkey=accounts["perp_market"], is_signer=False, is_writable=False),
         AccountMeta(pubkey=accounts["perp_bids"], is_signer=False, is_writable=False),
         AccountMeta(pubkey=accounts["perp_asks"], is_signer=False, is_writable=False),

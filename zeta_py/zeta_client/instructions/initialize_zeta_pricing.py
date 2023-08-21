@@ -1,11 +1,14 @@
 from __future__ import annotations
+
 import typing
+
+import borsh_construct as borsh
+from solders.instruction import AccountMeta, Instruction
 from solders.pubkey import Pubkey
 from solders.system_program import ID as SYS_PROGRAM_ID
 from solders.sysvar import RENT
 from spl.token.constants import TOKEN_PROGRAM_ID
-from solders.instruction import Instruction, AccountMeta
-import borsh_construct as borsh
+
 from .. import types
 from ..program_id import PROGRAM_ID
 
@@ -14,9 +17,7 @@ class InitializeZetaPricingArgs(typing.TypedDict):
     args: types.initialize_zeta_pricing_args.InitializeZetaPricingArgs
 
 
-layout = borsh.CStruct(
-    "args" / types.initialize_zeta_pricing_args.InitializeZetaPricingArgs.layout
-)
+layout = borsh.CStruct("args" / types.initialize_zeta_pricing_args.InitializeZetaPricingArgs.layout)
 
 
 class InitializeZetaPricingAccounts(typing.TypedDict):

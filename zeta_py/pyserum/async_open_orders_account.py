@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from typing import List
 
-from solders.pubkey import Pubkey
 from solana.rpc.async_api import AsyncClient
 from solana.rpc.commitment import Confirmed
 from solana.rpc.types import Commitment
+from solders.pubkey import Pubkey
 
 from .async_utils import load_bytes_data
 from .open_orders_account import _OpenOrdersAccountCore

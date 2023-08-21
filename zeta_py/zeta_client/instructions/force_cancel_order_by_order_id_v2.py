@@ -1,8 +1,11 @@
 from __future__ import annotations
+
 import typing
-from solders.pubkey import Pubkey
-from solders.instruction import Instruction, AccountMeta
+
 import borsh_construct as borsh
+from solders.instruction import AccountMeta, Instruction
+from solders.pubkey import Pubkey
+
 from .. import types
 from ..program_id import PROGRAM_ID
 
@@ -13,9 +16,7 @@ class ForceCancelOrderByOrderIdV2Args(typing.TypedDict):
     asset: types.asset.AssetKind
 
 
-layout = borsh.CStruct(
-    "side" / types.side.layout, "order_id" / borsh.U128, "asset" / types.asset.layout
-)
+layout = borsh.CStruct("side" / types.side.layout, "order_id" / borsh.U128, "asset" / types.asset.layout)
 
 
 class ForceCancelOrderByOrderIdV2Accounts(typing.TypedDict):
@@ -47,12 +48,8 @@ def force_cancel_order_by_order_id_v2(
     keys: list[AccountMeta] = [
         AccountMeta(pubkey=accounts["pricing"], is_signer=False, is_writable=False),
         AccountMeta(pubkey=accounts["oracle"], is_signer=False, is_writable=False),
-        AccountMeta(
-            pubkey=accounts["oracle_backup_feed"], is_signer=False, is_writable=False
-        ),
-        AccountMeta(
-            pubkey=accounts["oracle_backup_program"], is_signer=False, is_writable=False
-        ),
+        AccountMeta(pubkey=accounts["oracle_backup_feed"], is_signer=False, is_writable=False),
+        AccountMeta(pubkey=accounts["oracle_backup_program"], is_signer=False, is_writable=False),
         AccountMeta(
             pubkey=accounts["cancel_accounts"]["state"],
             is_signer=False,

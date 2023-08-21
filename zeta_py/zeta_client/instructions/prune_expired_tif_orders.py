@@ -1,7 +1,10 @@
 from __future__ import annotations
+
 import typing
+
+from solders.instruction import AccountMeta, Instruction
 from solders.pubkey import Pubkey
-from solders.instruction import Instruction, AccountMeta
+
 from ..program_id import PROGRAM_ID
 
 
@@ -23,9 +26,7 @@ def prune_expired_tif_orders(
     keys: list[AccountMeta] = [
         AccountMeta(pubkey=accounts["dex_program"], is_signer=False, is_writable=False),
         AccountMeta(pubkey=accounts["state"], is_signer=False, is_writable=False),
-        AccountMeta(
-            pubkey=accounts["serum_authority"], is_signer=False, is_writable=False
-        ),
+        AccountMeta(pubkey=accounts["serum_authority"], is_signer=False, is_writable=False),
         AccountMeta(pubkey=accounts["market"], is_signer=False, is_writable=True),
         AccountMeta(pubkey=accounts["bids"], is_signer=False, is_writable=True),
         AccountMeta(pubkey=accounts["asks"], is_signer=False, is_writable=True),

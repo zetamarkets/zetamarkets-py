@@ -1,15 +1,17 @@
 import typing
 from dataclasses import dataclass
-from solders.pubkey import Pubkey
-from solana.rpc.async_api import AsyncClient
-from solana.rpc.commitment import Commitment
+
 import borsh_construct as borsh
+from anchorpy.borsh_extension import BorshPubkey
 from anchorpy.coder.accounts import ACCOUNT_DISCRIMINATOR_SIZE
 from anchorpy.error import AccountInvalidDiscriminator
 from anchorpy.utils.rpc import get_multiple_accounts
-from anchorpy.borsh_extension import BorshPubkey
-from ..program_id import PROGRAM_ID
+from solana.rpc.async_api import AsyncClient
+from solana.rpc.commitment import Commitment
+from solders.pubkey import Pubkey
+
 from .. import types
+from ..program_id import PROGRAM_ID
 
 
 class SpreadAccountJSON(typing.TypedDict):
@@ -87,9 +89,7 @@ class SpreadAccount:
     @classmethod
     def decode(cls, data: bytes) -> "SpreadAccount":
         if data[:ACCOUNT_DISCRIMINATOR_SIZE] != cls.discriminator:
-            raise AccountInvalidDiscriminator(
-                "The discriminator for this account is invalid"
-            )
+            raise AccountInvalidDiscriminator("The discriminator for this account is invalid")
         dec = SpreadAccount.layout.parse(data[ACCOUNT_DISCRIMINATOR_SIZE:])
         return cls(
             authority=dec.authority,
@@ -121,9 +121,7 @@ class SpreadAccount:
             "series_expiry": self.series_expiry,
             "series_expiry_padding": self.series_expiry_padding,
             "positions": list(map(lambda item: item.to_json(), self.positions)),
-            "positions_padding": list(
-                map(lambda item: item.to_json(), self.positions_padding)
-            ),
+            "positions_padding": list(map(lambda item: item.to_json(), self.positions_padding)),
             "asset": self.asset.to_json(),
             "padding": self.padding,
         }

@@ -1,8 +1,8 @@
 from typing import Any, Dict, List
 
 import requests
-from solders.pubkey import Pubkey
 from solana.rpc.api import Client as conn  # pylint: disable=unused-import # noqa:F401
+from solders.pubkey import Pubkey
 
 from .market.types import MarketInfo, TokenInfo
 

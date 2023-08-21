@@ -1,5 +1,4 @@
-from borsh_construct import CStruct, I64, U64
-
+from borsh_construct import I64, U64, CStruct
 
 SYSTEM_CLOCK_LAYOUT = CStruct(
     "slot" / U64,

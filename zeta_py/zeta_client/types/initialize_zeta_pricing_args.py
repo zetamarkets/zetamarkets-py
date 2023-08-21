@@ -1,8 +1,10 @@
 from __future__ import annotations
+
 import typing
 from dataclasses import dataclass
-from construct import Container
+
 import borsh_construct as borsh
+from construct import Container
 
 
 class InitializeZetaPricingArgsJSON(typing.TypedDict):
@@ -63,9 +65,7 @@ class InitializeZetaPricingArgs:
         }
 
     @classmethod
-    def from_json(
-        cls, obj: InitializeZetaPricingArgsJSON
-    ) -> "InitializeZetaPricingArgs":
+    def from_json(cls, obj: InitializeZetaPricingArgsJSON) -> "InitializeZetaPricingArgs":
         return cls(
             min_funding_rate_percent=obj["min_funding_rate_percent"],
             max_funding_rate_percent=obj["max_funding_rate_percent"],

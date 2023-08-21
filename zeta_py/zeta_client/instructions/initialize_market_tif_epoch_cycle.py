@@ -1,8 +1,11 @@
 from __future__ import annotations
+
 import typing
-from solders.pubkey import Pubkey
-from solders.instruction import Instruction, AccountMeta
+
 import borsh_construct as borsh
+from solders.instruction import AccountMeta, Instruction
+from solders.pubkey import Pubkey
+
 from ..program_id import PROGRAM_ID
 
 
@@ -31,9 +34,7 @@ def initialize_market_tif_epoch_cycle(
         AccountMeta(pubkey=accounts["state"], is_signer=False, is_writable=False),
         AccountMeta(pubkey=accounts["admin"], is_signer=True, is_writable=True),
         AccountMeta(pubkey=accounts["market"], is_signer=False, is_writable=True),
-        AccountMeta(
-            pubkey=accounts["serum_authority"], is_signer=False, is_writable=False
-        ),
+        AccountMeta(pubkey=accounts["serum_authority"], is_signer=False, is_writable=False),
         AccountMeta(pubkey=accounts["dex_program"], is_signer=False, is_writable=False),
     ]
     if remaining_accounts is not None:

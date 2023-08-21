@@ -1,8 +1,10 @@
 from __future__ import annotations
+
 import typing
 from dataclasses import dataclass
-from anchorpy.borsh_extension import EnumForCodegen
+
 import borsh_construct as borsh
+from anchorpy.borsh_extension import EnumForCodegen
 
 
 class MarginAccountJSON(typing.TypedDict):
@@ -72,6 +74,4 @@ def from_json(obj: TraitTypeJSON) -> TraitTypeKind:
     raise ValueError(f"Unrecognized enum kind: {kind}")
 
 
-layout = EnumForCodegen(
-    "MarginAccount" / borsh.CStruct(), "CrossMarginAccount" / borsh.CStruct()
-)
+layout = EnumForCodegen("MarginAccount" / borsh.CStruct(), "CrossMarginAccount" / borsh.CStruct())

@@ -1,7 +1,6 @@
-from enum import Enum
 from solders.pubkey import Pubkey
-from zeta_py.types import Asset
 
+from zeta_py.types import Asset
 
 ZETA_PID = {
     # "localnet": Pubkey.from_string("BG3oRikW8d16YjUEmX3ZxHm9SiJzrGtMhsSR8aCw1Cd7"),

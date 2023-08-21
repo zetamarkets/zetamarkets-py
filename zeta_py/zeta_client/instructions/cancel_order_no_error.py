@@ -1,8 +1,11 @@
 from __future__ import annotations
+
 import typing
-from solders.pubkey import Pubkey
-from solders.instruction import Instruction, AccountMeta
+
 import borsh_construct as borsh
+from solders.instruction import AccountMeta, Instruction
+from solders.pubkey import Pubkey
+
 from .. import types
 from ..program_id import PROGRAM_ID
 
@@ -13,9 +16,7 @@ class CancelOrderNoErrorArgs(typing.TypedDict):
     asset: types.asset.AssetKind
 
 
-layout = borsh.CStruct(
-    "side" / types.side.layout, "order_id" / borsh.U128, "asset" / types.asset.layout
-)
+layout = borsh.CStruct("side" / types.side.layout, "order_id" / borsh.U128, "asset" / types.asset.layout)
 
 
 class CancelOrderNoErrorAccounts(typing.TypedDict):

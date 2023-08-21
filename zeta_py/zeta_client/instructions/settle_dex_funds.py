@@ -1,8 +1,11 @@
 from __future__ import annotations
+
 import typing
+
+from solders.instruction import AccountMeta, Instruction
 from solders.pubkey import Pubkey
 from spl.token.constants import TOKEN_PROGRAM_ID
-from solders.instruction import Instruction, AccountMeta
+
 from ..program_id import PROGRAM_ID
 
 
@@ -27,25 +30,13 @@ def settle_dex_funds(
     keys: list[AccountMeta] = [
         AccountMeta(pubkey=accounts["state"], is_signer=False, is_writable=False),
         AccountMeta(pubkey=accounts["market"], is_signer=False, is_writable=True),
-        AccountMeta(
-            pubkey=accounts["zeta_base_vault"], is_signer=False, is_writable=True
-        ),
-        AccountMeta(
-            pubkey=accounts["zeta_quote_vault"], is_signer=False, is_writable=True
-        ),
-        AccountMeta(
-            pubkey=accounts["dex_base_vault"], is_signer=False, is_writable=True
-        ),
-        AccountMeta(
-            pubkey=accounts["dex_quote_vault"], is_signer=False, is_writable=True
-        ),
+        AccountMeta(pubkey=accounts["zeta_base_vault"], is_signer=False, is_writable=True),
+        AccountMeta(pubkey=accounts["zeta_quote_vault"], is_signer=False, is_writable=True),
+        AccountMeta(pubkey=accounts["dex_base_vault"], is_signer=False, is_writable=True),
+        AccountMeta(pubkey=accounts["dex_quote_vault"], is_signer=False, is_writable=True),
         AccountMeta(pubkey=accounts["vault_owner"], is_signer=False, is_writable=False),
-        AccountMeta(
-            pubkey=accounts["mint_authority"], is_signer=False, is_writable=False
-        ),
-        AccountMeta(
-            pubkey=accounts["serum_authority"], is_signer=False, is_writable=False
-        ),
+        AccountMeta(pubkey=accounts["mint_authority"], is_signer=False, is_writable=False),
+        AccountMeta(pubkey=accounts["serum_authority"], is_signer=False, is_writable=False),
         AccountMeta(pubkey=accounts["dex_program"], is_signer=False, is_writable=False),
         AccountMeta(pubkey=TOKEN_PROGRAM_ID, is_signer=False, is_writable=False),
     ]

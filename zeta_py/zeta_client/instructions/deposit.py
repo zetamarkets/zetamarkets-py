@@ -1,9 +1,12 @@
 from __future__ import annotations
+
 import typing
+
+import borsh_construct as borsh
+from solders.instruction import AccountMeta, Instruction
 from solders.pubkey import Pubkey
 from spl.token.constants import TOKEN_PROGRAM_ID
-from solders.instruction import Instruction, AccountMeta
-import borsh_construct as borsh
+
 from ..program_id import PROGRAM_ID
 
 
@@ -33,13 +36,9 @@ def deposit(
 ) -> Instruction:
     keys: list[AccountMeta] = [
         AccountMeta(pubkey=accounts["zeta_group"], is_signer=False, is_writable=False),
-        AccountMeta(
-            pubkey=accounts["margin_account"], is_signer=False, is_writable=True
-        ),
+        AccountMeta(pubkey=accounts["margin_account"], is_signer=False, is_writable=True),
         AccountMeta(pubkey=accounts["vault"], is_signer=False, is_writable=True),
-        AccountMeta(
-            pubkey=accounts["user_token_account"], is_signer=False, is_writable=True
-        ),
+        AccountMeta(pubkey=accounts["user_token_account"], is_signer=False, is_writable=True),
         AccountMeta(
             pubkey=accounts["socialized_loss_account"],
             is_signer=False,

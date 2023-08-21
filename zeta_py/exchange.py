@@ -1,27 +1,22 @@
 from __future__ import annotations
 
-import asyncio
-from dataclasses import dataclass
+import os
 import statistics
-from typing import Any, Callable, Dict, List, Mapping, Optional
+from dataclasses import dataclass
+from typing import Any, Callable, List, Mapping, Optional
+
+import requests
 from anchorpy import Idl, Program, Provider, Wallet
-from solders.pubkey import Pubkey
-from solana.rpc.api import Commitment
 from solana.rpc.async_api import AsyncClient
 from solana.utils.cluster import Cluster
-import os
-
 from solders.sysvar import CLOCK
-import requests
 
-from zeta_py import types, constants, utils, pda
+from zeta_py import constants, pda, types, utils
 from zeta_py.clock import Clock
-from zeta_py.types import Asset
-from solana.rpc.types import TxOpts
 from zeta_py.events import EventType
 from zeta_py.market import Market
 from zeta_py.program_account import Account
-
+from zeta_py.types import Asset
 from zeta_py.zeta_client.accounts.pricing import Pricing
 from zeta_py.zeta_client.accounts.state import State
 
@@ -42,9 +37,10 @@ class Exchange:
     wallet: Wallet
     connection: AsyncClient
     program: Program
-    state: State
-    pricing: Pricing
+    state: Account[State]
+    pricing: Account[Pricing]
     markets: Mapping[Asset, Market] = None
+    clock: Account[Clock] = None
 
     @classmethod
     async def create(
@@ -84,7 +80,7 @@ class Exchange:
         #     await market.load(subscribe)
 
         # Load Clock
-        cls.clock = await Account[Clock].create(CLOCK, load_config.connection, Clock)
+        instance.clock = await Account[Clock].create(CLOCK, load_config.connection, Clock)
 
         # TODO: Maybe disable polling/subscriptions by default and have helper to enable bulk
         if subscribe:

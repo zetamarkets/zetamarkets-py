@@ -1,27 +1,26 @@
 from __future__ import annotations
-from ast import List
-import asyncio
 
+import asyncio
+import re
+from ast import List
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-import re
+from typing import TYPE_CHECKING
 
-from zeta_py import pda
-from zeta_py import constants
+from solana.rpc.websocket_api import connect
+from solders.pubkey import Pubkey
 
+from zeta_py import constants, pda
 from zeta_py.constants import Asset
-from solana.rpc.async_api import AsyncClient
 from zeta_py.program_account import Account
-
+from zeta_py.pyserum.market import AsyncMarket as SerumMarket
 from zeta_py.pyserum.market.orderbook import OrderBook
 from zeta_py.pyserum.market.types import OrderInfo
 from zeta_py.types import Side
 from zeta_py.zeta_client.accounts.perp_sync_queue import PerpSyncQueue
-from zeta_py.zeta_client.accounts.zeta_group import ZetaGroup
 
-from zeta_py.pyserum.market import AsyncMarket as SerumMarket
-from solders.pubkey import Pubkey
-from solana.rpc.websocket_api import connect
+if TYPE_CHECKING:
+    from zeta_py.exchange import Exchange
 
 
 # Going to use ws for now, can add polling later
@@ -34,7 +33,7 @@ class Market:
     """
 
     asset: Asset
-    exchange: "Exchange"
+    exchange: Exchange
     bids: OrderBook
     asks: OrderBook
     perp_sync_queue: Account[PerpSyncQueue]
@@ -43,7 +42,7 @@ class Market:
     _asks_subscription_task: bool = None
 
     @classmethod
-    async def create(cls, asset: Asset, exchange: "Exchange", subscribe: bool = False):
+    async def create(cls, asset: Asset, exchange: Exchange, subscribe: bool = False):
         # Initialize
         asset_mint = pda.get_underlying_mint(asset, exchange.network)
         zeta_group_address, _ = pda.get_zeta_group(exchange.program.program_id, asset_mint)
@@ -99,7 +98,7 @@ class Market:
                     encoding="base64",
                 )
                 first_resp = await ws.recv()
-                subscription_id = first_resp[0].result
+                first_resp[0].result
                 while True:
                     msg = await ws.recv()
                     orderbook = self.serum_market._parse_bids_or_asks(msg[0].result.value.data)

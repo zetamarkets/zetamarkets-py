@@ -1,8 +1,11 @@
 from __future__ import annotations
+
 import typing
-from solders.pubkey import Pubkey
-from solders.instruction import Instruction, AccountMeta
+
 import borsh_construct as borsh
+from solders.instruction import AccountMeta, Instruction
+from solders.pubkey import Pubkey
+
 from ..program_id import PROGRAM_ID
 
 
@@ -26,9 +29,7 @@ def close_cross_margin_account(
     remaining_accounts: typing.Optional[typing.List[AccountMeta]] = None,
 ) -> Instruction:
     keys: list[AccountMeta] = [
-        AccountMeta(
-            pubkey=accounts["cross_margin_account"], is_signer=False, is_writable=True
-        ),
+        AccountMeta(pubkey=accounts["cross_margin_account"], is_signer=False, is_writable=True),
         AccountMeta(
             pubkey=accounts["cross_margin_account_manager"],
             is_signer=False,

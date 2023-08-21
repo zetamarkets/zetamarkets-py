@@ -1,8 +1,11 @@
 from __future__ import annotations
+
 import typing
-from solders.pubkey import Pubkey
-from solders.instruction import Instruction, AccountMeta
+
 import borsh_construct as borsh
+from solders.instruction import AccountMeta, Instruction
+from solders.pubkey import Pubkey
+
 from .. import types
 from ..program_id import PROGRAM_ID
 
@@ -11,9 +14,7 @@ class UpdateZetaGroupMarginParametersArgs(typing.TypedDict):
     args: types.update_margin_parameters_args.UpdateMarginParametersArgs
 
 
-layout = borsh.CStruct(
-    "args" / types.update_margin_parameters_args.UpdateMarginParametersArgs.layout
-)
+layout = borsh.CStruct("args" / types.update_margin_parameters_args.UpdateMarginParametersArgs.layout)
 
 
 class UpdateZetaGroupMarginParametersAccounts(typing.TypedDict):

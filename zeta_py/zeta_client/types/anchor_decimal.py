@@ -1,8 +1,10 @@
 from __future__ import annotations
+
 import typing
 from dataclasses import dataclass
-from construct import Container
+
 import borsh_construct as borsh
+from construct import Container
 
 
 class AnchorDecimalJSON(typing.TypedDict):
@@ -14,9 +16,7 @@ class AnchorDecimalJSON(typing.TypedDict):
 
 @dataclass
 class AnchorDecimal:
-    layout: typing.ClassVar = borsh.CStruct(
-        "flags" / borsh.U32, "hi" / borsh.U32, "lo" / borsh.U32, "mid" / borsh.U32
-    )
+    layout: typing.ClassVar = borsh.CStruct("flags" / borsh.U32, "hi" / borsh.U32, "lo" / borsh.U32, "mid" / borsh.U32)
     flags: int
     hi: int
     lo: int

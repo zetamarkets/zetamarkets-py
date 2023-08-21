@@ -1,4 +1,5 @@
 import typing
+
 from anchorpy.error import ProgramError
 
 
@@ -94,9 +95,7 @@ class ZeroWithdrawableBalance(ProgramError):
 
 class DepositAmountExceeded(ProgramError):
     def __init__(self) -> None:
-        super().__init__(
-            6010, "Deposit amount exceeds limit and user is not whitelisted"
-        )
+        super().__init__(6010, "Deposit amount exceeds limit and user is not whitelisted")
 
     code = 6010
     name = "DepositAmountExceeded"
@@ -816,9 +815,7 @@ class AccountDidNotSerialize(ProgramError):
 
 class OpenOrdersWithNonEmptyPositions(ProgramError):
     def __init__(self) -> None:
-        super().__init__(
-            6090, "Cannot close open orders account with non empty positions"
-        )
+        super().__init__(6090, "Cannot close open orders account with non empty positions")
 
     code = 6090
     name = "OpenOrdersWithNonEmptyPositions"
@@ -1130,9 +1127,7 @@ class PerpSyncQueueEmpty(ProgramError):
 
 class InvalidNonPerpMarket(ProgramError):
     def __init__(self) -> None:
-        super().__init__(
-            6124, "Perp product index given in placeOrder, use placePerpOrder"
-        )
+        super().__init__(6124, "Perp product index given in placeOrder, use placePerpOrder")
 
     code = 6124
     name = "InvalidNonPerpMarket"
@@ -1141,9 +1136,7 @@ class InvalidNonPerpMarket(ProgramError):
 
 class InvalidPerpMarket(ProgramError):
     def __init__(self) -> None:
-        super().__init__(
-            6125, "Non-perp product index given in placePerpOrder, use placeOrder"
-        )
+        super().__init__(6125, "Non-perp product index given in placePerpOrder, use placeOrder")
 
     code = 6125
     name = "InvalidPerpMarket"
@@ -1152,9 +1145,7 @@ class InvalidPerpMarket(ProgramError):
 
 class CannotInitializePerpMarketNode(ProgramError):
     def __init__(self) -> None:
-        super().__init__(
-            6126, "Not allowed to initialize market node for a perp market"
-        )
+        super().__init__(6126, "Not allowed to initialize market node for a perp market")
 
     code = 6126
     name = "CannotInitializePerpMarketNode"
@@ -1163,9 +1154,7 @@ class CannotInitializePerpMarketNode(ProgramError):
 
 class DeprecatedInstruction(ProgramError):
     def __init__(self) -> None:
-        super().__init__(
-            6127, "Instruction is deprecated, please use the newer version"
-        )
+        super().__init__(6127, "Instruction is deprecated, please use the newer version")
 
     code = 6127
     name = "DeprecatedInstruction"
@@ -1264,9 +1253,7 @@ class ZetaNotHalted(ProgramError):
 
 class NotFreshCrossMarginAccount(ProgramError):
     def __init__(self) -> None:
-        super().__init__(
-            6138, "Cross margin account is not unused, close it and make a new one"
-        )
+        super().__init__(6138, "Cross margin account is not unused, close it and make a new one")
 
     code = 6138
     name = "NotFreshCrossMarginAccount"
@@ -1291,9 +1278,7 @@ class CannotMigrateWithOpenOrders(ProgramError):
 
     code = 6140
     name = "CannotMigrateWithOpenOrders"
-    msg = (
-        "Cannot migrate to cross margin account with open orders, close all open orders"
-    )
+    msg = "Cannot migrate to cross margin account with open orders, close all open orders"
 
 
 class InvalidMarginAccountType(ProgramError):
@@ -1310,9 +1295,7 @@ class InvalidMarginAccountType(ProgramError):
 
 class MarginAccountAssetMismatch(ProgramError):
     def __init__(self) -> None:
-        super().__init__(
-            6142, "Margin account asset mismatched with instruction argument asset"
-        )
+        super().__init__(6142, "Margin account asset mismatched with instruction argument asset")
 
     code = 6142
     name = "MarginAccountAssetMismatch"

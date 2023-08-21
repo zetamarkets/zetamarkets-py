@@ -1,8 +1,10 @@
 from __future__ import annotations
+
 import typing
 from dataclasses import dataclass
-from anchorpy.borsh_extension import EnumForCodegen
+
 import borsh_construct as borsh
+from anchorpy.borsh_extension import EnumForCodegen
 
 
 class PlaceOrderJSON(typing.TypedDict):
@@ -72,6 +74,4 @@ def from_json(obj: PlaceOrderTypeJSON) -> PlaceOrderTypeKind:
     raise ValueError(f"Unrecognized enum kind: {kind}")
 
 
-layout = EnumForCodegen(
-    "PlaceOrder" / borsh.CStruct(), "PlacePerpOrder" / borsh.CStruct()
-)
+layout = EnumForCodegen("PlaceOrder" / borsh.CStruct(), "PlacePerpOrder" / borsh.CStruct())

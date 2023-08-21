@@ -1,8 +1,10 @@
 from __future__ import annotations
+
 import typing
 from dataclasses import dataclass
-from anchorpy.borsh_extension import EnumForCodegen
+
 import borsh_construct as borsh
+from anchorpy.borsh_extension import EnumForCodegen
 
 
 class LimitJSON(typing.TypedDict):
@@ -115,12 +117,8 @@ class PostOnlySlide:
         }
 
 
-OrderTypeKind = typing.Union[
-    Limit, PostOnly, FillOrKill, ImmediateOrCancel, PostOnlySlide
-]
-OrderTypeJSON = typing.Union[
-    LimitJSON, PostOnlyJSON, FillOrKillJSON, ImmediateOrCancelJSON, PostOnlySlideJSON
-]
+OrderTypeKind = typing.Union[Limit, PostOnly, FillOrKill, ImmediateOrCancel, PostOnlySlide]
+OrderTypeJSON = typing.Union[LimitJSON, PostOnlyJSON, FillOrKillJSON, ImmediateOrCancelJSON, PostOnlySlideJSON]
 
 
 def from_decoded(obj: dict) -> OrderTypeKind:

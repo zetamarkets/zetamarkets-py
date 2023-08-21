@@ -1,10 +1,13 @@
 from __future__ import annotations
+
 import typing
+
+import borsh_construct as borsh
+from solders.instruction import AccountMeta, Instruction
 from solders.pubkey import Pubkey
 from solders.sysvar import RENT
 from spl.token.constants import TOKEN_PROGRAM_ID
-from solders.instruction import Instruction, AccountMeta
-import borsh_construct as borsh
+
 from .. import types
 from ..program_id import PROGRAM_ID
 
@@ -70,15 +73,11 @@ def place_perp_order_v2(
     keys: list[AccountMeta] = [
         AccountMeta(pubkey=accounts["state"], is_signer=False, is_writable=False),
         AccountMeta(pubkey=accounts["zeta_group"], is_signer=False, is_writable=False),
-        AccountMeta(
-            pubkey=accounts["margin_account"], is_signer=False, is_writable=True
-        ),
+        AccountMeta(pubkey=accounts["margin_account"], is_signer=False, is_writable=True),
         AccountMeta(pubkey=accounts["authority"], is_signer=True, is_writable=False),
         AccountMeta(pubkey=accounts["dex_program"], is_signer=False, is_writable=False),
         AccountMeta(pubkey=TOKEN_PROGRAM_ID, is_signer=False, is_writable=False),
-        AccountMeta(
-            pubkey=accounts["serum_authority"], is_signer=False, is_writable=False
-        ),
+        AccountMeta(pubkey=accounts["serum_authority"], is_signer=False, is_writable=False),
         AccountMeta(pubkey=accounts["greeks"], is_signer=False, is_writable=False),
         AccountMeta(pubkey=accounts["open_orders"], is_signer=False, is_writable=True),
         AccountMeta(pubkey=RENT, is_signer=False, is_writable=False),
@@ -133,19 +132,11 @@ def place_perp_order_v2(
             is_writable=True,
         ),
         AccountMeta(pubkey=accounts["oracle"], is_signer=False, is_writable=False),
-        AccountMeta(
-            pubkey=accounts["oracle_backup_feed"], is_signer=False, is_writable=False
-        ),
-        AccountMeta(
-            pubkey=accounts["oracle_backup_program"], is_signer=False, is_writable=False
-        ),
+        AccountMeta(pubkey=accounts["oracle_backup_feed"], is_signer=False, is_writable=False),
+        AccountMeta(pubkey=accounts["oracle_backup_program"], is_signer=False, is_writable=False),
         AccountMeta(pubkey=accounts["market_mint"], is_signer=False, is_writable=True),
-        AccountMeta(
-            pubkey=accounts["mint_authority"], is_signer=False, is_writable=False
-        ),
-        AccountMeta(
-            pubkey=accounts["perp_sync_queue"], is_signer=False, is_writable=True
-        ),
+        AccountMeta(pubkey=accounts["mint_authority"], is_signer=False, is_writable=False),
+        AccountMeta(pubkey=accounts["perp_sync_queue"], is_signer=False, is_writable=True),
     ]
     if remaining_accounts is not None:
         keys += remaining_accounts

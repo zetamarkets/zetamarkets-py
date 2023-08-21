@@ -1,8 +1,10 @@
 from __future__ import annotations
+
 import typing
 from dataclasses import dataclass
-from construct import Container
+
 import borsh_construct as borsh
+from construct import Container
 
 
 class UpdateVolatilityArgsJSON(typing.TypedDict):
@@ -12,9 +14,7 @@ class UpdateVolatilityArgsJSON(typing.TypedDict):
 
 @dataclass
 class UpdateVolatilityArgs:
-    layout: typing.ClassVar = borsh.CStruct(
-        "expiry_index" / borsh.U8, "volatility" / borsh.U64[5]
-    )
+    layout: typing.ClassVar = borsh.CStruct("expiry_index" / borsh.U8, "volatility" / borsh.U64[5])
     expiry_index: int
     volatility: list[int]
 

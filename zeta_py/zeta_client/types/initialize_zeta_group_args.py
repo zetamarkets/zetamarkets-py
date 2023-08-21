@@ -1,11 +1,12 @@
 from __future__ import annotations
-from . import (
-    asset,
-)
+
 import typing
 from dataclasses import dataclass
-from construct import Container
+
 import borsh_construct as borsh
+from construct import Container
+
+from . import asset
 
 
 class InitializeZetaGroupArgsJSON(typing.TypedDict):
@@ -108,11 +109,7 @@ class InitializeZetaGroupArgs:
         return cls(
             perps_only=obj.perps_only,
             flex_underlying=obj.flex_underlying,
-            asset_override=(
-                None
-                if obj.asset_override is None
-                else asset.from_decoded(obj.asset_override)
-            ),
+            asset_override=(None if obj.asset_override is None else asset.from_decoded(obj.asset_override)),
             zeta_group_nonce=obj.zeta_group_nonce,
             underlying_nonce=obj.underlying_nonce,
             greeks_nonce=obj.greeks_nonce,
@@ -145,11 +142,7 @@ class InitializeZetaGroupArgs:
         return {
             "perps_only": self.perps_only,
             "flex_underlying": self.flex_underlying,
-            "asset_override": (
-                None
-                if self.asset_override is None
-                else self.asset_override.to_encodable()
-            ),
+            "asset_override": (None if self.asset_override is None else self.asset_override.to_encodable()),
             "zeta_group_nonce": self.zeta_group_nonce,
             "underlying_nonce": self.underlying_nonce,
             "greeks_nonce": self.greeks_nonce,
@@ -182,9 +175,7 @@ class InitializeZetaGroupArgs:
         return {
             "perps_only": self.perps_only,
             "flex_underlying": self.flex_underlying,
-            "asset_override": (
-                None if self.asset_override is None else self.asset_override.to_json()
-            ),
+            "asset_override": (None if self.asset_override is None else self.asset_override.to_json()),
             "zeta_group_nonce": self.zeta_group_nonce,
             "underlying_nonce": self.underlying_nonce,
             "greeks_nonce": self.greeks_nonce,
@@ -218,11 +209,7 @@ class InitializeZetaGroupArgs:
         return cls(
             perps_only=obj["perps_only"],
             flex_underlying=obj["flex_underlying"],
-            asset_override=(
-                None
-                if obj["asset_override"] is None
-                else asset.from_json(obj["asset_override"])
-            ),
+            asset_override=(None if obj["asset_override"] is None else asset.from_json(obj["asset_override"])),
             zeta_group_nonce=obj["zeta_group_nonce"],
             underlying_nonce=obj["underlying_nonce"],
             greeks_nonce=obj["greeks_nonce"],

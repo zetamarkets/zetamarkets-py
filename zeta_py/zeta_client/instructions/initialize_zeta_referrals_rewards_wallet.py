@@ -1,10 +1,13 @@
 from __future__ import annotations
+
 import typing
+
+from solders.instruction import AccountMeta, Instruction
 from solders.pubkey import Pubkey
 from solders.system_program import ID as SYS_PROGRAM_ID
 from solders.sysvar import RENT
 from spl.token.constants import TOKEN_PROGRAM_ID
-from solders.instruction import Instruction, AccountMeta
+
 from ..program_id import PROGRAM_ID
 
 

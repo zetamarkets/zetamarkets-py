@@ -1,8 +1,10 @@
 from __future__ import annotations
+
 import typing
 from dataclasses import dataclass
-from construct import Container
+
 import borsh_construct as borsh
+from construct import Container
 
 
 class UpdateZetaGroupExpiryArgsJSON(typing.TypedDict):
@@ -39,9 +41,7 @@ class UpdateZetaGroupExpiryArgs:
         }
 
     @classmethod
-    def from_json(
-        cls, obj: UpdateZetaGroupExpiryArgsJSON
-    ) -> "UpdateZetaGroupExpiryArgs":
+    def from_json(cls, obj: UpdateZetaGroupExpiryArgsJSON) -> "UpdateZetaGroupExpiryArgs":
         return cls(
             expiry_interval_seconds=obj["expiry_interval_seconds"],
             new_expiry_threshold_seconds=obj["new_expiry_threshold_seconds"],

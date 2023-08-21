@@ -1,13 +1,15 @@
 import typing
 from dataclasses import dataclass
-from solders.pubkey import Pubkey
-from solana.rpc.async_api import AsyncClient
-from solana.rpc.commitment import Commitment
+
 import borsh_construct as borsh
+from anchorpy.borsh_extension import BorshPubkey
 from anchorpy.coder.accounts import ACCOUNT_DISCRIMINATOR_SIZE
 from anchorpy.error import AccountInvalidDiscriminator
 from anchorpy.utils.rpc import get_multiple_accounts
-from anchorpy.borsh_extension import BorshPubkey
+from solana.rpc.async_api import AsyncClient
+from solana.rpc.commitment import Commitment
+from solders.pubkey import Pubkey
+
 from ..program_id import PROGRAM_ID
 
 
@@ -19,9 +21,7 @@ class CrossOpenOrdersMapJSON(typing.TypedDict):
 @dataclass
 class CrossOpenOrdersMap:
     discriminator: typing.ClassVar = b"\xc5\x18R\tR\x0e0\x9a"
-    layout: typing.ClassVar = borsh.CStruct(
-        "user_key" / BorshPubkey, "subaccount_index" / borsh.U8
-    )
+    layout: typing.ClassVar = borsh.CStruct("user_key" / BorshPubkey, "subaccount_index" / borsh.U8)
     user_key: Pubkey
     subaccount_index: int
 
@@ -64,9 +64,7 @@ class CrossOpenOrdersMap:
     @classmethod
     def decode(cls, data: bytes) -> "CrossOpenOrdersMap":
         if data[:ACCOUNT_DISCRIMINATOR_SIZE] != cls.discriminator:
-            raise AccountInvalidDiscriminator(
-                "The discriminator for this account is invalid"
-            )
+            raise AccountInvalidDiscriminator("The discriminator for this account is invalid")
         dec = CrossOpenOrdersMap.layout.parse(data[ACCOUNT_DISCRIMINATOR_SIZE:])
         return cls(
             user_key=dec.user_key,

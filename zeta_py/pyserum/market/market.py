@@ -3,20 +3,19 @@ from __future__ import annotations
 
 from typing import List
 
-from solders.keypair import Keypair
-from solders.pubkey import Pubkey
 from solana.rpc.api import Client
 from solana.rpc.types import TxOpts
-from solders.rpc.responses import RPCResult
 from solana.transaction import Transaction
+from solders.keypair import Keypair
+from solders.pubkey import Pubkey
+from solders.rpc.responses import RPCResult
 
-from . import types as t
 from .. import instructions
-
 from .._layouts.open_orders import OPEN_ORDERS_LAYOUT
 from ..enums import OrderType, Side
 from ..open_orders_account import OpenOrdersAccount
 from ..utils import load_bytes_data
+from . import types as t
 from ._internal.queue import decode_event_queue, decode_request_queue
 from .core import MarketCore
 from .orderbook import OrderBook

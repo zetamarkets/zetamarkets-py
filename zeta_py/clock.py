@@ -1,11 +1,7 @@
-from dataclasses import dataclass
 import typing
-from borsh_construct import CStruct
-from solana.rpc.async_api import AsyncClient
-from solders.pubkey import Pubkey
-from zeta_py._layouts.clock import SYSTEM_CLOCK_LAYOUT
-from solana.rpc.commitment import Commitment
+from dataclasses import dataclass
 
+from zeta_py._layouts.clock import SYSTEM_CLOCK_LAYOUT
 from zeta_py.zeta_client.accounts import AnchorpyAccount
 
 

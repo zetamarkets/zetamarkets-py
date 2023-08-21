@@ -1,15 +1,17 @@
 import typing
 from dataclasses import dataclass
-from solders.pubkey import Pubkey
-from solana.rpc.async_api import AsyncClient
-from solana.rpc.commitment import Commitment
+
 import borsh_construct as borsh
+from anchorpy.borsh_extension import BorshPubkey
 from anchorpy.coder.accounts import ACCOUNT_DISCRIMINATOR_SIZE
 from anchorpy.error import AccountInvalidDiscriminator
 from anchorpy.utils.rpc import get_multiple_accounts
-from anchorpy.borsh_extension import BorshPubkey
-from ..program_id import PROGRAM_ID
+from solana.rpc.async_api import AsyncClient
+from solana.rpc.commitment import Commitment
+from solders.pubkey import Pubkey
+
 from .. import types
+from ..program_id import PROGRAM_ID
 
 
 class ZetaGroupJSON(typing.TypedDict):
@@ -135,9 +137,7 @@ class ZetaGroup:
     @classmethod
     def decode(cls, data: bytes) -> "ZetaGroup":
         if data[:ACCOUNT_DISCRIMINATOR_SIZE] != cls.discriminator:
-            raise AccountInvalidDiscriminator(
-                "The discriminator for this account is invalid"
-            )
+            raise AccountInvalidDiscriminator("The discriminator for this account is invalid")
         dec = ZetaGroup.layout.parse(data[ACCOUNT_DISCRIMINATOR_SIZE:])
         return cls(
             nonce=dec.nonce,
@@ -147,16 +147,10 @@ class ZetaGroup:
             underlying_mint=dec.underlying_mint,
             oracle=dec.oracle,
             greeks=dec.greeks,
-            pricing_parameters=types.pricing_parameters.PricingParameters.from_decoded(
-                dec.pricing_parameters
-            ),
-            margin_parameters=types.margin_parameters.MarginParameters.from_decoded(
-                dec.margin_parameters
-            ),
+            pricing_parameters=types.pricing_parameters.PricingParameters.from_decoded(dec.pricing_parameters),
+            margin_parameters=types.margin_parameters.MarginParameters.from_decoded(dec.margin_parameters),
             margin_parameters_padding=dec.margin_parameters_padding,
-            products=list(
-                map(lambda item: types.product.Product.from_decoded(item), dec.products)
-            ),
+            products=list(map(lambda item: types.product.Product.from_decoded(item), dec.products)),
             products_padding=list(
                 map(
                     lambda item: types.product.Product.from_decoded(item),
@@ -180,9 +174,7 @@ class ZetaGroup:
             asset=types.asset.from_decoded(dec.asset),
             expiry_interval_seconds=dec.expiry_interval_seconds,
             new_expiry_threshold_seconds=dec.new_expiry_threshold_seconds,
-            perp_parameters=types.perp_parameters.PerpParameters.from_decoded(
-                dec.perp_parameters
-            ),
+            perp_parameters=types.perp_parameters.PerpParameters.from_decoded(dec.perp_parameters),
             perp_sync_queue=dec.perp_sync_queue,
             oracle_backup_feed=dec.oracle_backup_feed,
             perps_only=dec.perps_only,
@@ -203,14 +195,10 @@ class ZetaGroup:
             "margin_parameters": self.margin_parameters.to_json(),
             "margin_parameters_padding": self.margin_parameters_padding,
             "products": list(map(lambda item: item.to_json(), self.products)),
-            "products_padding": list(
-                map(lambda item: item.to_json(), self.products_padding)
-            ),
+            "products_padding": list(map(lambda item: item.to_json(), self.products_padding)),
             "perp": self.perp.to_json(),
             "expiry_series": list(map(lambda item: item.to_json(), self.expiry_series)),
-            "expiry_series_padding": list(
-                map(lambda item: item.to_json(), self.expiry_series_padding)
-            ),
+            "expiry_series_padding": list(map(lambda item: item.to_json(), self.expiry_series_padding)),
             "deprecated_padding": self.deprecated_padding,
             "asset": self.asset.to_json(),
             "expiry_interval_seconds": self.expiry_interval_seconds,
@@ -233,16 +221,10 @@ class ZetaGroup:
             underlying_mint=Pubkey.from_string(obj["underlying_mint"]),
             oracle=Pubkey.from_string(obj["oracle"]),
             greeks=Pubkey.from_string(obj["greeks"]),
-            pricing_parameters=types.pricing_parameters.PricingParameters.from_json(
-                obj["pricing_parameters"]
-            ),
-            margin_parameters=types.margin_parameters.MarginParameters.from_json(
-                obj["margin_parameters"]
-            ),
+            pricing_parameters=types.pricing_parameters.PricingParameters.from_json(obj["pricing_parameters"]),
+            margin_parameters=types.margin_parameters.MarginParameters.from_json(obj["margin_parameters"]),
             margin_parameters_padding=obj["margin_parameters_padding"],
-            products=list(
-                map(lambda item: types.product.Product.from_json(item), obj["products"])
-            ),
+            products=list(map(lambda item: types.product.Product.from_json(item), obj["products"])),
             products_padding=list(
                 map(
                     lambda item: types.product.Product.from_json(item),
@@ -266,9 +248,7 @@ class ZetaGroup:
             asset=types.asset.from_json(obj["asset"]),
             expiry_interval_seconds=obj["expiry_interval_seconds"],
             new_expiry_threshold_seconds=obj["new_expiry_threshold_seconds"],
-            perp_parameters=types.perp_parameters.PerpParameters.from_json(
-                obj["perp_parameters"]
-            ),
+            perp_parameters=types.perp_parameters.PerpParameters.from_json(obj["perp_parameters"]),
             perp_sync_queue=Pubkey.from_string(obj["perp_sync_queue"]),
             oracle_backup_feed=Pubkey.from_string(obj["oracle_backup_feed"]),
             perps_only=obj["perps_only"],

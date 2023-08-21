@@ -1,8 +1,10 @@
 from __future__ import annotations
+
 import typing
 from dataclasses import dataclass
-from construct import Container
+
 import borsh_construct as borsh
+from construct import Container
 
 
 class OrderStateJSON(typing.TypedDict):
@@ -12,9 +14,7 @@ class OrderStateJSON(typing.TypedDict):
 
 @dataclass
 class OrderState:
-    layout: typing.ClassVar = borsh.CStruct(
-        "closing_orders" / borsh.U64, "opening_orders" / borsh.U64[2]
-    )
+    layout: typing.ClassVar = borsh.CStruct("closing_orders" / borsh.U64, "opening_orders" / borsh.U64[2])
     closing_orders: int
     opening_orders: list[int]
 
@@ -36,6 +36,4 @@ class OrderState:
 
     @classmethod
     def from_json(cls, obj: OrderStateJSON) -> "OrderState":
-        return cls(
-            closing_orders=obj["closing_orders"], opening_orders=obj["opening_orders"]
-        )
+        return cls(closing_orders=obj["closing_orders"], opening_orders=obj["opening_orders"])

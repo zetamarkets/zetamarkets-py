@@ -1,8 +1,11 @@
 from __future__ import annotations
+
 import typing
-from solders.pubkey import Pubkey
-from solders.instruction import Instruction, AccountMeta
+
 import borsh_construct as borsh
+from solders.instruction import AccountMeta, Instruction
+from solders.pubkey import Pubkey
+
 from .. import types
 from ..program_id import PROGRAM_ID
 
@@ -11,9 +14,7 @@ class UpdateInterestRateArgs(typing.TypedDict):
     args: types.update_interest_rate_args.UpdateInterestRateArgs
 
 
-layout = borsh.CStruct(
-    "args" / types.update_interest_rate_args.UpdateInterestRateArgs.layout
-)
+layout = borsh.CStruct("args" / types.update_interest_rate_args.UpdateInterestRateArgs.layout)
 
 
 class UpdateInterestRateAccounts(typing.TypedDict):

@@ -1,8 +1,10 @@
 from __future__ import annotations
+
 import typing
 from dataclasses import dataclass
-from construct import Container
+
 import borsh_construct as borsh
+from construct import Container
 
 
 class UpdatePricingParametersArgsJSON(typing.TypedDict):
@@ -87,9 +89,7 @@ class UpdatePricingParametersArgs:
         }
 
     @classmethod
-    def from_json(
-        cls, obj: UpdatePricingParametersArgsJSON
-    ) -> "UpdatePricingParametersArgs":
+    def from_json(cls, obj: UpdatePricingParametersArgsJSON) -> "UpdatePricingParametersArgs":
         return cls(
             option_trade_normalizer=obj["option_trade_normalizer"],
             future_trade_normalizer=obj["future_trade_normalizer"],

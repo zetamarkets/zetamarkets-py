@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from typing import Iterable, List, Union
 
-from . import types as t
-
 from ..enums import Side
+from . import types as t
 from ._internal.slab import Slab, SlabInnerNode, SlabLeafNode
 from .state import MarketState
 

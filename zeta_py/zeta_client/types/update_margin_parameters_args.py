@@ -1,8 +1,10 @@
 from __future__ import annotations
+
 import typing
 from dataclasses import dataclass
-from construct import Container
+
 import borsh_construct as borsh
+from construct import Container
 
 
 class UpdateMarginParametersArgsJSON(typing.TypedDict):
@@ -38,9 +40,7 @@ class UpdateMarginParametersArgs:
         }
 
     @classmethod
-    def from_json(
-        cls, obj: UpdateMarginParametersArgsJSON
-    ) -> "UpdateMarginParametersArgs":
+    def from_json(cls, obj: UpdateMarginParametersArgsJSON) -> "UpdateMarginParametersArgs":
         return cls(
             future_margin_initial=obj["future_margin_initial"],
             future_margin_maintenance=obj["future_margin_maintenance"],

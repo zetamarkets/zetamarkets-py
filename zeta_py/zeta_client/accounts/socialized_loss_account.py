@@ -1,12 +1,14 @@
 import typing
 from dataclasses import dataclass
-from solders.pubkey import Pubkey
-from solana.rpc.async_api import AsyncClient
-from solana.rpc.commitment import Commitment
+
 import borsh_construct as borsh
 from anchorpy.coder.accounts import ACCOUNT_DISCRIMINATOR_SIZE
 from anchorpy.error import AccountInvalidDiscriminator
 from anchorpy.utils.rpc import get_multiple_accounts
+from solana.rpc.async_api import AsyncClient
+from solana.rpc.commitment import Commitment
+from solders.pubkey import Pubkey
+
 from ..program_id import PROGRAM_ID
 
 
@@ -18,9 +20,7 @@ class SocializedLossAccountJSON(typing.TypedDict):
 @dataclass
 class SocializedLossAccount:
     discriminator: typing.ClassVar = b"A\xfe\x8d\xeb<Th\x89"
-    layout: typing.ClassVar = borsh.CStruct(
-        "nonce" / borsh.U8, "overbankrupt_amount" / borsh.U64
-    )
+    layout: typing.ClassVar = borsh.CStruct("nonce" / borsh.U8, "overbankrupt_amount" / borsh.U64)
     nonce: int
     overbankrupt_amount: int
 
@@ -63,9 +63,7 @@ class SocializedLossAccount:
     @classmethod
     def decode(cls, data: bytes) -> "SocializedLossAccount":
         if data[:ACCOUNT_DISCRIMINATOR_SIZE] != cls.discriminator:
-            raise AccountInvalidDiscriminator(
-                "The discriminator for this account is invalid"
-            )
+            raise AccountInvalidDiscriminator("The discriminator for this account is invalid")
         dec = SocializedLossAccount.layout.parse(data[ACCOUNT_DISCRIMINATOR_SIZE:])
         return cls(
             nonce=dec.nonce,

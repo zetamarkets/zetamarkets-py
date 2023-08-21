@@ -3,14 +3,13 @@ from __future__ import annotations
 import math
 
 from construct import Container, Struct
-from solders.pubkey import Pubkey
 from solana.rpc.api import Client
 from solana.rpc.async_api import AsyncClient
+from solders.pubkey import Pubkey
 
 from zeta_py.constants import POSITION_PRECISION
 
 from .. import async_utils, utils
-
 from .._layouts.market import MARKET_LAYOUT
 from .types import AccountFlags
 

@@ -1,11 +1,12 @@
 from __future__ import annotations
-from . import (
-    asset,
-)
+
 import typing
 from dataclasses import dataclass
-from construct import Container
+
 import borsh_construct as borsh
+from construct import Container
+
+from . import asset
 
 
 class InitializeMarketArgsJSON(typing.TypedDict):

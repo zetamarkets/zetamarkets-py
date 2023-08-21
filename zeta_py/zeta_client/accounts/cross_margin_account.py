@@ -1,15 +1,17 @@
 import typing
 from dataclasses import dataclass
-from solders.pubkey import Pubkey
-from solana.rpc.async_api import AsyncClient
-from solana.rpc.commitment import Commitment
+
 import borsh_construct as borsh
+from anchorpy.borsh_extension import BorshPubkey
 from anchorpy.coder.accounts import ACCOUNT_DISCRIMINATOR_SIZE
 from anchorpy.error import AccountInvalidDiscriminator
 from anchorpy.utils.rpc import get_multiple_accounts
-from anchorpy.borsh_extension import BorshPubkey
-from ..program_id import PROGRAM_ID
+from solana.rpc.async_api import AsyncClient
+from solana.rpc.commitment import Commitment
+from solders.pubkey import Pubkey
+
 from .. import types
+from ..program_id import PROGRAM_ID
 
 
 class CrossMarginAccountJSON(typing.TypedDict):
@@ -105,9 +107,7 @@ class CrossMarginAccount:
     @classmethod
     def decode(cls, data: bytes) -> "CrossMarginAccount":
         if data[:ACCOUNT_DISCRIMINATOR_SIZE] != cls.discriminator:
-            raise AccountInvalidDiscriminator(
-                "The discriminator for this account is invalid"
-            )
+            raise AccountInvalidDiscriminator("The discriminator for this account is invalid")
         dec = CrossMarginAccount.layout.parse(data[ACCOUNT_DISCRIMINATOR_SIZE:])
         return cls(
             authority=dec.authority,
@@ -159,18 +159,10 @@ class CrossMarginAccount:
             "open_orders_nonces": self.open_orders_nonces,
             "open_orders_nonces_padding": self.open_orders_nonces_padding,
             "rebalance_amount": self.rebalance_amount,
-            "last_funding_deltas": list(
-                map(lambda item: item.to_json(), self.last_funding_deltas)
-            ),
-            "last_funding_deltas_padding": list(
-                map(lambda item: item.to_json(), self.last_funding_deltas_padding)
-            ),
-            "product_ledgers": list(
-                map(lambda item: item.to_json(), self.product_ledgers)
-            ),
-            "product_ledgers_padding": list(
-                map(lambda item: item.to_json(), self.product_ledgers_padding)
-            ),
+            "last_funding_deltas": list(map(lambda item: item.to_json(), self.last_funding_deltas)),
+            "last_funding_deltas_padding": list(map(lambda item: item.to_json(), self.last_funding_deltas_padding)),
+            "product_ledgers": list(map(lambda item: item.to_json(), self.product_ledgers)),
+            "product_ledgers_padding": list(map(lambda item: item.to_json(), self.product_ledgers_padding)),
             "padding": self.padding,
         }
 

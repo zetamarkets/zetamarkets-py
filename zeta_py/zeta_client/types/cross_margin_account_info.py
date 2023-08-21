@@ -1,8 +1,10 @@
 from __future__ import annotations
+
 import typing
 from dataclasses import dataclass
-from construct import Container
+
 import borsh_construct as borsh
+from construct import Container
 
 
 class CrossMarginAccountInfoJSON(typing.TypedDict):
@@ -12,9 +14,7 @@ class CrossMarginAccountInfoJSON(typing.TypedDict):
 
 @dataclass
 class CrossMarginAccountInfo:
-    layout: typing.ClassVar = borsh.CStruct(
-        "initialized" / borsh.Bool, "name" / borsh.U8[10]
-    )
+    layout: typing.ClassVar = borsh.CStruct("initialized" / borsh.Bool, "name" / borsh.U8[10])
     initialized: bool
     name: list[int]
 

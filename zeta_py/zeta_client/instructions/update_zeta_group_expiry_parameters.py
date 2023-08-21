@@ -1,8 +1,11 @@
 from __future__ import annotations
+
 import typing
-from solders.pubkey import Pubkey
-from solders.instruction import Instruction, AccountMeta
+
 import borsh_construct as borsh
+from solders.instruction import AccountMeta, Instruction
+from solders.pubkey import Pubkey
+
 from .. import types
 from ..program_id import PROGRAM_ID
 
@@ -11,9 +14,7 @@ class UpdateZetaGroupExpiryParametersArgs(typing.TypedDict):
     args: types.update_zeta_group_expiry_args.UpdateZetaGroupExpiryArgs
 
 
-layout = borsh.CStruct(
-    "args" / types.update_zeta_group_expiry_args.UpdateZetaGroupExpiryArgs.layout
-)
+layout = borsh.CStruct("args" / types.update_zeta_group_expiry_args.UpdateZetaGroupExpiryArgs.layout)
 
 
 class UpdateZetaGroupExpiryParametersAccounts(typing.TypedDict):

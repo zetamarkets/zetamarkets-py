@@ -1,11 +1,12 @@
 from __future__ import annotations
-from . import (
-    asset,
-)
+
 import typing
 from dataclasses import dataclass
-from construct import Container
+
 import borsh_construct as borsh
+from construct import Container
+
+from . import asset
 
 
 class HaltStateArgsJSON(typing.TypedDict):
@@ -16,9 +17,7 @@ class HaltStateArgsJSON(typing.TypedDict):
 
 @dataclass
 class HaltStateArgs:
-    layout: typing.ClassVar = borsh.CStruct(
-        "asset" / asset.layout, "spot_price" / borsh.U64, "timestamp" / borsh.U64
-    )
+    layout: typing.ClassVar = borsh.CStruct("asset" / asset.layout, "spot_price" / borsh.U64, "timestamp" / borsh.U64)
     asset: asset.AssetKind
     spot_price: int
     timestamp: int

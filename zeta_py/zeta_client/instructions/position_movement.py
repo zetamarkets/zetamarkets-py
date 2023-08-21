@@ -1,9 +1,12 @@
 from __future__ import annotations
+
 import typing
-from solders.pubkey import Pubkey
-from solders.instruction import Instruction, AccountMeta
-from construct import Construct
+
 import borsh_construct as borsh
+from construct import Construct
+from solders.instruction import AccountMeta, Instruction
+from solders.pubkey import Pubkey
+
 from .. import types
 from ..program_id import PROGRAM_ID
 
@@ -15,10 +18,7 @@ class PositionMovementArgs(typing.TypedDict):
 
 layout = borsh.CStruct(
     "movement_type" / types.movement_type.layout,
-    "movements"
-    / borsh.Vec(
-        typing.cast(Construct, types.position_movement_arg.PositionMovementArg.layout)
-    ),
+    "movements" / borsh.Vec(typing.cast(Construct, types.position_movement_arg.PositionMovementArg.layout)),
 )
 
 
@@ -43,21 +43,13 @@ def position_movement(
     keys: list[AccountMeta] = [
         AccountMeta(pubkey=accounts["state"], is_signer=False, is_writable=False),
         AccountMeta(pubkey=accounts["zeta_group"], is_signer=False, is_writable=False),
-        AccountMeta(
-            pubkey=accounts["margin_account"], is_signer=False, is_writable=True
-        ),
-        AccountMeta(
-            pubkey=accounts["spread_account"], is_signer=False, is_writable=True
-        ),
+        AccountMeta(pubkey=accounts["margin_account"], is_signer=False, is_writable=True),
+        AccountMeta(pubkey=accounts["spread_account"], is_signer=False, is_writable=True),
         AccountMeta(pubkey=accounts["authority"], is_signer=True, is_writable=False),
         AccountMeta(pubkey=accounts["greeks"], is_signer=False, is_writable=False),
         AccountMeta(pubkey=accounts["oracle"], is_signer=False, is_writable=False),
-        AccountMeta(
-            pubkey=accounts["oracle_backup_feed"], is_signer=False, is_writable=False
-        ),
-        AccountMeta(
-            pubkey=accounts["oracle_backup_program"], is_signer=False, is_writable=False
-        ),
+        AccountMeta(pubkey=accounts["oracle_backup_feed"], is_signer=False, is_writable=False),
+        AccountMeta(pubkey=accounts["oracle_backup_program"], is_signer=False, is_writable=False),
     ]
     if remaining_accounts is not None:
         keys += remaining_accounts

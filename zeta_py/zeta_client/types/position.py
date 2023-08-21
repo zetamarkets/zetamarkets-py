@@ -1,8 +1,10 @@
 from __future__ import annotations
+
 import typing
 from dataclasses import dataclass
-from construct import Container
+
 import borsh_construct as borsh
+from construct import Container
 
 
 class PositionJSON(typing.TypedDict):
@@ -12,9 +14,7 @@ class PositionJSON(typing.TypedDict):
 
 @dataclass
 class Position:
-    layout: typing.ClassVar = borsh.CStruct(
-        "size" / borsh.I64, "cost_of_trades" / borsh.U64
-    )
+    layout: typing.ClassVar = borsh.CStruct("size" / borsh.I64, "cost_of_trades" / borsh.U64)
     size: int
     cost_of_trades: int
 

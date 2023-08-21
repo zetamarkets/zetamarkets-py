@@ -1,11 +1,12 @@
 from __future__ import annotations
-from . import (
-    anchor_decimal,
-)
+
 import typing
 from dataclasses import dataclass
-from construct import Container
+
 import borsh_construct as borsh
+from construct import Container
+
+from . import anchor_decimal
 
 
 class PricingParametersJSON(typing.TypedDict):
@@ -49,18 +50,10 @@ class PricingParameters:
     @classmethod
     def from_decoded(cls, obj: Container) -> "PricingParameters":
         return cls(
-            option_trade_normalizer=anchor_decimal.AnchorDecimal.from_decoded(
-                obj.option_trade_normalizer
-            ),
-            future_trade_normalizer=anchor_decimal.AnchorDecimal.from_decoded(
-                obj.future_trade_normalizer
-            ),
-            max_volatility_retreat=anchor_decimal.AnchorDecimal.from_decoded(
-                obj.max_volatility_retreat
-            ),
-            max_interest_retreat=anchor_decimal.AnchorDecimal.from_decoded(
-                obj.max_interest_retreat
-            ),
+            option_trade_normalizer=anchor_decimal.AnchorDecimal.from_decoded(obj.option_trade_normalizer),
+            future_trade_normalizer=anchor_decimal.AnchorDecimal.from_decoded(obj.future_trade_normalizer),
+            max_volatility_retreat=anchor_decimal.AnchorDecimal.from_decoded(obj.max_volatility_retreat),
+            max_interest_retreat=anchor_decimal.AnchorDecimal.from_decoded(obj.max_interest_retreat),
             max_delta=obj.max_delta,
             min_delta=obj.min_delta,
             min_volatility=obj.min_volatility,
@@ -100,18 +93,10 @@ class PricingParameters:
     @classmethod
     def from_json(cls, obj: PricingParametersJSON) -> "PricingParameters":
         return cls(
-            option_trade_normalizer=anchor_decimal.AnchorDecimal.from_json(
-                obj["option_trade_normalizer"]
-            ),
-            future_trade_normalizer=anchor_decimal.AnchorDecimal.from_json(
-                obj["future_trade_normalizer"]
-            ),
-            max_volatility_retreat=anchor_decimal.AnchorDecimal.from_json(
-                obj["max_volatility_retreat"]
-            ),
-            max_interest_retreat=anchor_decimal.AnchorDecimal.from_json(
-                obj["max_interest_retreat"]
-            ),
+            option_trade_normalizer=anchor_decimal.AnchorDecimal.from_json(obj["option_trade_normalizer"]),
+            future_trade_normalizer=anchor_decimal.AnchorDecimal.from_json(obj["future_trade_normalizer"]),
+            max_volatility_retreat=anchor_decimal.AnchorDecimal.from_json(obj["max_volatility_retreat"]),
+            max_interest_retreat=anchor_decimal.AnchorDecimal.from_json(obj["max_interest_retreat"]),
             max_delta=obj["max_delta"],
             min_delta=obj["min_delta"],
             min_volatility=obj["min_volatility"],

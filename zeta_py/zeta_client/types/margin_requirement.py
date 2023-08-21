@@ -1,8 +1,10 @@
 from __future__ import annotations
+
 import typing
 from dataclasses import dataclass
-from anchorpy.borsh_extension import EnumForCodegen
+
 import borsh_construct as borsh
+from anchorpy.borsh_extension import EnumForCodegen
 
 
 class InitialJSON(typing.TypedDict):
@@ -93,9 +95,7 @@ class MarketMakerConcession:
         }
 
 
-MarginRequirementKind = typing.Union[
-    Initial, Maintenance, MaintenanceIncludingOrders, MarketMakerConcession
-]
+MarginRequirementKind = typing.Union[Initial, Maintenance, MaintenanceIncludingOrders, MarketMakerConcession]
 MarginRequirementJSON = typing.Union[
     InitialJSON,
     MaintenanceJSON,

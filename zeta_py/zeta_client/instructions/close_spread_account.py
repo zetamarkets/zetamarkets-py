@@ -1,7 +1,10 @@
 from __future__ import annotations
+
 import typing
+
+from solders.instruction import AccountMeta, Instruction
 from solders.pubkey import Pubkey
-from solders.instruction import Instruction, AccountMeta
+
 from ..program_id import PROGRAM_ID
 
 
@@ -17,9 +20,7 @@ def close_spread_account(
     remaining_accounts: typing.Optional[typing.List[AccountMeta]] = None,
 ) -> Instruction:
     keys: list[AccountMeta] = [
-        AccountMeta(
-            pubkey=accounts["spread_account"], is_signer=False, is_writable=True
-        ),
+        AccountMeta(pubkey=accounts["spread_account"], is_signer=False, is_writable=True),
         AccountMeta(pubkey=accounts["authority"], is_signer=True, is_writable=True),
         AccountMeta(pubkey=accounts["zeta_group"], is_signer=False, is_writable=False),
     ]

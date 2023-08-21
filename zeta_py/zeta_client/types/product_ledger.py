@@ -1,12 +1,12 @@
 from __future__ import annotations
-from . import (
-    position,
-    order_state,
-)
+
 import typing
 from dataclasses import dataclass
-from construct import Container
+
 import borsh_construct as borsh
+from construct import Container
+
+from . import order_state, position
 
 
 class ProductLedgerJSON(typing.TypedDict):

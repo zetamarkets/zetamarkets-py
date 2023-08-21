@@ -1,9 +1,12 @@
 from __future__ import annotations
+
 import typing
-from solders.pubkey import Pubkey
-from solders.instruction import Instruction, AccountMeta
-from construct import Construct
+
 import borsh_construct as borsh
+from construct import Construct
+from solders.instruction import AccountMeta, Instruction
+from solders.pubkey import Pubkey
+
 from .. import types
 from ..program_id import PROGRAM_ID
 
@@ -13,12 +16,7 @@ class SetReferralsRewardsArgs(typing.TypedDict):
 
 
 layout = borsh.CStruct(
-    "args"
-    / borsh.Vec(
-        typing.cast(
-            Construct, types.set_referrals_rewards_args.SetReferralsRewardsArgs.layout
-        )
-    )
+    "args" / borsh.Vec(typing.cast(Construct, types.set_referrals_rewards_args.SetReferralsRewardsArgs.layout))
 )
 
 
@@ -35,9 +33,7 @@ def set_referrals_rewards(
 ) -> Instruction:
     keys: list[AccountMeta] = [
         AccountMeta(pubkey=accounts["state"], is_signer=False, is_writable=False),
-        AccountMeta(
-            pubkey=accounts["referrals_admin"], is_signer=True, is_writable=False
-        ),
+        AccountMeta(pubkey=accounts["referrals_admin"], is_signer=True, is_writable=False),
     ]
     if remaining_accounts is not None:
         keys += remaining_accounts

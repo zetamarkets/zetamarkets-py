@@ -1,8 +1,10 @@
 from __future__ import annotations
+
 import typing
 from dataclasses import dataclass
-from construct import Container
+
 import borsh_construct as borsh
+from construct import Container
 
 
 class InitializeStateArgsJSON(typing.TypedDict):
@@ -152,27 +154,15 @@ class InitializeStateArgs:
             state_nonce=obj["state_nonce"],
             serum_nonce=obj["serum_nonce"],
             mint_auth_nonce=obj["mint_auth_nonce"],
-            strike_initialization_threshold_seconds=obj[
-                "strike_initialization_threshold_seconds"
-            ],
+            strike_initialization_threshold_seconds=obj["strike_initialization_threshold_seconds"],
             pricing_frequency_seconds=obj["pricing_frequency_seconds"],
             liquidator_liquidation_percentage=obj["liquidator_liquidation_percentage"],
-            insurance_vault_liquidation_percentage=obj[
-                "insurance_vault_liquidation_percentage"
-            ],
+            insurance_vault_liquidation_percentage=obj["insurance_vault_liquidation_percentage"],
             native_d1_trade_fee_percentage=obj["native_d1_trade_fee_percentage"],
-            native_d1_underlying_fee_percentage=obj[
-                "native_d1_underlying_fee_percentage"
-            ],
-            native_option_trade_fee_percentage=obj[
-                "native_option_trade_fee_percentage"
-            ],
-            native_option_underlying_fee_percentage=obj[
-                "native_option_underlying_fee_percentage"
-            ],
-            native_whitelist_underlying_fee_percentage=obj[
-                "native_whitelist_underlying_fee_percentage"
-            ],
+            native_d1_underlying_fee_percentage=obj["native_d1_underlying_fee_percentage"],
+            native_option_trade_fee_percentage=obj["native_option_trade_fee_percentage"],
+            native_option_underlying_fee_percentage=obj["native_option_underlying_fee_percentage"],
+            native_whitelist_underlying_fee_percentage=obj["native_whitelist_underlying_fee_percentage"],
             native_deposit_limit=obj["native_deposit_limit"],
             expiration_threshold_seconds=obj["expiration_threshold_seconds"],
             position_movement_fee_bps=obj["position_movement_fee_bps"],

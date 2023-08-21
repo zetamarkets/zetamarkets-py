@@ -1,8 +1,10 @@
 from __future__ import annotations
+
 import typing
 from dataclasses import dataclass
-from anchorpy.borsh_extension import EnumForCodegen
+
 import borsh_construct as borsh
+from anchorpy.borsh_extension import EnumForCodegen
 
 
 class UninitializedJSON(typing.TypedDict):
@@ -115,12 +117,8 @@ class ExpiredDirty:
         }
 
 
-ExpirySeriesStatusKind = typing.Union[
-    Uninitialized, Initialized, Live, Expired, ExpiredDirty
-]
-ExpirySeriesStatusJSON = typing.Union[
-    UninitializedJSON, InitializedJSON, LiveJSON, ExpiredJSON, ExpiredDirtyJSON
-]
+ExpirySeriesStatusKind = typing.Union[Uninitialized, Initialized, Live, Expired, ExpiredDirty]
+ExpirySeriesStatusJSON = typing.Union[UninitializedJSON, InitializedJSON, LiveJSON, ExpiredJSON, ExpiredDirtyJSON]
 
 
 def from_decoded(obj: dict) -> ExpirySeriesStatusKind:

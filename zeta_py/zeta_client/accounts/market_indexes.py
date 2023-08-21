@@ -1,12 +1,14 @@
 import typing
 from dataclasses import dataclass
-from solders.pubkey import Pubkey
-from solana.rpc.async_api import AsyncClient
-from solana.rpc.commitment import Commitment
+
 import borsh_construct as borsh
 from anchorpy.coder.accounts import ACCOUNT_DISCRIMINATOR_SIZE
 from anchorpy.error import AccountInvalidDiscriminator
 from anchorpy.utils.rpc import get_multiple_accounts
+from solana.rpc.async_api import AsyncClient
+from solana.rpc.commitment import Commitment
+from solders.pubkey import Pubkey
+
 from ..program_id import PROGRAM_ID
 
 
@@ -19,9 +21,7 @@ class MarketIndexesJSON(typing.TypedDict):
 @dataclass
 class MarketIndexes:
     discriminator: typing.ClassVar = b"o\xcdi\x92\xdb\x89R\x17"
-    layout: typing.ClassVar = borsh.CStruct(
-        "nonce" / borsh.U8, "initialized" / borsh.Bool, "indexes" / borsh.U8[138]
-    )
+    layout: typing.ClassVar = borsh.CStruct("nonce" / borsh.U8, "initialized" / borsh.Bool, "indexes" / borsh.U8[138])
     nonce: int
     initialized: bool
     indexes: list[int]
@@ -65,9 +65,7 @@ class MarketIndexes:
     @classmethod
     def decode(cls, data: bytes) -> "MarketIndexes":
         if data[:ACCOUNT_DISCRIMINATOR_SIZE] != cls.discriminator:
-            raise AccountInvalidDiscriminator(
-                "The discriminator for this account is invalid"
-            )
+            raise AccountInvalidDiscriminator("The discriminator for this account is invalid")
         dec = MarketIndexes.layout.parse(data[ACCOUNT_DISCRIMINATOR_SIZE:])
         return cls(
             nonce=dec.nonce,

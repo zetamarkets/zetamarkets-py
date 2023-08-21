@@ -1,18 +1,15 @@
-from abc import ABC, abstractmethod
 import asyncio
 from dataclasses import dataclass
-import typing
-from borsh_construct import CStruct
-from solders.pubkey import Pubkey
-from typing import Type, TypeVar, Generic, Union
-from zeta_py import utils
+from typing import Generic, Type, TypeVar
 
-from solana.rpc.websocket_api import connect
 from solana.rpc.async_api import AsyncClient
-from solana.utils.cluster import Cluster
 from solana.rpc.commitment import Commitment
-from zeta_py.zeta_client.accounts import AnchorpyAccount
+from solana.rpc.websocket_api import connect
+from solana.utils.cluster import Cluster
+from solders.pubkey import Pubkey
 
+from zeta_py import utils
+from zeta_py.zeta_client.accounts import AnchorpyAccount
 
 AnchorpyAccountType = TypeVar("AnchorpyAccountType", bound=AnchorpyAccount)
 
@@ -32,7 +29,7 @@ class Account(Generic[AnchorpyAccountType]):
     ) -> "Account[AnchorpyAccountType]":
         instance = cls(address, decode_class)
         instance.account, instance.last_update_slot = await instance.fetch(connection, address)
-        print(f"Loaded account: {decode_class.__name__}")
+        print(f"Loaded account: {instance.account.__class__.__name__}")
         return instance
 
     @property
@@ -69,7 +66,7 @@ class Account(Generic[AnchorpyAccountType]):
                     encoding="base64",
                 )
                 first_resp = await asyncio.wait_for(ws.recv(), timeout=self._TIMEOUT)
-                subscription_id = first_resp[0].result
+                first_resp[0].result
                 while True:
                     msg = await asyncio.wait_for(ws.recv(), timeout=self._TIMEOUT)
                     account = self.decode(msg[0].result.value.data)
@@ -94,54 +91,3 @@ class Account(Generic[AnchorpyAccountType]):
         self._subscription_task.cancel()
         self._subscription_task = None
         print(f"Unsubscribed to {self.account.__class__.__name__}")
-
-
-# @dataclass
-# class ProgramAccount(BaseAccount[AnchorpyAccountType]):
-#     @classmethod
-#     async def create(
-#         cls, address: Pubkey, connection: AsyncClient, decode_class: AnchorpyAccountType
-#     ) -> "ProgramAccount[AnchorpyAccountType]":
-#         account = await decode_class.fetch(connection, address, connection.commitment)
-#         # self._last_update_slot = msg[0].result.value.context.slot
-#         print(f"Loaded account: {decode_class.__name__}")
-#         return cls(address, account, decode_class)
-
-#     # async def fetch(self, conn: AsyncClient, address: Pubkey) -> AnchorpyAccountType:
-#     #     if not self._is_initialized:
-#     #         raise Exception("ProgramAccount not initialized")
-#     #     self.account = await self.account.fetch(conn, address, conn.commitment)
-
-#     def decode(self, data: bytes) -> AnchorpyAccountType:
-#         return self.account.decode(data)
-
-
-# @dataclass
-# class LayoutAccount(BaseAccount[AnchorpyAccountType]):
-#     @classmethod
-#     # async def create(
-#     #     cls, address: Pubkey, connection: AsyncClient, decode_class: AnchorpyAccountType
-#     # ) -> "ProgramAccount[AnchorpyAccountType]":
-#     #     resp = await connection.get_account_info(address, commitment=connection.commitment)
-#     #     info = resp.value
-#     #     if info is None:
-#     #         return None
-#     #     bytes_data = info.data
-#     #     account = layout.parse(bytes_data)
-#     #     instance = cls(address, account, decode_class)
-#     #     instance.layout = layout
-#     #     # self._last_update_slot = msg[0].result.value.context.slot
-#     #     print(f"Loaded account: {AnchorpyAccountType.__name__}")
-#     #     return instance
-
-#     # async def fetch(self, conn: AsyncClient, address: Pubkey) -> AnchorpyAccountType:
-#     #     resp = await conn.get_account_info(address, commitment=conn.commitment)
-#     #     info = resp.value
-#     #     if info is None:
-#     #         return None
-#     #     bytes_data = info.data
-#     #     account = self.decode(bytes_data)
-#     #     return account
-
-#     def decode(self, data: bytes) -> AnchorpyAccountType:
-#         return self.layout.parse(data)

@@ -1,13 +1,15 @@
 import typing
 from dataclasses import dataclass
-from solders.pubkey import Pubkey
-from solana.rpc.async_api import AsyncClient
-from solana.rpc.commitment import Commitment
+
 import borsh_construct as borsh
+from anchorpy.borsh_extension import BorshPubkey
 from anchorpy.coder.accounts import ACCOUNT_DISCRIMINATOR_SIZE
 from anchorpy.error import AccountInvalidDiscriminator
 from anchorpy.utils.rpc import get_multiple_accounts
-from anchorpy.borsh_extension import BorshPubkey
+from solana.rpc.async_api import AsyncClient
+from solana.rpc.commitment import Commitment
+from solders.pubkey import Pubkey
+
 from ..program_id import PROGRAM_ID
 
 
@@ -19,9 +21,7 @@ class WhitelistDepositAccountJSON(typing.TypedDict):
 @dataclass
 class WhitelistDepositAccount:
     discriminator: typing.ClassVar = b"n\x02\xd9QD\xaex\xd9"
-    layout: typing.ClassVar = borsh.CStruct(
-        "nonce" / borsh.U8, "user_key" / BorshPubkey
-    )
+    layout: typing.ClassVar = borsh.CStruct("nonce" / borsh.U8, "user_key" / BorshPubkey)
     nonce: int
     user_key: Pubkey
 
@@ -64,9 +64,7 @@ class WhitelistDepositAccount:
     @classmethod
     def decode(cls, data: bytes) -> "WhitelistDepositAccount":
         if data[:ACCOUNT_DISCRIMINATOR_SIZE] != cls.discriminator:
-            raise AccountInvalidDiscriminator(
-                "The discriminator for this account is invalid"
-            )
+            raise AccountInvalidDiscriminator("The discriminator for this account is invalid")
         dec = WhitelistDepositAccount.layout.parse(data[ACCOUNT_DISCRIMINATOR_SIZE:])
         return cls(
             nonce=dec.nonce,

@@ -15,12 +15,28 @@ anchorpy = { path = "../anchorpy" }
 ruff = "^0.0.284"
 perspective-python = "^2.5.0"
 ipykernel = "^6.25.1"
+isort = "^5.12.0"
+black = {extras = ["jupyter"], version = "^23.7.0"}
+
+[tool.poe]
+poetry_command = ""
+
+[tool.poe.tasks]
+black = "black zeta_py"
+isort = "isort zeta_py"
+format = ["black", "isort"]
+lint = "ruff check zeta_py"
 
 [tool.ruff]
 line-length=120
+exclude = ["zeta_py/zeta_client"]
 
 [tool.black]
 line-length=120
+
+[tool.isort]
+profile = "black"
+skip = ["zeta_py/zeta_client"]
 
 [tool.poetry.scripts]
 main = "zeta_py.main:main"

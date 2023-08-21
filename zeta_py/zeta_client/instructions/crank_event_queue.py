@@ -1,8 +1,11 @@
 from __future__ import annotations
+
 import typing
-from solders.pubkey import Pubkey
-from solders.instruction import Instruction, AccountMeta
+
 import borsh_construct as borsh
+from solders.instruction import AccountMeta, Instruction
+from solders.pubkey import Pubkey
+
 from .. import types
 from ..program_id import PROGRAM_ID
 
@@ -36,12 +39,8 @@ def crank_event_queue(
         AccountMeta(pubkey=accounts["market"], is_signer=False, is_writable=True),
         AccountMeta(pubkey=accounts["event_queue"], is_signer=False, is_writable=True),
         AccountMeta(pubkey=accounts["dex_program"], is_signer=False, is_writable=False),
-        AccountMeta(
-            pubkey=accounts["serum_authority"], is_signer=False, is_writable=False
-        ),
-        AccountMeta(
-            pubkey=accounts["perp_sync_queue"], is_signer=False, is_writable=True
-        ),
+        AccountMeta(pubkey=accounts["serum_authority"], is_signer=False, is_writable=False),
+        AccountMeta(pubkey=accounts["perp_sync_queue"], is_signer=False, is_writable=True),
     ]
     if remaining_accounts is not None:
         keys += remaining_accounts
