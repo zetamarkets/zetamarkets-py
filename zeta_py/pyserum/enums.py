@@ -6,9 +6,9 @@ from enum import IntEnum
 class Side(IntEnum):
     """Side of the orderbook to trade."""
 
-    BUY = 0
+    BID = 0
     """"""
-    SELL = 1
+    ASK = 1
     """"""
 
 

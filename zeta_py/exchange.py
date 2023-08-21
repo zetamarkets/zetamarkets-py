@@ -12,9 +12,8 @@ from solana.rpc.types import TxOpts
 from solders.sysvar import CLOCK
 
 from zeta_py import constants, pda
-from zeta_py.clock import Clock
+from zeta_py.accounts import Account, Clock
 from zeta_py.market import Market
-from zeta_py.program_account import Account
 from zeta_py.types import Asset, Network
 from zeta_py.zeta_client.accounts.pricing import Pricing
 from zeta_py.zeta_client.accounts.state import State
@@ -63,10 +62,10 @@ class Exchange:
         program = Program(idl, constants.ZETA_PID[network], provider)
 
         # Accounts
-        state_address, _ = pda.get_state(program.program_id)
+        state_address, _ = pda.get_state_address(program.program_id)
         state = await Account[State].create(state_address, connection, State)
 
-        pricing_address, _ = pda.get_pricing(program.program_id)
+        pricing_address, _ = pda.get_pricing_address(program.program_id)
         pricing = await Account[Pricing].create(pricing_address, connection, Pricing)
 
         instance = cls(network, connection, wallet, program, state, pricing)

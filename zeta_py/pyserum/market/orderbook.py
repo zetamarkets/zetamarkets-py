@@ -101,7 +101,7 @@ class OrderBook:
                     size=self._market_state.base_size_lots_to_number(node.quantity),
                     size_lots=node.quantity,
                 ),
-                side=Side.BUY if self._is_bids else Side.SELL,
+                side=Side.BID if self._is_bids else Side.ASK,
                 open_order_slot=node.owner_slot,
                 tif_offset=node.tif_offset,
             )

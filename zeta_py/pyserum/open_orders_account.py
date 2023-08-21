@@ -75,58 +75,57 @@ class _OpenOrdersAccountCore:  # pylint: disable=too-many-instance-attributes,to
             client_ids=open_order_decoded.client_ids,
         )
 
-    @classmethod
-    def _process_get_program_accounts_resp(cls: Type[_T], resp: RPCResult) -> List[_T]:
-        accounts = []
-        for account in resp["result"]:
-            account_details = account["account"]
-            accounts.append(
-                ProgramAccount(
-                    public_key=Pubkey(account["pubkey"]),
-                    data=base64.decodebytes(account_details["data"][0].encode("ascii")),
-                    is_executablable=bool(account_details["executable"]),
-                    owner=Pubkey(account_details["owner"]),
-                    lamports=int(account_details["lamports"]),
-                )
-            )
+    # @classmethod
+    # def _process_get_program_accounts_resp(cls: Type[_T], resp: RPCResult) -> List[_T]:
+    #     accounts = []
+    #     for account in resp["result"]:
+    #         account_details = account["account"]
+    #         accounts.append(
+    #             ProgramAccount(
+    #                 public_key=Pubkey(account["pubkey"]),
+    #                 data=base64.decodebytes(account_details["data"][0].encode("ascii")),
+    #                 is_executablable=bool(account_details["executable"]),
+    #                 owner=Pubkey(account_details["owner"]),
+    #                 lamports=int(account_details["lamports"]),
+    #             )
+    #         )
 
-        return [cls.from_bytes(account.public_key, account.data) for account in accounts]
+    #     return [cls.from_bytes(account.public_key, account.data) for account in accounts]
 
-    @staticmethod
-    def _build_get_program_accounts_args(
-        market: Pubkey, program_id: Pubkey, owner: Pubkey, commitment: Commitment
-    ) -> Tuple[Pubkey, Commitment, str, None, int, List[MemcmpOpts]]:
-        filters = [
-            MemcmpOpts(
-                offset=5 + 8,  # 5 bytes of padding, 8 bytes of account flag
-                bytes=str(market),
-            ),
-            MemcmpOpts(
-                offset=5 + 8 + 32,  # 5 bytes of padding, 8 bytes of account flag, 32 bytes of market public key
-                bytes=str(owner),
-            ),
-        ]
-        data_slice = None
-        return (
-            program_id,
-            commitment,
-            "base64",
-            data_slice,
-            OPEN_ORDERS_LAYOUT.sizeof(),
-            filters,
-        )
+    # @staticmethod
+    # def _build_get_program_accounts_args(
+    #     market: Pubkey, program_id: Pubkey, owner: Pubkey, commitment: Commitment
+    # ) -> Tuple[Pubkey, Commitment, str, None, int, List[MemcmpOpts]]:
+    #     filters = [
+    #         MemcmpOpts(
+    #             offset=5 + 8,  # 5 bytes of padding, 8 bytes of account flag
+    #             bytes=str(market),
+    #         ),
+    #         MemcmpOpts(
+    #             offset=5 + 8 + 32,  # 5 bytes of padding, 8 bytes of account flag, 32 bytes of market public key
+    #             bytes=str(owner),
+    #         ),
+    #     ]
+    #     data_slice = None
+    #     return (
+    #         program_id,
+    #         commitment,
+    #         "base64",
+    #         data_slice,
+    #         filters,
+    #     )
 
 
 class OpenOrdersAccount(_OpenOrdersAccountCore):
-    @classmethod
-    def find_for_market_and_owner(  # pylint: disable=too-many-arguments
-        cls, conn: Client, market: Pubkey, owner: Pubkey, program_id: Pubkey, commitment: Commitment = Recent
-    ) -> List[OpenOrdersAccount]:
-        args = cls._build_get_program_accounts_args(
-            market=market, program_id=program_id, owner=owner, commitment=commitment
-        )
-        resp = conn.get_program_accounts(*args)
-        return cls._process_get_program_accounts_resp(resp)
+    # @classmethod
+    # def find_for_market_and_owner(  # pylint: disable=too-many-arguments
+    #     cls, conn: Client, market: Pubkey, owner: Pubkey, program_id: Pubkey, commitment: Commitment = Recent
+    # ) -> List[OpenOrdersAccount]:
+    #     args = cls._build_get_program_accounts_args(
+    #         market=market, program_id=program_id, owner=owner, commitment=commitment
+    #     )
+    #     resp = conn.get_program_accounts(*args)
+    #     return cls._process_get_program_accounts_resp(resp)
 
     @classmethod
     def load(cls, conn: Client, address: str) -> OpenOrdersAccount:

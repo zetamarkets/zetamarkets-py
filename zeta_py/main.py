@@ -15,7 +15,7 @@ from zeta_py.zeta_client import accounts, program_id
 
 
 async def test_anchorpy(connection: AsyncClient):
-    pricing_address, _ = pda.get_pricing(program_id.PROGRAM_ID)
+    pricing_address, _ = pda.get_pricing_address(program_id.PROGRAM_ID)
     print(pricing_address)
     pricing = await accounts.Pricing.fetch(connection, pricing_address)
     print([m for m in pricing.markets])
@@ -24,7 +24,7 @@ async def test_anchorpy(connection: AsyncClient):
 async def async_ws(network: Network):
     async with connect(cluster_endpoint(network, ws=True)) as websocket:
         await websocket.account_subscribe(
-            pda.get_pricing(program_id.PROGRAM_ID)[0],
+            pda.get_pricing_address(program_id.PROGRAM_ID)[0],
             commitment="confirmed",
             encoding="base64",
         )

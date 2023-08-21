@@ -1,9 +1,13 @@
+from dataclasses import dataclass
 from enum import Enum
 
 
-class Side(Enum):
-    BID = 0
-    ASK = 1
+# class Side(Enum):
+#     BID = 0
+#     ASK = 1
+
+#     def __str__(self) -> str:
+#         return self.name
 
 
 class Asset(Enum):
@@ -24,9 +28,21 @@ class Asset(Enum):
     def all():
         return [a for a in Asset if a != Asset.UNDEFINED]
 
+    def __str__(self) -> str:
+        return self.name
+
 
 class Network(Enum):
     LOCALNET = "localnet"
     DEVNET = "devnet"
     TESTNET = "testnet"
     MAINNET = "mainnet_beta"
+
+    def __str__(self) -> str:
+        return self.name
+
+
+@dataclass
+class Position:
+    size: float
+    cost_of_trades: float

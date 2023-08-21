@@ -11,12 +11,12 @@ from solana.rpc.websocket_api import connect
 from solders.pubkey import Pubkey
 
 from zeta_py import constants, pda
+from zeta_py.accounts import Account
 from zeta_py.constants import Asset
-from zeta_py.program_account import Account
+from zeta_py.pyserum.enums import Side
 from zeta_py.pyserum.market import AsyncMarket as SerumMarket
 from zeta_py.pyserum.market.orderbook import OrderBook
 from zeta_py.pyserum.market.types import OrderInfo
-from zeta_py.types import Side
 from zeta_py.zeta_client.accounts.perp_sync_queue import PerpSyncQueue
 
 if TYPE_CHECKING:
@@ -37,35 +37,39 @@ class Market:
     bids: OrderBook
     asks: OrderBook
     perp_sync_queue: Account[PerpSyncQueue]
-    serum_market: SerumMarket
+    _serum_market: SerumMarket
     _bids_subscription_task: bool = None
     _asks_subscription_task: bool = None
 
     @classmethod
     async def create(cls, asset: Asset, exchange: Exchange, subscribe: bool = False):
         # Initialize
-        asset_mint = pda.get_underlying_mint(asset, exchange.network)
-        zeta_group_address, _ = pda.get_zeta_group(exchange.program.program_id, asset_mint)
-        perp_sync_queue_address, _ = pda.get_perp_sync_queue(exchange.program.program_id, zeta_group_address)
+        asset_mint = pda.get_underlying_mint_address(asset, exchange.network)
+        zeta_group_address, _ = pda.get_zeta_group_address(exchange.program.program_id, asset_mint)
+        perp_sync_queue_address, _ = pda.get_perp_sync_queue_address(exchange.program.program_id, zeta_group_address)
         perp_sync_queue = await Account[PerpSyncQueue].create(
             perp_sync_queue_address, exchange.connection, PerpSyncQueue
         )
 
         # Load Serum Market
-        serum_market = await SerumMarket.load(
+        _serum_market = await SerumMarket.load(
             exchange.connection,
             exchange.pricing.account.markets[asset.to_index()],
             constants.DEX_PID[exchange.network],
         )
-        bids, asks = await serum_market.load_bids_and_asks()
+        bids, asks = await _serum_market.load_bids_and_asks()
 
-        instance = cls(asset, exchange, bids, asks, perp_sync_queue, serum_market)
+        instance = cls(asset, exchange, bids, asks, perp_sync_queue, _serum_market)
 
         # Subscribe
         if subscribe:
             instance.subscribe_orderbooks()
 
         return instance
+
+    @property
+    def address(self) -> Pubkey:
+        return self._serum_market.state.public_key()
 
     @property
     def _is_subscribed_bids(self) -> bool:
@@ -80,7 +84,7 @@ class Market:
         while True:
             if datetime.now() - _last_poll_ts > timedelta(seconds=interval):
                 _last_poll_ts = datetime.now()
-                self.bids, self.asks = await self.serum_market.load_bids_and_asks()
+                self.bids, self.asks = await self._serum_market.load_bids_and_asks()
                 self.print_orderbook()
             else:
                 await asyncio.sleep(interval)
@@ -101,7 +105,7 @@ class Market:
                 first_resp[0].result
                 while True:
                     msg = await ws.recv()
-                    orderbook = self.serum_market._parse_bids_or_asks(msg[0].result.value.data)
+                    orderbook = self._serum_market._parse_bids_or_asks(msg[0].result.value.data)
                     if side == Side.BID:
                         self.bids = orderbook
                     else:
@@ -116,7 +120,7 @@ class Market:
             print("Already subscribed to bids")
         else:
             self._bids_subscription_task = asyncio.create_task(
-                self._subscribe_orderbook(self.serum_market.state.bids(), side=Side.BID)
+                self._subscribe_orderbook(self._serum_market.state.bids(), side=Side.BID)
             )
             print(f"Subscribed to {self.asset.name}:bid")
         # Subscribe asks
@@ -124,7 +128,7 @@ class Market:
             print("Already subscribed to asks")
         else:
             self._asks_subscription_task = asyncio.create_task(
-                self._subscribe_orderbook(self.serum_market.state.asks(), side=Side.ASK)
+                self._subscribe_orderbook(self._serum_market.state.asks(), side=Side.ASK)
             )
             print(f"Subscribed to {self.asset.name}:ask")
 
@@ -172,9 +176,9 @@ class Market:
             order_expired = self._is_order_expired(
                 clock_ts,
                 node.tif_offset,
-                self.serum_market.state.epoch_start_ts(),
+                self._serum_market.state.epoch_start_ts(),
                 seq_num,
-                self.serum_market.state.start_epoch_seq_num(),
+                self._serum_market.state.start_epoch_seq_num(),
             )
             if filter_tif and order_expired:
                 continue

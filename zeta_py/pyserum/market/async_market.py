@@ -55,10 +55,10 @@ class AsyncMarket(MarketCore):
         market_state = await MarketState.async_load(conn, market_address, program_id)
         return cls(conn, market_state, force_use_request_queue)
 
-    async def find_open_orders_accounts_for_owner(self, owner_address: Pubkey) -> List[AsyncOpenOrdersAccount]:
-        return await AsyncOpenOrdersAccount.find_for_market_and_owner(
-            self._conn, self.state.public_key(), owner_address, self.state.program_id()
-        )
+    # async def find_open_orders_accounts_for_owner(self, owner_address: Pubkey) -> List[AsyncOpenOrdersAccount]:
+    #     return await AsyncOpenOrdersAccount.find_for_market_and_owner(
+    #         self._conn, self.state.public_key(), owner_address, self.state.program_id(), self._conn.commitment
+    #     )
 
     async def load_bids(self) -> OrderBook:
         """Load the bid order book"""
@@ -75,10 +75,11 @@ class AsyncMarket(MarketCore):
         [bids_bytes, asks_bytes] = await load_multiple_bytes_data([self.state.bids(), self.state.asks()], self._conn)
         return self._parse_bids_or_asks(bids_bytes), self._parse_bids_or_asks(asks_bytes)
 
-    async def load_orders_for_owner(self, owner_address: Pubkey) -> List[t.Order]:
+    async def load_orders_for_owner(self, owner_address: Pubkey, open_orders_account_address: Pubkey) -> List[t.Order]:
         """Load orders for owner."""
-        bids, asks = self.load_bids_and_asks()
-        open_orders_accounts = await self.find_open_orders_accounts_for_owner(owner_address)
+        bids, asks = await self.load_bids_and_asks()
+        # open_orders_accounts = await self.find_open_orders_accounts_for_owner(owner_address)
+        open_orders_accounts = [await AsyncOpenOrdersAccount.load(self._conn, open_orders_account_address)]
         return self._parse_orders_for_owner(bids, asks, open_orders_accounts)
 
     async def load_event_queue(self) -> List[t.Event]:

@@ -92,14 +92,14 @@ class MarketCore:
 
     def parse_fill_event(self, event: t.Event) -> t.FilledOrder:
         if event.event_flags.bid:
-            side = Side.BUY
+            side = Side.BID
             price_before_fees = (
                 event.native_quantity_released + event.native_fee_or_rebate
                 if event.event_flags.maker
                 else event.native_quantity_released - event.native_fee_or_rebate
             )
         else:
-            side = Side.SELL
+            side = Side.ASK
             price_before_fees = (
                 event.native_quantity_released - event.native_fee_or_rebate
                 if event.event_flags.maker
@@ -154,8 +154,8 @@ class MarketCore:
             raise ValueError("Invalid payer account. Cannot use unwrapped SOL.")
 
         # TODO: add integration test for SOL wrapping.
-        should_wrap_sol = (side == Side.BUY and self.state.quote_mint() == WRAPPED_SOL_MINT) or (
-            side == Side.SELL and self.state.base_mint() == WRAPPED_SOL_MINT
+        should_wrap_sol = (side == Side.BID and self.state.quote_mint() == WRAPPED_SOL_MINT) or (
+            side == Side.ASK and self.state.base_mint() == WRAPPED_SOL_MINT
         )
 
         if should_wrap_sol:
@@ -227,7 +227,7 @@ class MarketCore:
         open_orders_accounts: Union[List[OpenOrdersAccount], List[AsyncOpenOrdersAccount]],
     ) -> int:
         lamports = 0
-        if side == Side.BUY:
+        if side == Side.BID:
             lamports = round(price * size * 1.01 * LAMPORTS_PER_SOL)
             if open_orders_accounts:
                 lamports -= open_orders_accounts[0].quote_token_free
