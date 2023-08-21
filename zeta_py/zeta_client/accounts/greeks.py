@@ -10,6 +10,7 @@ from anchorpy.utils.rpc import get_multiple_accounts
 from anchorpy.borsh_extension import BorshPubkey
 from ..program_id import PROGRAM_ID
 from .. import types
+from . import AnchorpyAccount
 
 
 class GreeksJSON(typing.TypedDict):
@@ -126,9 +127,7 @@ class Greeks:
     @classmethod
     def decode(cls, data: bytes) -> "Greeks":
         if data[:ACCOUNT_DISCRIMINATOR_SIZE] != cls.discriminator:
-            raise AccountInvalidDiscriminator(
-                "The discriminator for this account is invalid"
-            )
+            raise AccountInvalidDiscriminator("The discriminator for this account is invalid")
         dec = Greeks.layout.parse(data[ACCOUNT_DISCRIMINATOR_SIZE:])
         return cls(
             nonce=dec.nonce,
@@ -159,12 +158,8 @@ class Greeks:
             node_keys=dec.node_keys,
             halt_force_pricing=dec.halt_force_pricing,
             perp_update_timestamp=dec.perp_update_timestamp,
-            perp_funding_delta=types.anchor_decimal.AnchorDecimal.from_decoded(
-                dec.perp_funding_delta
-            ),
-            perp_latest_funding_rate=types.anchor_decimal.AnchorDecimal.from_decoded(
-                dec.perp_latest_funding_rate
-            ),
+            perp_funding_delta=types.anchor_decimal.AnchorDecimal.from_decoded(dec.perp_funding_delta),
+            perp_latest_funding_rate=types.anchor_decimal.AnchorDecimal.from_decoded(dec.perp_latest_funding_rate),
             perp_latest_midpoint=dec.perp_latest_midpoint,
             padding=dec.padding,
         )
@@ -175,12 +170,8 @@ class Greeks:
             "mark_prices": self.mark_prices,
             "mark_prices_padding": self.mark_prices_padding,
             "perp_mark_price": self.perp_mark_price,
-            "product_greeks": list(
-                map(lambda item: item.to_json(), self.product_greeks)
-            ),
-            "product_greeks_padding": list(
-                map(lambda item: item.to_json(), self.product_greeks_padding)
-            ),
+            "product_greeks": list(map(lambda item: item.to_json(), self.product_greeks)),
+            "product_greeks_padding": list(map(lambda item: item.to_json(), self.product_greeks_padding)),
             "update_timestamp": self.update_timestamp,
             "update_timestamp_padding": self.update_timestamp_padding,
             "retreat_expiration_timestamp": self.retreat_expiration_timestamp,
@@ -221,25 +212,17 @@ class Greeks:
             update_timestamp=obj["update_timestamp"],
             update_timestamp_padding=obj["update_timestamp_padding"],
             retreat_expiration_timestamp=obj["retreat_expiration_timestamp"],
-            retreat_expiration_timestamp_padding=obj[
-                "retreat_expiration_timestamp_padding"
-            ],
+            retreat_expiration_timestamp_padding=obj["retreat_expiration_timestamp_padding"],
             interest_rate=obj["interest_rate"],
             interest_rate_padding=obj["interest_rate_padding"],
             nodes=obj["nodes"],
             volatility=obj["volatility"],
             volatility_padding=obj["volatility_padding"],
-            node_keys=list(
-                map(lambda item: Pubkey.from_string(item), obj["node_keys"])
-            ),
+            node_keys=list(map(lambda item: Pubkey.from_string(item), obj["node_keys"])),
             halt_force_pricing=obj["halt_force_pricing"],
             perp_update_timestamp=obj["perp_update_timestamp"],
-            perp_funding_delta=types.anchor_decimal.AnchorDecimal.from_json(
-                obj["perp_funding_delta"]
-            ),
-            perp_latest_funding_rate=types.anchor_decimal.AnchorDecimal.from_json(
-                obj["perp_latest_funding_rate"]
-            ),
+            perp_funding_delta=types.anchor_decimal.AnchorDecimal.from_json(obj["perp_funding_delta"]),
+            perp_latest_funding_rate=types.anchor_decimal.AnchorDecimal.from_json(obj["perp_latest_funding_rate"]),
             perp_latest_midpoint=obj["perp_latest_midpoint"],
             padding=obj["padding"],
         )

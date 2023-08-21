@@ -1,3 +1,46 @@
+from abc import ABC, abstractmethod
+import typing
+from dataclasses import dataclass
+from solders.pubkey import Pubkey
+from solana.rpc.async_api import AsyncClient
+from solana.rpc.commitment import Commitment
+from zeta_py.zeta_client.program_id import PROGRAM_ID
+
+
+@dataclass
+class AnchorpyAccount(ABC):
+    discriminator: typing.ClassVar = None
+    layout: typing.ClassVar
+
+    # @classmethod
+    # @abstractmethod
+    # async def fetch(
+    #     cls,
+    #     connection: AsyncClient,
+    #     address: Pubkey,
+    #     commitment: typing.Optional[Commitment] = None,
+    #     program_id: Pubkey = PROGRAM_ID,
+    # ) -> typing.Optional["AnchorpyAccount"]:
+    #     pass
+
+    # @classmethod
+    # @abstractmethod
+    # async def fetch_multiple(
+    #     cls,
+    #     conn: AsyncClient,
+    #     addresses: list[Pubkey],
+    #     commitment: typing.Optional[Commitment] = None,
+    #     program_id: Pubkey = PROGRAM_ID,
+    # ) -> typing.List[typing.Optional["AnchorpyAccount"]]:
+    #     pass
+
+    @classmethod
+    @abstractmethod
+    def decode(cls, data: bytes) -> "AnchorpyAccount":
+        pass
+
+
+from httpx import AsyncClient
 from .pricing import Pricing, PricingJSON
 from .greeks import Greeks, GreeksJSON
 from .market_indexes import MarketIndexes, MarketIndexesJSON

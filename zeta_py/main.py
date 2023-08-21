@@ -1,10 +1,12 @@
 import asyncio
+from datetime import datetime
 import solana
 from solders.pubkey import Pubkey
 from solana.rpc.api import Client
 from solana.rpc.async_api import AsyncClient
-from solana.utils.cluster import Cluster, ENDPOINT
+from solana.utils.cluster import Cluster
 from solana.rpc.websocket_api import connect
+from solana.rpc import commitment
 
 
 from zeta_py.exchange import Exchange
@@ -18,9 +20,9 @@ from solders.sysvar import CLOCK
 
 async def test_anchorpy(connection: AsyncClient):
     pricing_address, _ = pda.get_pricing(program_id.PROGRAM_ID)
-    print(accounts.Pricing)
+    print(pricing_address)
     pricing = await accounts.Pricing.fetch(connection, pricing_address)
-    print(pricing)
+    print([m for m in pricing.markets])
 
     # clock = await connection.get_account_info_json_parsed(CLOCK)
     # print(clock.value.data.parsed["info"]["slot"])
@@ -46,32 +48,29 @@ async def async_ws(network: Cluster):
 async def setup_exchange(network: Cluster):
     opts = {
         "skip_preflight": False,
-        "preflight_commitment": "confirmed",
+        "preflight_commitment": commitment.Confirmed,
     }
+    endpoint = cluster_endpoint(network)
     config = LoadExchangeConfig(
         **{
             "network": network,
-            "connection": AsyncClient(cluster_endpoint(network)),
+            "connection": AsyncClient(endpoint, commitment=opts.get("preflight_commitment")),
+            "assets": [Asset.SOL],
             "opts": opts,
-            "throttle_ms": 0,
             "load_from_store": False,
         }
     )
     # zeta = await Exchange.create(config)
-    zeta = Exchange(config)
-    print(zeta.is_loaded)
-    await zeta.load(config)
-    print(zeta.is_loaded)
-    for i in range(100):
-        print(i)
-        print("Mark Prices", zeta.accounts.pricing.account.mark_prices)
-        print(
-            "Perp Sync Queue Head",
-            zeta.markets[Asset.SOL].accounts.perp_sync_queue.account.head,
-        )
-        await asyncio.sleep(1)
-        if i == 50:
-            await zeta.accounts.pricing.unsubscribe()
+    zeta = await Exchange.create(config, subscribe=True)
+    # print(zeta.is_loaded)
+    # await zeta.load(config, subscribe=False)
+    # print(zeta.is_loaded)
+    for i in range(100000):
+        # if i == 15:
+        #     await zeta.accounts.pricing.unsubscribe()
+        print(zeta.clock.last_update_slot)
+        zeta.markets[Asset.SOL].print_orderbook()
+        await asyncio.sleep(0.4)
 
 
 def main():
@@ -81,6 +80,7 @@ def main():
 
     network = "mainnet_beta"
     connection = AsyncClient(cluster_endpoint(network))
+    # connection = AsyncClient("http://localhost:8899")
 
     # print(zeta.is_initialized)
     # print(zeta.is_setup)

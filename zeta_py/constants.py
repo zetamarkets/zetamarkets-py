@@ -1,14 +1,6 @@
 from enum import Enum
 from solders.pubkey import Pubkey
-
-
-class Asset(Enum):
-    SOL = "SOL"
-    BTC = "BTC"
-    ETH = "ETH"
-    APT = "APT"
-    ARB = "ARB"
-    UNDEFINED = "UNDEFINED"
+from zeta_py.types import Asset
 
 
 ZETA_PID = {

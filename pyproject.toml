@@ -5,19 +5,25 @@ description = "Python SDK for Zeta Markets"
 authors = ["Your Name <you@example.com>"]
 
 [tool.poetry.dependencies]
-python = "^3.9"
-anchorpy = "^0.18.0"
+python = "^3.11"
 solana = "^0.30.2"
-ruff = "^0.0.284"
 solders = "^0.18.1"
-pyserum = "^0.5.0-alpha.0"
+requests = "^2.31.0"
+anchorpy = { path = "../anchorpy" }
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.0.284"
+perspective-python = "^2.5.0"
+ipykernel = "^6.25.1"
+
+[tool.ruff]
+line-length=120
+
+[tool.black]
+line-length=120
 
 [tool.poetry.scripts]
 main = "zeta_py.main:main"
-
-[tool.ruff]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

@@ -1,87 +1,147 @@
+from abc import ABC, abstractmethod
 import asyncio
+from dataclasses import dataclass
+import typing
+from borsh_construct import CStruct
 from solders.pubkey import Pubkey
-from typing import TypeVar, Generic
+from typing import Type, TypeVar, Generic, Union
 from zeta_py import utils
 
-from zeta_py.zeta_client.accounts.pricing import Pricing
 from solana.rpc.websocket_api import connect
 from solana.rpc.async_api import AsyncClient
 from solana.utils.cluster import Cluster
+from solana.rpc.commitment import Commitment
+from zeta_py.zeta_client.accounts import AnchorpyAccount
 
-ProgramAccountType = TypeVar("ProgramAccountType")
+
+AnchorpyAccountType = TypeVar("AnchorpyAccountType", bound=AnchorpyAccount)
 
 
-class ProgramAccount(Generic[ProgramAccountType]):
+@dataclass
+class Account(Generic[AnchorpyAccountType]):
+    address: Pubkey
+    decode_class: Type[AnchorpyAccountType]
+    account: AnchorpyAccountType = None
+    last_update_slot: int = None
+    _subscription_task: asyncio.Task = None
+    _TIMEOUT = 60
+
+    @classmethod
+    async def create(
+        cls, address: Pubkey, connection: AsyncClient, decode_class: AnchorpyAccountType
+    ) -> "Account[AnchorpyAccountType]":
+        instance = cls(address, decode_class)
+        instance.account, instance.last_update_slot = await instance.fetch(connection, address)
+        print(f"Loaded account: {decode_class.__name__}")
+        return instance
+
     @property
-    def _is_loaded(self) -> bool:
-        return self._account is not None
-
-    @property
-    def address(self) -> Pubkey:
-        return self._address
-
-    @property
-    def account(self) -> ProgramAccountType:
-        if self._is_loaded:
-            return self._account
-        else:
-            raise Exception("Account not loaded, please call .load() first")
-
-    @account.setter
-    def account(self, account: ProgramAccountType):
-        self._account = account
+    def _is_initialized(self) -> bool:
+        return self.account is not None
 
     @property
     def _is_subscribed(self) -> bool:
         return self._subscription_task is not None
 
-    def __init__(
-        self,
-        address: Pubkey,
-        account_class: ProgramAccountType,
-    ):
-        self._address = address
-        self._account_class = account_class
-        self._account = None
-        self._subscription_task = None
+    async def fetch(self, conn: AsyncClient, address: Pubkey) -> None:
+        resp = await conn.get_account_info(address, commitment=conn.commitment)
+        info = resp.value
+        if info is None:
+            return None
+        fetch_slot = resp.context.slot
+        bytes_data = info.data
+        account = self.decode(bytes_data)
+        return account, fetch_slot
 
-    async def load(self, connection: AsyncClient):
-        if self._is_loaded:
-            print(self._is_loaded)
-            raise Exception("Exchange already loaded")
-        self._account: ProgramAccountType = await self._account_class.fetch(
-            connection, self.address
-        )
-        print(f"Loaded account: {self._account_class.__name__}")
+    def decode(self, data: bytes) -> AnchorpyAccountType:
+        return self.decode_class.decode(data)
 
-    async def _subscribe(self, network: Cluster) -> None:
+    async def update(self, conn: AsyncClient) -> None:
+        self.account = await self.fetch(conn, self.address)
+
+    async def _subscribe(self, network: Cluster, commitment: Commitment) -> None:
         ws_endpoint = utils.cluster_endpoint(network, ws=True)
         try:
             async with connect(ws_endpoint) as ws:
                 await ws.account_subscribe(
                     self.address,
-                    commitment="confirmed",
+                    commitment=commitment,
                     encoding="base64",
                 )
-                first_resp = await ws.recv()
+                first_resp = await asyncio.wait_for(ws.recv(), timeout=self._TIMEOUT)
                 subscription_id = first_resp[0].result
                 while True:
-                    msg = await ws.recv()
-                    account = self._account_class.decode(msg[0].result.value.data)
-                    self._account = account
+                    msg = await asyncio.wait_for(ws.recv(), timeout=self._TIMEOUT)
+                    account = self.decode(msg[0].result.value.data)
+                    self.account = account
+                    self.last_update_slot = msg[0].result.context.slot
         finally:
             self._subscription_task = None
 
-    def subscribe(self, network: Cluster) -> None:
+    def subscribe(self, network: Cluster, commitment: Commitment) -> None:
         if self._is_subscribed:
-            raise Exception("Already subscribed")
+            print("Already subscribed")
+            return
         # Run the subscription in the background
-        self._subscription_task = asyncio.create_task(self._subscribe(network))
-        print(f"Subscribed to {self._account_class.__name__}")
+        # TODO: worth threading this??
+        self._subscription_task = asyncio.create_task(self._subscribe(network, commitment))
+        print(f"Subscribed to {self.account.__class__.__name__}")
 
-    async def unsubscribe(self) -> None:
+    def unsubscribe(self) -> None:
         if not self._is_subscribed:
-            raise Exception("Not subscribed")
+            print("Not subscribed")
+            return
         self._subscription_task.cancel()
         self._subscription_task = None
-        print(f"Unsubscribed to {self._account_class.__name__}")
+        print(f"Unsubscribed to {self.account.__class__.__name__}")
+
+
+# @dataclass
+# class ProgramAccount(BaseAccount[AnchorpyAccountType]):
+#     @classmethod
+#     async def create(
+#         cls, address: Pubkey, connection: AsyncClient, decode_class: AnchorpyAccountType
+#     ) -> "ProgramAccount[AnchorpyAccountType]":
+#         account = await decode_class.fetch(connection, address, connection.commitment)
+#         # self._last_update_slot = msg[0].result.value.context.slot
+#         print(f"Loaded account: {decode_class.__name__}")
+#         return cls(address, account, decode_class)
+
+#     # async def fetch(self, conn: AsyncClient, address: Pubkey) -> AnchorpyAccountType:
+#     #     if not self._is_initialized:
+#     #         raise Exception("ProgramAccount not initialized")
+#     #     self.account = await self.account.fetch(conn, address, conn.commitment)
+
+#     def decode(self, data: bytes) -> AnchorpyAccountType:
+#         return self.account.decode(data)
+
+
+# @dataclass
+# class LayoutAccount(BaseAccount[AnchorpyAccountType]):
+#     @classmethod
+#     # async def create(
+#     #     cls, address: Pubkey, connection: AsyncClient, decode_class: AnchorpyAccountType
+#     # ) -> "ProgramAccount[AnchorpyAccountType]":
+#     #     resp = await connection.get_account_info(address, commitment=connection.commitment)
+#     #     info = resp.value
+#     #     if info is None:
+#     #         return None
+#     #     bytes_data = info.data
+#     #     account = layout.parse(bytes_data)
+#     #     instance = cls(address, account, decode_class)
+#     #     instance.layout = layout
+#     #     # self._last_update_slot = msg[0].result.value.context.slot
+#     #     print(f"Loaded account: {AnchorpyAccountType.__name__}")
+#     #     return instance
+
+#     # async def fetch(self, conn: AsyncClient, address: Pubkey) -> AnchorpyAccountType:
+#     #     resp = await conn.get_account_info(address, commitment=conn.commitment)
+#     #     info = resp.value
+#     #     if info is None:
+#     #         return None
+#     #     bytes_data = info.data
+#     #     account = self.decode(bytes_data)
+#     #     return account
+
+#     def decode(self, data: bytes) -> AnchorpyAccountType:
+#         return self.layout.parse(data)

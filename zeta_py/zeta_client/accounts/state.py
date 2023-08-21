@@ -10,6 +10,7 @@ from anchorpy.utils.rpc import get_multiple_accounts
 from anchorpy.borsh_extension import BorshPubkey
 from ..program_id import PROGRAM_ID
 from .. import types
+from . import AnchorpyAccount
 
 
 class StateJSON(typing.TypedDict):
@@ -50,7 +51,7 @@ class StateJSON(typing.TypedDict):
 
 
 @dataclass
-class State:
+class State(AnchorpyAccount):
     discriminator: typing.ClassVar = b"\xd8\x92k^hK\xb6\xb1"
     layout: typing.ClassVar = borsh.CStruct(
         "admin" / BorshPubkey,
@@ -162,9 +163,7 @@ class State:
     @classmethod
     def decode(cls, data: bytes) -> "State":
         if data[:ACCOUNT_DISCRIMINATOR_SIZE] != cls.discriminator:
-            raise AccountInvalidDiscriminator(
-                "The discriminator for this account is invalid"
-            )
+            raise AccountInvalidDiscriminator("The discriminator for this account is invalid")
         dec = State.layout.parse(data[ACCOUNT_DISCRIMINATOR_SIZE:])
         return cls(
             admin=dec.admin,
@@ -247,9 +246,7 @@ class State:
             "withdraw_limit_epoch_seconds": self.withdraw_limit_epoch_seconds,
             "native_open_interest_limit": self.native_open_interest_limit,
             "halt_states": list(map(lambda item: item.to_json(), self.halt_states)),
-            "halt_states_padding": list(
-                map(lambda item: item.to_json(), self.halt_states_padding)
-            ),
+            "halt_states_padding": list(map(lambda item: item.to_json(), self.halt_states_padding)),
             "padding": self.padding,
         }
 
@@ -263,41 +260,27 @@ class State:
             num_underlyings=obj["num_underlyings"],
             num_flex_underlyings=obj["num_flex_underlyings"],
             null=obj["null"],
-            strike_initialization_threshold_seconds=obj[
-                "strike_initialization_threshold_seconds"
-            ],
+            strike_initialization_threshold_seconds=obj["strike_initialization_threshold_seconds"],
             pricing_frequency_seconds=obj["pricing_frequency_seconds"],
             liquidator_liquidation_percentage=obj["liquidator_liquidation_percentage"],
-            insurance_vault_liquidation_percentage=obj[
-                "insurance_vault_liquidation_percentage"
-            ],
+            insurance_vault_liquidation_percentage=obj["insurance_vault_liquidation_percentage"],
             native_d1_trade_fee_percentage=obj["native_d1_trade_fee_percentage"],
-            native_d1_underlying_fee_percentage=obj[
-                "native_d1_underlying_fee_percentage"
-            ],
-            native_whitelist_underlying_fee_percentage=obj[
-                "native_whitelist_underlying_fee_percentage"
-            ],
+            native_d1_underlying_fee_percentage=obj["native_d1_underlying_fee_percentage"],
+            native_whitelist_underlying_fee_percentage=obj["native_whitelist_underlying_fee_percentage"],
             native_deposit_limit=obj["native_deposit_limit"],
             expiration_threshold_seconds=obj["expiration_threshold_seconds"],
             position_movement_fee_bps=obj["position_movement_fee_bps"],
             margin_concession_percentage=obj["margin_concession_percentage"],
             treasury_wallet_nonce=obj["treasury_wallet_nonce"],
-            native_option_trade_fee_percentage=obj[
-                "native_option_trade_fee_percentage"
-            ],
-            native_option_underlying_fee_percentage=obj[
-                "native_option_underlying_fee_percentage"
-            ],
+            native_option_trade_fee_percentage=obj["native_option_trade_fee_percentage"],
+            native_option_underlying_fee_percentage=obj["native_option_underlying_fee_percentage"],
             referrals_admin=Pubkey.from_string(obj["referrals_admin"]),
             referrals_rewards_wallet_nonce=obj["referrals_rewards_wallet_nonce"],
             max_perp_delta_age=obj["max_perp_delta_age"],
             secondary_admin=Pubkey.from_string(obj["secondary_admin"]),
             vault_nonce=obj["vault_nonce"],
             insurance_vault_nonce=obj["insurance_vault_nonce"],
-            deprecated_total_insurance_vault_deposits=obj[
-                "deprecated_total_insurance_vault_deposits"
-            ],
+            deprecated_total_insurance_vault_deposits=obj["deprecated_total_insurance_vault_deposits"],
             native_withdraw_limit=obj["native_withdraw_limit"],
             withdraw_limit_epoch_seconds=obj["withdraw_limit_epoch_seconds"],
             native_open_interest_limit=obj["native_open_interest_limit"],

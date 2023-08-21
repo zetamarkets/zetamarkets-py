@@ -10,6 +10,7 @@ from anchorpy.utils.rpc import get_multiple_accounts
 from anchorpy.borsh_extension import BorshPubkey
 from ..program_id import PROGRAM_ID
 from .. import types
+from . import AnchorpyAccount
 
 
 class PricingJSON(typing.TypedDict):
@@ -49,7 +50,7 @@ class PricingJSON(typing.TypedDict):
 
 
 @dataclass
-class Pricing:
+class Pricing(AnchorpyAccount):
     discriminator: typing.ClassVar = b"\xbe{\xd2\xb6\x8f\x0b\x98\x88"
     layout: typing.ClassVar = borsh.CStruct(
         "nonce" / borsh.U8,
@@ -74,8 +75,7 @@ class Pricing:
         "perp_parameters" / types.perp_parameters.PerpParameters.layout[5],
         "perp_parameters_padding" / types.perp_parameters.PerpParameters.layout[20],
         "margin_parameters" / types.margin_parameters.MarginParameters.layout[5],
-        "margin_parameters_padding"
-        / types.margin_parameters.MarginParameters.layout[20],
+        "margin_parameters_padding" / types.margin_parameters.MarginParameters.layout[20],
         "products" / types.product.Product.layout[5],
         "products_padding" / types.product.Product.layout[20],
         "zeta_group_keys" / BorshPubkey[5],
@@ -160,9 +160,7 @@ class Pricing:
     @classmethod
     def decode(cls, data: bytes) -> "Pricing":
         if data[:ACCOUNT_DISCRIMINATOR_SIZE] != cls.discriminator:
-            raise AccountInvalidDiscriminator(
-                "The discriminator for this account is invalid"
-            )
+            raise AccountInvalidDiscriminator("The discriminator for this account is invalid")
         dec = Pricing.layout.parse(data[ACCOUNT_DISCRIMINATOR_SIZE:])
         return cls(
             nonce=dec.nonce,
@@ -206,39 +204,29 @@ class Pricing:
             perp_sync_queues_padding=dec.perp_sync_queues_padding,
             perp_parameters=list(
                 map(
-                    lambda item: types.perp_parameters.PerpParameters.from_decoded(
-                        item
-                    ),
+                    lambda item: types.perp_parameters.PerpParameters.from_decoded(item),
                     dec.perp_parameters,
                 )
             ),
             perp_parameters_padding=list(
                 map(
-                    lambda item: types.perp_parameters.PerpParameters.from_decoded(
-                        item
-                    ),
+                    lambda item: types.perp_parameters.PerpParameters.from_decoded(item),
                     dec.perp_parameters_padding,
                 )
             ),
             margin_parameters=list(
                 map(
-                    lambda item: types.margin_parameters.MarginParameters.from_decoded(
-                        item
-                    ),
+                    lambda item: types.margin_parameters.MarginParameters.from_decoded(item),
                     dec.margin_parameters,
                 )
             ),
             margin_parameters_padding=list(
                 map(
-                    lambda item: types.margin_parameters.MarginParameters.from_decoded(
-                        item
-                    ),
+                    lambda item: types.margin_parameters.MarginParameters.from_decoded(item),
                     dec.margin_parameters_padding,
                 )
             ),
-            products=list(
-                map(lambda item: types.product.Product.from_decoded(item), dec.products)
-            ),
+            products=list(map(lambda item: types.product.Product.from_decoded(item), dec.products)),
             products_padding=list(
                 map(
                     lambda item: types.product.Product.from_decoded(item),
@@ -262,56 +250,28 @@ class Pricing:
             "mark_prices_padding": self.mark_prices_padding,
             "update_timestamps": self.update_timestamps,
             "update_timestamps_padding": self.update_timestamps_padding,
-            "funding_deltas": list(
-                map(lambda item: item.to_json(), self.funding_deltas)
-            ),
-            "funding_deltas_padding": list(
-                map(lambda item: item.to_json(), self.funding_deltas_padding)
-            ),
-            "latest_funding_rates": list(
-                map(lambda item: item.to_json(), self.latest_funding_rates)
-            ),
-            "latest_funding_rates_padding": list(
-                map(lambda item: item.to_json(), self.latest_funding_rates_padding)
-            ),
+            "funding_deltas": list(map(lambda item: item.to_json(), self.funding_deltas)),
+            "funding_deltas_padding": list(map(lambda item: item.to_json(), self.funding_deltas_padding)),
+            "latest_funding_rates": list(map(lambda item: item.to_json(), self.latest_funding_rates)),
+            "latest_funding_rates_padding": list(map(lambda item: item.to_json(), self.latest_funding_rates_padding)),
             "latest_midpoints": self.latest_midpoints,
             "latest_midpoints_padding": self.latest_midpoints_padding,
             "oracles": list(map(lambda item: str(item), self.oracles)),
             "oracles_padding": list(map(lambda item: str(item), self.oracles_padding)),
-            "oracle_backup_feeds": list(
-                map(lambda item: str(item), self.oracle_backup_feeds)
-            ),
-            "oracle_backup_feeds_padding": list(
-                map(lambda item: str(item), self.oracle_backup_feeds_padding)
-            ),
+            "oracle_backup_feeds": list(map(lambda item: str(item), self.oracle_backup_feeds)),
+            "oracle_backup_feeds_padding": list(map(lambda item: str(item), self.oracle_backup_feeds_padding)),
             "markets": list(map(lambda item: str(item), self.markets)),
             "markets_padding": list(map(lambda item: str(item), self.markets_padding)),
-            "perp_sync_queues": list(
-                map(lambda item: str(item), self.perp_sync_queues)
-            ),
-            "perp_sync_queues_padding": list(
-                map(lambda item: str(item), self.perp_sync_queues_padding)
-            ),
-            "perp_parameters": list(
-                map(lambda item: item.to_json(), self.perp_parameters)
-            ),
-            "perp_parameters_padding": list(
-                map(lambda item: item.to_json(), self.perp_parameters_padding)
-            ),
-            "margin_parameters": list(
-                map(lambda item: item.to_json(), self.margin_parameters)
-            ),
-            "margin_parameters_padding": list(
-                map(lambda item: item.to_json(), self.margin_parameters_padding)
-            ),
+            "perp_sync_queues": list(map(lambda item: str(item), self.perp_sync_queues)),
+            "perp_sync_queues_padding": list(map(lambda item: str(item), self.perp_sync_queues_padding)),
+            "perp_parameters": list(map(lambda item: item.to_json(), self.perp_parameters)),
+            "perp_parameters_padding": list(map(lambda item: item.to_json(), self.perp_parameters_padding)),
+            "margin_parameters": list(map(lambda item: item.to_json(), self.margin_parameters)),
+            "margin_parameters_padding": list(map(lambda item: item.to_json(), self.margin_parameters_padding)),
             "products": list(map(lambda item: item.to_json(), self.products)),
-            "products_padding": list(
-                map(lambda item: item.to_json(), self.products_padding)
-            ),
+            "products_padding": list(map(lambda item: item.to_json(), self.products_padding)),
             "zeta_group_keys": list(map(lambda item: str(item), self.zeta_group_keys)),
-            "zeta_group_keys_padding": list(
-                map(lambda item: str(item), self.zeta_group_keys_padding)
-            ),
+            "zeta_group_keys_padding": list(map(lambda item: str(item), self.zeta_group_keys_padding)),
             "total_insurance_vault_deposits": self.total_insurance_vault_deposits,
             "last_withdraw_timestamp": self.last_withdraw_timestamp,
             "net_outflow_sum": self.net_outflow_sum,
@@ -355,12 +315,8 @@ class Pricing:
             latest_midpoints=obj["latest_midpoints"],
             latest_midpoints_padding=obj["latest_midpoints_padding"],
             oracles=list(map(lambda item: Pubkey.from_string(item), obj["oracles"])),
-            oracles_padding=list(
-                map(lambda item: Pubkey.from_string(item), obj["oracles_padding"])
-            ),
-            oracle_backup_feeds=list(
-                map(lambda item: Pubkey.from_string(item), obj["oracle_backup_feeds"])
-            ),
+            oracles_padding=list(map(lambda item: Pubkey.from_string(item), obj["oracles_padding"])),
+            oracle_backup_feeds=list(map(lambda item: Pubkey.from_string(item), obj["oracle_backup_feeds"])),
             oracle_backup_feeds_padding=list(
                 map(
                     lambda item: Pubkey.from_string(item),
@@ -368,12 +324,8 @@ class Pricing:
                 )
             ),
             markets=list(map(lambda item: Pubkey.from_string(item), obj["markets"])),
-            markets_padding=list(
-                map(lambda item: Pubkey.from_string(item), obj["markets_padding"])
-            ),
-            perp_sync_queues=list(
-                map(lambda item: Pubkey.from_string(item), obj["perp_sync_queues"])
-            ),
+            markets_padding=list(map(lambda item: Pubkey.from_string(item), obj["markets_padding"])),
+            perp_sync_queues=list(map(lambda item: Pubkey.from_string(item), obj["perp_sync_queues"])),
             perp_sync_queues_padding=list(
                 map(
                     lambda item: Pubkey.from_string(item),
@@ -394,32 +346,24 @@ class Pricing:
             ),
             margin_parameters=list(
                 map(
-                    lambda item: types.margin_parameters.MarginParameters.from_json(
-                        item
-                    ),
+                    lambda item: types.margin_parameters.MarginParameters.from_json(item),
                     obj["margin_parameters"],
                 )
             ),
             margin_parameters_padding=list(
                 map(
-                    lambda item: types.margin_parameters.MarginParameters.from_json(
-                        item
-                    ),
+                    lambda item: types.margin_parameters.MarginParameters.from_json(item),
                     obj["margin_parameters_padding"],
                 )
             ),
-            products=list(
-                map(lambda item: types.product.Product.from_json(item), obj["products"])
-            ),
+            products=list(map(lambda item: types.product.Product.from_json(item), obj["products"])),
             products_padding=list(
                 map(
                     lambda item: types.product.Product.from_json(item),
                     obj["products_padding"],
                 )
             ),
-            zeta_group_keys=list(
-                map(lambda item: Pubkey.from_string(item), obj["zeta_group_keys"])
-            ),
+            zeta_group_keys=list(map(lambda item: Pubkey.from_string(item), obj["zeta_group_keys"])),
             zeta_group_keys_padding=list(
                 map(
                     lambda item: Pubkey.from_string(item),
