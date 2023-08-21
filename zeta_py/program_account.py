@@ -5,10 +5,10 @@ from typing import Generic, Type, TypeVar
 from solana.rpc.async_api import AsyncClient
 from solana.rpc.commitment import Commitment
 from solana.rpc.websocket_api import connect
-from solana.utils.cluster import Cluster
 from solders.pubkey import Pubkey
 
 from zeta_py import utils
+from zeta_py.types import Network
 from zeta_py.zeta_client.accounts import AnchorpyAccount
 
 AnchorpyAccountType = TypeVar("AnchorpyAccountType", bound=AnchorpyAccount)
@@ -56,7 +56,7 @@ class Account(Generic[AnchorpyAccountType]):
     async def update(self, conn: AsyncClient) -> None:
         self.account = await self.fetch(conn, self.address)
 
-    async def _subscribe(self, network: Cluster, commitment: Commitment) -> None:
+    async def _subscribe(self, network: Network, commitment: Commitment) -> None:
         ws_endpoint = utils.cluster_endpoint(network, ws=True)
         try:
             async with connect(ws_endpoint) as ws:
@@ -75,7 +75,7 @@ class Account(Generic[AnchorpyAccountType]):
         finally:
             self._subscription_task = None
 
-    def subscribe(self, network: Cluster, commitment: Commitment) -> None:
+    def subscribe(self, network: Network, commitment: Commitment) -> None:
         if self._is_subscribed:
             print("Already subscribed")
             return

@@ -1,9 +1,4 @@
 from enum import Enum
-from typing import List, NamedTuple
-
-from solana.rpc.async_api import AsyncClient
-from solana.rpc.types import TxOpts
-from solana.utils.cluster import Cluster
 
 
 class Side(Enum):
@@ -30,9 +25,8 @@ class Asset(Enum):
         return [a for a in Asset if a != Asset.UNDEFINED]
 
 
-class LoadExchangeConfig(NamedTuple):
-    network: Cluster
-    connection: AsyncClient
-    assets: List[Asset]
-    opts: TxOpts
-    load_from_store: bool
+class Network(Enum):
+    LOCALNET = "localnet"
+    DEVNET = "devnet"
+    TESTNET = "testnet"
+    MAINNET = "mainnet_beta"

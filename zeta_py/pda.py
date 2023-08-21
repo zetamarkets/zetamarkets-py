@@ -1,9 +1,9 @@
 from typing import Tuple
 
-from solana.utils.cluster import Cluster
 from solders.pubkey import Pubkey
 
 from zeta_py.constants import FLEXIBLE_MINTS, MINTS, Asset
+from zeta_py.types import Network
 
 
 def get_state(program_id: Pubkey) -> Tuple[Pubkey, int]:
@@ -22,7 +22,22 @@ def get_perp_sync_queue(program_id: Pubkey, zeta_group: Pubkey) -> Tuple[Pubkey,
     return Pubkey.find_program_address([b"perp-sync-queue", bytes(zeta_group)], program_id)
 
 
-def get_underlying_mint(asset: Asset, network: Cluster) -> Pubkey:
+def get_margin_account(
+    program_id: Pubkey,
+    authority: Pubkey,
+    subaccount_index: int = 0,
+) -> Pubkey:
+    return Pubkey.find_program_address(
+        [
+            b"cross-margin",
+            bytes(authority),
+            bytes([subaccount_index]),
+        ],
+        program_id,
+    )
+
+
+def get_underlying_mint(asset: Asset, network: Network) -> Pubkey:
     if asset in MINTS:
         return MINTS[asset]
     if asset in FLEXIBLE_MINTS[network]:
