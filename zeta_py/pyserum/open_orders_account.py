@@ -9,7 +9,8 @@ from solders.system_program import CreateAccountParams, create_account
 
 from ._layouts.open_orders import OPEN_ORDERS_LAYOUT
 from .instructions import DEFAULT_DEX_PROGRAM_ID
-from .utils import load_bytes_data
+
+# from .utils import load_bytes_data
 
 
 class ProgramAccount(NamedTuple):
@@ -71,77 +72,27 @@ class _OpenOrdersAccountCore:  # pylint: disable=too-many-instance-attributes,to
             client_ids=open_order_decoded.client_ids,
         )
 
-    # @classmethod
-    # def _process_get_program_accounts_resp(cls: Type[_T], resp: RPCResult) -> list[_T]:
-    #     accounts = []
-    #     for account in resp["result"]:
-    #         account_details = account["account"]
-    #         accounts.append(
-    #             ProgramAccount(
-    #                 public_key=Pubkey(account["pubkey"]),
-    #                 data=base64.decodebytes(account_details["data"][0].encode("ascii")),
-    #                 is_executablable=bool(account_details["executable"]),
-    #                 owner=Pubkey(account_details["owner"]),
-    #                 lamports=int(account_details["lamports"]),
-    #             )
-    #         )
 
-    #     return [cls.from_bytes(account.public_key, account.data) for account in accounts]
-
-    # @staticmethod
-    # def _build_get_program_accounts_args(
-    #     market: Pubkey, program_id: Pubkey, owner: Pubkey, commitment: Commitment
-    # ) -> Tuple[Pubkey, Commitment, str, None, int, list[MemcmpOpts]]:
-    #     filters = [
-    #         MemcmpOpts(
-    #             offset=5 + 8,  # 5 bytes of padding, 8 bytes of account flag
-    #             bytes=str(market),
-    #         ),
-    #         MemcmpOpts(
-    #             offset=5 + 8 + 32,  # 5 bytes of padding, 8 bytes of account flag, 32 bytes of market public key
-    #             bytes=str(owner),
-    #         ),
-    #     ]
-    #     data_slice = None
-    #     return (
-    #         program_id,
-    #         commitment,
-    #         "base64",
-    #         data_slice,
-    #         filters,
-    #     )
+# class OpenOrdersAccount(_OpenOrdersAccountCore):
+#     @classmethod
+#     def load(cls, conn: Client, address: str) -> OpenOrdersAccount:
+#         addr_pub_key = Pubkey(address)
+#         bytes_data = load_bytes_data(addr_pub_key, conn)
+#         return cls.from_bytes(addr_pub_key, bytes_data)
 
 
-class OpenOrdersAccount(_OpenOrdersAccountCore):
-    # @classmethod
-    # def find_for_market_and_owner(  # pylint: disable=too-many-arguments
-    #     cls, conn: Client, market: Pubkey, owner: Pubkey, program_id: Pubkey, commitment: Commitment = Recent
-    # ) -> list[OpenOrdersAccount]:
-    #     args = cls._build_get_program_accounts_args(
-    #         market=market, program_id=program_id, owner=owner, commitment=commitment
-    #     )
-    #     resp = conn.get_program_accounts(*args)
-    #     return cls._process_get_program_accounts_resp(resp)
-
-    @classmethod
-    def load(cls, conn: Client, address: str) -> OpenOrdersAccount:
-        addr_pub_key = Pubkey(address)
-        bytes_data = load_bytes_data(addr_pub_key, conn)
-        return cls.from_bytes(addr_pub_key, bytes_data)
-
-
-def make_create_account_instruction(
-    owner_address: Pubkey,
-    new_account_address: Pubkey,
-    lamports: int,
-    program_id: Pubkey = DEFAULT_DEX_PROGRAM_ID,
-) -> Instruction:
-    return create_account(
-        CreateAccountParams(
-            from_pubkey=owner_address,
-            new_account_pubkey=new_account_address,
-            lamports=lamports,
-            space=OPEN_ORDERS_LAYOUT.sizeof(),
-            program_id=program_id,
-        )
-    )
+# def make_create_account_instruction(
+#     owner_address: Pubkey,
+#     new_account_address: Pubkey,
+#     lamports: int,
+#     program_id: Pubkey = DEFAULT_DEX_PROGRAM_ID,
+# ) -> Instruction:
+#     return create_account(
+#         CreateAccountParams(
+#             from_pubkey=owner_address,
+#             new_account_pubkey=new_account_address,
+#             lamports=lamports,
+#             space=OPEN_ORDERS_LAYOUT.sizeof(),
+#             program_id=program_id,
+#         )
+#     )

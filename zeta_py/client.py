@@ -11,7 +11,7 @@ from zeta_py import constants, pda, utils
 from zeta_py.accounts import Account
 from zeta_py.exchange import Exchange
 from zeta_py.pyserum.market.types import Order
-from zeta_py.types import Asset, Network, Position
+from zeta_py.types import Asset, Network, OrderOptions, Position
 from zeta_py.zeta_client.accounts.cross_margin_account import CrossMarginAccount
 from zeta_py.zeta_client.accounts.cross_margin_account_manager import (
     CrossMarginAccountManager,
@@ -20,7 +20,10 @@ from zeta_py.zeta_client.instructions import (
     deposit_v2,
     initialize_cross_margin_account,
     initialize_cross_margin_account_manager,
+    initialize_open_orders_v3,
+    place_perp_order_v3,
 )
+from solana.blockhash import BlockhashCache
 
 
 @dataclass
@@ -44,6 +47,7 @@ class Client:
     _combined_socialized_loss_address: Pubkey
     _user_usdc_address: Pubkey
     _logger: logging.Logger
+    _blockhash_cache = BlockhashCache()
 
     @classmethod
     async def load(
@@ -96,9 +100,7 @@ class Client:
                 exchange.markets[asset].address,
                 margin_account.address,
             )
-            open_orders[asset] = await exchange.markets[asset]._serum_market.load_orders_for_owner(
-                margin_account.address, open_orders_address
-            )
+            open_orders[asset] = await exchange.markets[asset]._serum_market.load_orders_for_owner(open_orders_address)
 
         # additional addresses to cache
         _margin_account_manager_address = pda.get_cross_margin_account_manager_address(
@@ -136,6 +138,14 @@ class Client:
 
     async def _check_margin_account_manager_exists(self):
         if not hasattr(self, "_margin_account_manager"):
+            # If they don't have margin account manager this will be null
+            self._margin_account_manager = await Account[CrossMarginAccountManager].load(
+                self._margin_account_manager_address, self.connection, CrossMarginAccountManager
+            )  # None if no manager exists
+        return self._margin_account_manager._is_initialized
+
+    async def _check_open_orders_account_exists(self, asset: Asset):
+        if not hasattr(self.open_orders[asset], "_margin_account_manager"):
             # If they don't have margin account manager this will be null
             self._margin_account_manager = await Account[CrossMarginAccountManager].load(
                 self._margin_account_manager_address, self.connection, CrossMarginAccountManager
@@ -192,12 +202,16 @@ class Client:
             raise Exception("User has no USDC, cannot deposit to margin account")
 
         # TODO: prefetch blockhash (look into blockhash cache)
-        recent_blockhash = await self.connection.get_latest_blockhash()
-        tx.recent_blockhash = recent_blockhash.value.blockhash
-        signed_tx = self.provider.wallet.sign_transaction(tx)
-        signature = await self.provider.send(
-            signed_tx,
-        )
+        # recent_blockhash = await self.connection.get_latest_blockhash()
+        # self._blockhash_cache.set(recent_blockhash.value.blockhash, recent_blockhash.context.slot)
+        # tx.recent_blockhash = self._blockhash_cache.get()
+        # signed_tx = self.provider.wallet.sign_transaction(tx)
+        # TODO: investigate skip_confirmation=True effect in txOpts
+        # signature = await self.provider.send(
+        #     signed_tx,
+        # )
+        resp = await self.connection.send_transaction(tx, self.provider.wallet.payer)
+        signature = resp.value
         self._logger.info(f"Deposit of ${amount} USDC to margin account {self.margin_account.address} submitted")
         return signature
 
@@ -206,7 +220,30 @@ class Client:
         raise NotImplementedError
 
     # TODO: placeorder
-    async def place_order(self):
+    async def place_order(
+        self, asset: Asset, price: float, size: float, side: str, order_opts: OrderOptions = OrderOptions
+    ):
+        tx = Transaction()
+        tx.add(
+            initialize_open_orders_v3(
+                {
+                    "cross_margin_account_manager": self.exchange.markets[asset].address,
+                    "authority": self.provider.wallet.public_key,
+                    "payer": self.margin_account.address,
+                    "zeta_program": self.exchange.program_id,
+                }
+            )
+        )
+        tx.add(
+            place_perp_order_v3(
+                {
+                    "cross_margin_account_manager": self._margin_account_manager_address,
+                    "authority": self.provider.wallet.public_key,
+                    "payer": self.provider.wallet.public_key,
+                    "zeta_program": self.exchange.program_id,
+                }
+            )
+        )
         raise NotImplementedError
 
     # TODO: cancelorder

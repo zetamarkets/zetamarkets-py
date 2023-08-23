@@ -1,12 +1,7 @@
-from dataclasses import dataclass
-from enum import Enum
-
-# class Side(Enum):
-#     BID = 0
-#     ASK = 1
-
-#     def __str__(self) -> str:
-#         return self.name
+from dataclasses import dataclass, field
+from enum import Enum, IntEnum
+from typing import NamedTuple, Optional
+from solders.hash import Hash
 
 
 class Asset(Enum):
@@ -41,7 +36,30 @@ class Network(Enum):
         return self.name
 
 
+class OrderType(IntEnum):
+    LIMIT = 0
+    POSTONLY = 1
+    FILLORKILL = 2
+    IMMEDIATEORCANCEL = 3
+    POSTONLYSLIDE = 4
+
+
 @dataclass
 class Position:
     size: float
     cost_of_trades: float
+
+
+@dataclass
+class TIFOptions:
+    expiry_offset: Optional[int] = None
+    expiry_ts: Optional[int] = None
+
+
+@dataclass
+class OrderOptions:
+    tif_options: TIFOptions = field(default_factory=TIFOptions)
+    order_type: Optional[OrderType] = OrderType.LIMIT
+    client_order_id: Optional[int] = 0
+    tag: Optional[str] = "SDK"
+    blockhash: Optional[Hash] = None

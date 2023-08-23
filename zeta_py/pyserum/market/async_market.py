@@ -16,7 +16,7 @@ from ..async_open_orders_account import AsyncOpenOrdersAccount
 from ..async_utils import load_bytes_data, load_multiple_bytes_data
 from ..enums import OrderType, Side
 from . import types as t
-from ._internal.queue import decode_event_queue, decode_request_queue
+from ._internal.queue import decode_event_queue  # , decode_request_queue
 from .core import MarketCore
 from .orderbook import OrderBook
 from .state import MarketState
@@ -32,9 +32,8 @@ class AsyncMarket(MarketCore):
         self,
         conn: AsyncClient,
         market_state: MarketState,
-        force_use_request_queue: bool = False,
     ) -> None:
-        super().__init__(market_state=market_state, force_use_request_queue=force_use_request_queue)
+        super().__init__(market_state=market_state)
         self._conn = conn
 
     @classmethod
@@ -44,7 +43,6 @@ class AsyncMarket(MarketCore):
         conn: AsyncClient,
         market_address: Pubkey,
         program_id: Pubkey = instructions.DEFAULT_DEX_PROGRAM_ID,
-        force_use_request_queue: bool = False,
     ) -> AsyncMarket:
         """Factory method to create a Market.
 
@@ -53,7 +51,7 @@ class AsyncMarket(MarketCore):
         :param program_id: The program id of the given market, it will use the default value if not provided.
         """
         market_state = await MarketState.async_load(conn, market_address, program_id)
-        return cls(conn, market_state, force_use_request_queue)
+        return cls(conn, market_state)
 
     # async def find_open_orders_accounts_for_owner(self, owner_address: Pubkey) -> list[AsyncOpenOrdersAccount]:
     #     return await AsyncOpenOrdersAccount.find_for_market_and_owner(
@@ -75,10 +73,9 @@ class AsyncMarket(MarketCore):
         [bids_bytes, asks_bytes] = await load_multiple_bytes_data([self.state.bids(), self.state.asks()], self._conn)
         return self._parse_bids_or_asks(bids_bytes), self._parse_bids_or_asks(asks_bytes)
 
-    async def load_orders_for_owner(self, owner_address: Pubkey, open_orders_account_address: Pubkey) -> list[t.Order]:
+    async def load_orders_for_owner(self, open_orders_account_address: Pubkey) -> list[t.Order]:
         """Load orders for owner."""
         bids, asks = await self.load_bids_and_asks()
-        # open_orders_accounts = await self.find_open_orders_accounts_for_owner(owner_address)
         open_orders_accounts = [await AsyncOpenOrdersAccount.load(self._conn, open_orders_account_address)]
         return self._parse_orders_for_owner(bids, asks, open_orders_accounts)
 
@@ -90,9 +87,9 @@ class AsyncMarket(MarketCore):
         bytes_data = await load_bytes_data(self.state.event_queue(), self._conn)
         return decode_event_queue(bytes_data)
 
-    async def load_request_queue(self) -> list[t.Request]:
-        bytes_data = await load_bytes_data(self.state.request_queue(), self._conn)
-        return decode_request_queue(bytes_data)
+    # async def load_request_queue(self) -> list[t.Request]:
+    #     bytes_data = await load_bytes_data(self.state.request_queue(), self._conn)
+    #     return decode_request_queue(bytes_data)
 
     async def load_fills(self, limit=100) -> list[t.FilledOrder]:
         bytes_data = await load_bytes_data(self.state.event_queue(), self._conn)

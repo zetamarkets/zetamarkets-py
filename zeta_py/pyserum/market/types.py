@@ -23,6 +23,14 @@ class AccountFlags(NamedTuple):
     """"""
     asks: bool = False
     """"""
+    disabled: bool = False
+    """"""
+    closed: bool = False
+    """"""
+    permissioned: bool = False
+    """"""
+    crank_authority_required: bool = False
+    """"""
 
     @staticmethod
     def from_bytes(buffer: bytes) -> AccountFlags:
@@ -35,6 +43,10 @@ class AccountFlags(NamedTuple):
             event_queue=con.event_queue,
             bids=con.bids,
             asks=con.asks,
+            disabled=con.disabled,
+            closed=con.closed,
+            permissioned=con.permissioned,
+            crank_authority_required=con.crank_authority_required,
         )
 
 

@@ -36,17 +36,17 @@ REQUEST_FLAGS_LAYOUT = BitsSwapped(  # Swap to little endian
     )
 )
 
-REQUEST_LAYOUT = cStruct(
-    "request_flags" / REQUEST_FLAGS_LAYOUT,
-    "open_order_slot" / Int8ul,
-    "fee_tier" / Int8ul,
-    Padding(5),
-    "max_base_size_or_cancel_id" / Int64ul,
-    "native_quote_quantity_locked" / Int64ul,
-    "order_id" / Bytes(16),
-    "open_orders" / Bytes(32),
-    "client_order_id" / Int64ul,
-)
+# REQUEST_LAYOUT = cStruct(
+#     "request_flags" / REQUEST_FLAGS_LAYOUT,
+#     "open_order_slot" / Int8ul,
+#     "fee_tier" / Int8ul,
+#     Padding(5),
+#     "max_base_size_or_cancel_id" / Int64ul,
+#     "native_quote_quantity_locked" / Int64ul,
+#     "order_id" / Bytes(16),
+#     "open_orders" / Bytes(32),
+#     "client_order_id" / Int64ul,
+# )
 
 EVENT_FLAGS_LAYOUT = BitsSwapped(
     BitStruct(
