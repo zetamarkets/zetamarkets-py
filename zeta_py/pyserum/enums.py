@@ -1,9 +1,9 @@
 """Serum specific enums."""
 
-from enum import IntEnum
+from enum import Enum
 
 
-class Side(IntEnum):
+class Side(Enum):
     """Side of the orderbook to trade."""
 
     BID = 0
@@ -12,7 +12,7 @@ class Side(IntEnum):
     """"""
 
 
-class OrderType(IntEnum):
+class OrderType(Enum):
     """Type of order."""
 
     LIMIT = 0
@@ -23,7 +23,7 @@ class OrderType(IntEnum):
     """"""
 
 
-class SelfTradeBehavior(IntEnum):
+class SelfTradeBehavior(Enum):
     DECREMENT_TAKE = 0
     CANCEL_PROVIDE = 1
     ABORT_TRANSACTION = 2

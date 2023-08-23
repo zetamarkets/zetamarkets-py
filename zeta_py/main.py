@@ -1,6 +1,6 @@
 import asyncio
+import logging
 import os
-from datetime import datetime
 
 from solana.rpc.async_api import AsyncClient
 from solana.rpc.commitment import Confirmed
@@ -13,9 +13,11 @@ from zeta_py.types import Network
 from zeta_py.utils import cluster_endpoint
 from zeta_py.zeta_client import accounts, program_id
 
+logging.getLogger("zeta_py").setLevel(logging.DEBUG)
+
 
 async def test_anchorpy(connection: AsyncClient):
-    pricing_address, _ = pda.get_pricing_address(program_id.PROGRAM_ID)
+    pricing_address = pda.get_pricing_address(program_id.PROGRAM_ID)
     print(pricing_address)
     pricing = await accounts.Pricing.fetch(connection, pricing_address)
     print([m for m in pricing.markets])
@@ -46,14 +48,12 @@ async def setup_exchange(network: Network):
     endpoint = os.environ.get("ENDPOINT", cluster_endpoint(network))
     print(endpoint)
     connection = AsyncClient(endpoint, commitment=commitment)
-    zeta = await Exchange.create(
-        network=network, connection=connection, assets=[Asset.SOL], tx_opts=opts, subscribe=True
-    )
+    await Exchange.load(network=network, connection=connection, assets=[Asset.SOL], tx_opts=opts, subscribe=True)
     for i in range(100000):
-        print(datetime.fromtimestamp(zeta.clock.account.unix_timestamp))
-        print(datetime.now() - datetime.fromtimestamp(zeta.clock.account.unix_timestamp))
-        print(zeta.clock.last_update_slot)
-        zeta.markets[Asset.SOL].print_orderbook()
+        # print(datetime.fromtimestamp(zeta.clock.account.unix_timestamp))
+        # print(datetime.now() - datetime.fromtimestamp(zeta.clock.account.unix_timestamp))
+        # print(zeta.clock.last_update_slot)
+        # zeta.markets[Asset.SOL].print_orderbook()
         await asyncio.sleep(0.4)
 
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Iterable, List, Union
+from typing import Iterable, Union
 
 from ..enums import Side
 from . import types as t
@@ -58,11 +58,11 @@ class OrderBook:
         slab = Slab.from_bytes(buffer[13:])
         return OrderBook(market_state, account_flags, slab)
 
-    def _get_l2(self, depth: int) -> List[t.OrderInfo]:
+    def _get_l2(self, depth: int) -> list[t.OrderInfo]:
         """Get the Level 2 market information."""
         descending = self._is_bids
         # The first element of the inner list is price, the second is quantity.
-        levels: List[List[int]] = []
+        levels: list[list[int]] = []
         for node in self._slab.items(descending):
             # TODO: Filter expired TIF orders
             price = self._get_price_from_slab(node)

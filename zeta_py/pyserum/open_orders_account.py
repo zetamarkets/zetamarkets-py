@@ -1,14 +1,10 @@
 from __future__ import annotations
 
-import base64
-from typing import List, NamedTuple, Tuple, Type, TypeVar
+from typing import NamedTuple, Type, TypeVar
 
 from solana.rpc.api import Client
-from solana.rpc.commitment import Recent
-from solana.rpc.types import Commitment, MemcmpOpts
 from solders.instruction import Instruction
 from solders.pubkey import Pubkey
-from solders.rpc.responses import RPCResult
 from solders.system_program import CreateAccountParams, create_account
 
 from ._layouts.open_orders import OPEN_ORDERS_LAYOUT
@@ -40,8 +36,8 @@ class _OpenOrdersAccountCore:  # pylint: disable=too-many-instance-attributes,to
         quote_token_total: int,
         free_slot_bits: int,
         is_bid_bits: int,
-        orders: List[int],
-        client_ids: List[int],
+        orders: list[int],
+        client_ids: list[int],
     ):
         self.address = address
         self.market = market
@@ -76,7 +72,7 @@ class _OpenOrdersAccountCore:  # pylint: disable=too-many-instance-attributes,to
         )
 
     # @classmethod
-    # def _process_get_program_accounts_resp(cls: Type[_T], resp: RPCResult) -> List[_T]:
+    # def _process_get_program_accounts_resp(cls: Type[_T], resp: RPCResult) -> list[_T]:
     #     accounts = []
     #     for account in resp["result"]:
     #         account_details = account["account"]
@@ -95,7 +91,7 @@ class _OpenOrdersAccountCore:  # pylint: disable=too-many-instance-attributes,to
     # @staticmethod
     # def _build_get_program_accounts_args(
     #     market: Pubkey, program_id: Pubkey, owner: Pubkey, commitment: Commitment
-    # ) -> Tuple[Pubkey, Commitment, str, None, int, List[MemcmpOpts]]:
+    # ) -> Tuple[Pubkey, Commitment, str, None, int, list[MemcmpOpts]]:
     #     filters = [
     #         MemcmpOpts(
     #             offset=5 + 8,  # 5 bytes of padding, 8 bytes of account flag
@@ -120,7 +116,7 @@ class OpenOrdersAccount(_OpenOrdersAccountCore):
     # @classmethod
     # def find_for_market_and_owner(  # pylint: disable=too-many-arguments
     #     cls, conn: Client, market: Pubkey, owner: Pubkey, program_id: Pubkey, commitment: Commitment = Recent
-    # ) -> List[OpenOrdersAccount]:
+    # ) -> list[OpenOrdersAccount]:
     #     args = cls._build_get_program_accounts_args(
     #         market=market, program_id=program_id, owner=owner, commitment=commitment
     #     )

@@ -1,5 +1,3 @@
-from typing import List
-
 from solana.rpc.async_api import AsyncClient
 from solders.pubkey import Pubkey
 from spl.token.constants import WRAPPED_SOL_MINT
@@ -12,7 +10,7 @@ async def load_bytes_data(addr: Pubkey, conn: AsyncClient) -> bytes:
     return parse_bytes_data(res)
 
 
-async def load_multiple_bytes_data(addrs: List[Pubkey], conn: AsyncClient) -> List[bytes]:
+async def load_multiple_bytes_data(addrs: list[Pubkey], conn: AsyncClient) -> list[bytes]:
     res = await conn.get_multiple_accounts(addrs)
     return parse_multiple_bytes_data(res)
 

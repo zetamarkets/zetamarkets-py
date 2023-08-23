@@ -1,10 +1,6 @@
 from __future__ import annotations
 
-from typing import List
-
 from solana.rpc.async_api import AsyncClient
-from solana.rpc.commitment import Confirmed
-from solana.rpc.types import Commitment
 from solders.pubkey import Pubkey
 
 from .async_utils import load_bytes_data
@@ -21,7 +17,7 @@ class AsyncOpenOrdersAccount(_OpenOrdersAccountCore):
     #     owner: Pubkey,
     #     program_id: Pubkey,
     #     commitment: Commitment,
-    # ) -> List[AsyncOpenOrdersAccount]:
+    # ) -> list[AsyncOpenOrdersAccount]:
     #     args = cls._build_get_program_accounts_args(
     #         market=market, program_id=program_id, owner=owner, commitment=commitment
     #     )

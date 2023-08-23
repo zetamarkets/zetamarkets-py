@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterable, List, NamedTuple, Optional
+from typing import Iterable, NamedTuple, Optional
 
 from construct import ListContainer
 from solders.pubkey import Pubkey
@@ -43,17 +43,17 @@ class SlabLeafNode(SlabNode):
 class SlabInnerNode(SlabNode):
     prefix_len: int
     key: int
-    children: List[int]
+    children: list[int]
 
 
 class Slab:
-    def __init__(self, header: SlabHeader, nodes: List[SlabNode]):
+    def __init__(self, header: SlabHeader, nodes: list[SlabNode]):
         self._header: SlabHeader = header
-        self._nodes: List[SlabNode] = nodes
+        self._nodes: list[SlabNode] = nodes
 
     @staticmethod
-    def __build(nodes: ListContainer) -> List[SlabNode]:
-        res: List[SlabNode] = []
+    def __build(nodes: ListContainer) -> list[SlabNode]:
+        res: list[SlabNode] = []
         for construct_node in nodes:
             node_type = construct_node.tag
             node = construct_node.node

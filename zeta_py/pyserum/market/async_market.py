@@ -1,7 +1,7 @@
 """Market module to interact with Serum DEX."""
 from __future__ import annotations
 
-from typing import List, Tuple
+from typing import Tuple
 
 from solana.rpc.async_api import AsyncClient
 from solana.rpc.types import TxOpts
@@ -55,7 +55,7 @@ class AsyncMarket(MarketCore):
         market_state = await MarketState.async_load(conn, market_address, program_id)
         return cls(conn, market_state, force_use_request_queue)
 
-    # async def find_open_orders_accounts_for_owner(self, owner_address: Pubkey) -> List[AsyncOpenOrdersAccount]:
+    # async def find_open_orders_accounts_for_owner(self, owner_address: Pubkey) -> list[AsyncOpenOrdersAccount]:
     #     return await AsyncOpenOrdersAccount.find_for_market_and_owner(
     #         self._conn, self.state.public_key(), owner_address, self.state.program_id(), self._conn.commitment
     #     )
@@ -75,14 +75,14 @@ class AsyncMarket(MarketCore):
         [bids_bytes, asks_bytes] = await load_multiple_bytes_data([self.state.bids(), self.state.asks()], self._conn)
         return self._parse_bids_or_asks(bids_bytes), self._parse_bids_or_asks(asks_bytes)
 
-    async def load_orders_for_owner(self, owner_address: Pubkey, open_orders_account_address: Pubkey) -> List[t.Order]:
+    async def load_orders_for_owner(self, owner_address: Pubkey, open_orders_account_address: Pubkey) -> list[t.Order]:
         """Load orders for owner."""
         bids, asks = await self.load_bids_and_asks()
         # open_orders_accounts = await self.find_open_orders_accounts_for_owner(owner_address)
         open_orders_accounts = [await AsyncOpenOrdersAccount.load(self._conn, open_orders_account_address)]
         return self._parse_orders_for_owner(bids, asks, open_orders_accounts)
 
-    async def load_event_queue(self) -> List[t.Event]:
+    async def load_event_queue(self) -> list[t.Event]:
         """Load the event queue which includes the fill item and out item. For any trades two fill items are added to
         the event queue. And in case of a trade, cancel or IOC order that missed, out items are added to the event
         queue.
@@ -90,11 +90,11 @@ class AsyncMarket(MarketCore):
         bytes_data = await load_bytes_data(self.state.event_queue(), self._conn)
         return decode_event_queue(bytes_data)
 
-    async def load_request_queue(self) -> List[t.Request]:
+    async def load_request_queue(self) -> list[t.Request]:
         bytes_data = await load_bytes_data(self.state.request_queue(), self._conn)
         return decode_request_queue(bytes_data)
 
-    async def load_fills(self, limit=100) -> List[t.FilledOrder]:
+    async def load_fills(self, limit=100) -> list[t.FilledOrder]:
         bytes_data = await load_bytes_data(self.state.event_queue(), self._conn)
         return self._parse_fills(bytes_data, limit)
 
@@ -110,7 +110,7 @@ class AsyncMarket(MarketCore):
         opts: TxOpts = TxOpts(),
     ) -> RPCResult:  # TODO: Add open_orders_address_key param and fee_discount_pubkey
         transaction = Transaction()
-        signers: List[Keypair] = [owner]
+        signers: list[Keypair] = [owner]
         open_order_accounts = await self.find_open_orders_accounts_for_owner(owner.public_key)
         if open_order_accounts:
             place_order_open_order_account = open_order_accounts[0].address

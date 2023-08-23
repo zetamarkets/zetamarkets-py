@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import itertools
 import logging
-from typing import List, Union
+from typing import Union
 
 from solana.transaction import Transaction
 from solders.instruction import Instruction
@@ -70,7 +70,7 @@ class MarketCore:
         return OrderBook.from_bytes(self.state, bytes_data)
 
     @staticmethod
-    def _parse_orders_for_owner(bids, asks, open_orders_accounts) -> List[t.Order]:
+    def _parse_orders_for_owner(bids, asks, open_orders_accounts) -> list[t.Order]:
         if not open_orders_accounts:
             return []
 
@@ -82,7 +82,7 @@ class MarketCore:
     def load_base_token_for_owner(self):
         raise NotImplementedError("load_base_token_for_owner not implemented")
 
-    def _parse_fills(self, bytes_data: bytes, limit: int) -> List[t.FilledOrder]:
+    def _parse_fills(self, bytes_data: bytes, limit: int) -> list[t.FilledOrder]:
         events = decode_event_queue(bytes_data, limit)
         return [
             self.parse_fill_event(event)
@@ -119,7 +119,7 @@ class MarketCore:
         )
 
     def _prepare_new_oo_account(
-        self, owner: Keypair, balance_needed: int, signers: List[Keypair], transaction: Transaction
+        self, owner: Keypair, balance_needed: int, signers: list[Keypair], transaction: Transaction
     ) -> Pubkey:
         # new_open_orders_account = Account()
         new_open_orders_account = Keypair()
@@ -142,11 +142,11 @@ class MarketCore:
         owner: Keypair,
         order_type: OrderType,
         side: Side,
-        signers: List[Keypair],
+        signers: list[Keypair],
         limit_price: float,
         max_quantity: float,
         client_id: int,
-        open_order_accounts: Union[List[OpenOrdersAccount], List[AsyncOpenOrdersAccount]],
+        open_order_accounts: Union[list[OpenOrdersAccount], list[AsyncOpenOrdersAccount]],
         place_order_open_order_account: Pubkey,
     ) -> None:
         # unwrapped SOL cannot be used for payment
@@ -213,7 +213,7 @@ class MarketCore:
             )
 
     def _after_oo_mbfre_resp(
-        self, mbfre_resp: RPCResult, owner: Keypair, signers: List[Keypair], transaction: Transaction
+        self, mbfre_resp: RPCResult, owner: Keypair, signers: list[Keypair], transaction: Transaction
     ) -> Pubkey:
         balance_needed = mbfre_resp["result"]
         place_order_open_order_account = self._prepare_new_oo_account(owner, balance_needed, signers, transaction)
@@ -224,7 +224,7 @@ class MarketCore:
         price: float,
         size: float,
         side: Side,
-        open_orders_accounts: Union[List[OpenOrdersAccount], List[AsyncOpenOrdersAccount]],
+        open_orders_accounts: Union[list[OpenOrdersAccount], list[AsyncOpenOrdersAccount]],
     ) -> int:
         lamports = 0
         if side == Side.BID:
@@ -383,7 +383,7 @@ class MarketCore:
     def _build_settle_funds_tx(  # pylint: disable=too-many-arguments
         self,
         owner: Keypair,
-        signers: List[Keypair],
+        signers: list[Keypair],
         open_orders: Union[OpenOrdersAccount, AsyncOpenOrdersAccount],
         base_wallet: Pubkey,
         quote_wallet: Pubkey,  # TODO: add referrer_quote_wallet.

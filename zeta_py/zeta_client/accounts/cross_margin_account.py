@@ -92,9 +92,9 @@ class CrossMarginAccount:
         addresses: list[Pubkey],
         commitment: typing.Optional[Commitment] = None,
         program_id: Pubkey = PROGRAM_ID,
-    ) -> typing.List[typing.Optional["CrossMarginAccount"]]:
+    ) -> list[typing.Optional["CrossMarginAccount"]]:
         infos = await get_multiple_accounts(conn, addresses, commitment=commitment)
-        res: typing.List[typing.Optional["CrossMarginAccount"]] = []
+        res: list[typing.Optional["CrossMarginAccount"]] = []
         for info in infos:
             if info is None:
                 res.append(None)

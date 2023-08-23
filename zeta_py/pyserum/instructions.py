@@ -1,5 +1,5 @@
 """Serum Dex Instructions."""
-from typing import Dict, List, NamedTuple, Optional
+from typing import NamedTuple, Optional
 
 from construct import Container
 from solana.transaction import AccountMeta
@@ -111,7 +111,7 @@ class ConsumeEventsParams(NamedTuple):
     """"""
     event_queue: Pubkey
     """"""
-    open_orders_accounts: List[Pubkey]
+    open_orders_accounts: list[Pubkey]
     """"""
     limit: int
     """"""
@@ -300,7 +300,7 @@ class InitOpenOrdersParams(NamedTuple):
 
 
 def __parse_and_validate_instruction(instruction: Instruction, instruction_type: InstructionType) -> Container:
-    instruction_type_to_length_map: Dict[InstructionType, int] = {
+    instruction_type_to_length_map: dict[InstructionType, int] = {
         InstructionType.INITIALIZE_MARKET: 9,
         InstructionType.NEW_ORDER: 9,
         InstructionType.MATCH_ORDER: 7,

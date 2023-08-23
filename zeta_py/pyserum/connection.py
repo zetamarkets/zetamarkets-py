@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any
 
 import requests
 from solana.rpc.api import Client as conn  # pylint: disable=unused-import # noqa:F401
@@ -10,19 +10,19 @@ LIVE_MARKETS_URL = "https://raw.githubusercontent.com/project-serum/serum-ts/mas
 TOKEN_MINTS_URL = "https://raw.githubusercontent.com/project-serum/serum-ts/master/packages/serum/src/token-mints.json"
 
 
-def parse_live_markets(data: List[Dict[str, Any]]) -> List[MarketInfo]:
+def parse_live_markets(data: list[dict[str, Any]]) -> list[MarketInfo]:
     return [
         MarketInfo(name=m["name"], address=m["address"], program_id=m["programId"]) for m in data if not m["deprecated"]
     ]
 
 
-def parse_token_mints(data: List[Dict[str, str]]) -> List[TokenInfo]:
+def parse_token_mints(data: list[dict[str, str]]) -> list[TokenInfo]:
     return [TokenInfo(name=t["name"], address=Pubkey(t["address"])) for t in data]
 
 
-def get_live_markets() -> List[MarketInfo]:
+def get_live_markets() -> list[MarketInfo]:
     return parse_live_markets(requests.get(LIVE_MARKETS_URL).json())
 
 
-def get_token_mints() -> List[TokenInfo]:
+def get_token_mints() -> list[TokenInfo]:
     return parse_token_mints(requests.get(TOKEN_MINTS_URL).json())

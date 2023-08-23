@@ -1,8 +1,6 @@
 """Market module to interact with Serum DEX."""
 from __future__ import annotations
 
-from typing import List
-
 from solana.rpc.api import Client
 from solana.rpc.types import TxOpts
 from solana.transaction import Transaction
@@ -50,7 +48,7 @@ class Market(MarketCore):
         market_state = MarketState.load(conn, market_address, program_id)
         return cls(conn, market_state, force_use_request_queue)
 
-    def find_open_orders_accounts_for_owner(self, owner_address: Pubkey) -> List[OpenOrdersAccount]:
+    def find_open_orders_accounts_for_owner(self, owner_address: Pubkey) -> list[OpenOrdersAccount]:
         return OpenOrdersAccount.find_for_market_and_owner(
             self._conn, self.state.public_key(), owner_address, self.state.program_id()
         )
@@ -65,14 +63,14 @@ class Market(MarketCore):
         bytes_data = load_bytes_data(self.state.asks(), self._conn)
         return self._parse_bids_or_asks(bytes_data)
 
-    def load_orders_for_owner(self, owner_address: Pubkey) -> List[t.Order]:
+    def load_orders_for_owner(self, owner_address: Pubkey) -> list[t.Order]:
         """Load orders for owner."""
         bids = self.load_bids()
         asks = self.load_asks()
         open_orders_accounts = self.find_open_orders_accounts_for_owner(owner_address)
         return self._parse_orders_for_owner(bids, asks, open_orders_accounts)
 
-    def load_event_queue(self) -> List[t.Event]:
+    def load_event_queue(self) -> list[t.Event]:
         """Load the event queue which includes the fill item and out item. For any trades two fill items are added to
         the event queue. And in case of a trade, cancel or IOC order that missed, out items are added to the event
         queue.
@@ -80,11 +78,11 @@ class Market(MarketCore):
         bytes_data = load_bytes_data(self.state.event_queue(), self._conn)
         return decode_event_queue(bytes_data)
 
-    def load_request_queue(self) -> List[t.Request]:
+    def load_request_queue(self) -> list[t.Request]:
         bytes_data = load_bytes_data(self.state.request_queue(), self._conn)
         return decode_request_queue(bytes_data)
 
-    def load_fills(self, limit=100) -> List[t.FilledOrder]:
+    def load_fills(self, limit=100) -> list[t.FilledOrder]:
         bytes_data = load_bytes_data(self.state.event_queue(), self._conn)
         return self._parse_fills(bytes_data, limit)
 
@@ -100,7 +98,7 @@ class Market(MarketCore):
         opts: TxOpts = TxOpts(),
     ) -> RPCResult:  # TODO: Add open_orders_address_key param and fee_discount_pubkey
         transaction = Transaction()
-        signers: List[Keypair] = [owner]
+        signers: list[Keypair] = [owner]
         open_order_accounts = self.find_open_orders_accounts_for_owner(owner.public_key)
         if open_order_accounts:
             place_order_open_order_account = open_order_accounts[0].address

@@ -3,12 +3,12 @@ from __future__ import annotations
 import os
 import statistics
 from dataclasses import dataclass
-from typing import List, Mapping
 
 import requests
-from anchorpy import Idl, Program, Provider, Wallet
+from anchorpy import Idl
 from solana.rpc.async_api import AsyncClient
 from solana.rpc.types import TxOpts
+from solders.pubkey import Pubkey
 from solders.sysvar import CLOCK
 
 from zeta_py import constants, pda
@@ -33,50 +33,43 @@ class Exchange:
     # Initialize
     network: Network
     connection: AsyncClient
-    wallet: Wallet
-    program: Program
+    program_id: Pubkey
     state: Account[State]
     pricing: Account[Pricing]
-    markets: Mapping[Asset, Market] = None
+    markets: dict[Asset, Market] = None
     clock: Account[Clock] = None
 
     @classmethod
-    async def create(
+    async def load(
         cls,
         network: Network,
         connection: AsyncClient,
-        assets: List[Asset] = Asset.all(),
+        assets: list[Asset] = Asset.all(),
         tx_opts: TxOpts = constants.DEFAULT_TX_OPTS,
         subscribe: bool = False,
-        wallet: Wallet = Wallet.dummy(),
         # load_from_store: bool,
         # callback: Optional[Callable[[Asset, EventType, Any], None]] = None,
     ) -> "Exchange":
         # if loadConfig.network == "localnet" and loadConfig.loadFromStore:
         #     raise Exception("Cannot load localnet from store")
-        provider = Provider(
-            connection,
-            wallet,
-            tx_opts,
-        )
-        program = Program(idl, constants.ZETA_PID[network], provider)
+        program_id = constants.ZETA_PID[network]
 
         # Accounts
-        state_address, _ = pda.get_state_address(program.program_id)
-        state = await Account[State].create(state_address, connection, State)
+        state_address = pda.get_state_address(program_id)
+        state = await Account[State].load(state_address, connection, State)
 
-        pricing_address, _ = pda.get_pricing_address(program.program_id)
-        pricing = await Account[Pricing].create(pricing_address, connection, Pricing)
+        pricing_address = pda.get_pricing_address(program_id)
+        pricing = await Account[Pricing].load(pricing_address, connection, Pricing)
 
-        instance = cls(network, connection, wallet, program, state, pricing)
+        instance = cls(network, connection, program_id, state, pricing)
 
-        instance.markets = {asset: await Market.create(asset, instance, subscribe) for asset in assets}
+        instance.markets = {asset: await Market.load(asset, instance, subscribe) for asset in assets}
 
         # TODO add risk
         #   cls._riskCalculator = RiskCalculator(self.assets)
 
         # Load Clock
-        instance.clock = await Account[Clock].create(CLOCK, connection, Clock)
+        instance.clock = await Account[Clock].load(CLOCK, connection, Clock)
 
         # TODO: Maybe disable polling/subscriptions by default and have helper to enable bulk
         if subscribe:
@@ -90,7 +83,7 @@ class Exchange:
         return self.connection._provider.endpoint_uri
 
     @property
-    def assets(self) -> List[Asset]:
+    def assets(self) -> list[Asset]:
         return list(self.markets.keys())
 
     # Priority Fees

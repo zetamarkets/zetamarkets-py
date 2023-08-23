@@ -1,5 +1,3 @@
-from typing import List
-
 from solana.rpc.api import Client
 from solders.pubkey import Pubkey
 from solders.rpc.responses import RPCResult
@@ -15,7 +13,7 @@ def parse_bytes_data(res: RPCResult) -> bytes:
     return data
 
 
-def parse_multiple_bytes_data(res: RPCResult) -> List[bytes]:
+def parse_multiple_bytes_data(res: RPCResult) -> list[bytes]:
     if not hasattr(res, "value"):
         raise Exception("Cannot load byte data.")
     return [v.data for v in res.value]

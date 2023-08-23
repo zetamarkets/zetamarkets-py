@@ -1,6 +1,6 @@
 import math
 from enum import IntEnum
-from typing import List, Optional, Tuple, Union, cast
+from typing import Optional, Tuple, Union, cast
 
 from construct import Container
 from solders.pubkey import Pubkey
@@ -16,11 +16,11 @@ class QueueType(IntEnum):
 
 def __from_bytes(
     buffer: bytes, queue_type: QueueType, history: Optional[int]
-) -> Tuple[Container, List[Union[Event, Request]]]:
+) -> Tuple[Container, list[Union[Event, Request]]]:
     header = QUEUE_HEADER_LAYOUT.parse(buffer)
     layout_size = EVENT_LAYOUT.sizeof() if queue_type == QueueType.EVENT else REQUEST_LAYOUT.sizeof()
     alloc_len = math.floor((len(buffer) - QUEUE_HEADER_LAYOUT.sizeof()) / layout_size)
-    nodes: List[Union[Event, Request]] = []
+    nodes: list[Union[Event, Request]] = []
     if history:
         for i in range(min(history, alloc_len)):
             node_index = (header.head + header.count + alloc_len - 1 - i) % alloc_len
@@ -79,15 +79,15 @@ def __parse_queue_item(buffer: bytes, queue_type: QueueType) -> Union[Event, Req
         )
 
 
-def decode_request_queue(buffer: bytes, history: Optional[int] = None) -> List[Request]:
+def decode_request_queue(buffer: bytes, history: Optional[int] = None) -> list[Request]:
     header, nodes = __from_bytes(buffer, QueueType.REQUEST, history)
     if not header.account_flags.initialized or not header.account_flags.request_queue:
         raise Exception("Invalid requests queue, either not initialized or not a request queue.")
-    return cast(List[Request], nodes)
+    return cast(list[Request], nodes)
 
 
-def decode_event_queue(buffer: bytes, history: Optional[int] = None) -> List[Event]:
+def decode_event_queue(buffer: bytes, history: Optional[int] = None) -> list[Event]:
     header, nodes = __from_bytes(buffer, QueueType.EVENT, history)
     if not header.account_flags.initialized or not header.account_flags.event_queue:
         raise Exception("Invalid events queue, either not initialized or not a event queue.")
-    return cast(List[Event], nodes)
+    return cast(list[Event], nodes)

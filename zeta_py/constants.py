@@ -33,28 +33,34 @@ FLEXIBLE_MINTS = {
     },
 }
 
-ZETAGROUP_PUBKEY_ASSET_MAP = {
-    # Network.LOCALNET: {
-    #     "HRobFXQ2HQvSgCLq2CU9ZG3DR2BxRaAffw5SvdNnvk97": Asset.SOL,
-    #     "CcLF7qQbgRQqUDmQeEkTSP2UbX82N9G91THjV5uRGCMW": Asset.BTC,
-    #     "8Ccch7LW5hd5j2NW8HdhUbDqB1yUN4dULVMNNHtfbPbV": Asset.ETH,
-    #     "5QyPHfnRttz4Tq7W7U5XEpKpvj7g3FTvMpE1BzL9w2Qi": Asset.APT,
-    #     "4fecsFCi8Tx4aFxvc8rAYT74RBmknQ3kqidZTejoqiw7": Asset.ARB,
-    # },
-    Network.DEVNET: {
-        "HRobFXQ2HQvSgCLq2CU9ZG3DR2BxRaAffw5SvdNnvk97": Asset.SOL,
-        "CcLF7qQbgRQqUDmQeEkTSP2UbX82N9G91THjV5uRGCMW": Asset.BTC,
-        "8Ccch7LW5hd5j2NW8HdhUbDqB1yUN4dULVMNNHtfbPbV": Asset.ETH,
-        "5QyPHfnRttz4Tq7W7U5XEpKpvj7g3FTvMpE1BzL9w2Qi": Asset.APT,
-        "4fecsFCi8Tx4aFxvc8rAYT74RBmknQ3kqidZTejoqiw7": Asset.ARB,
-    },
-    Network.MAINNET: {
-        "CoGhjFdyqzMFr5xVgznuBjULvoFbFtNN4bCdQzRArNK2": Asset.SOL,
-        "5XC7JWvLGGds4tjaawgY8FwMdotUb5rrEUmxcmyp5ZiW": Asset.BTC,
-        "HPnqfiRSVvuBjfHN9ah4Kecb6J9et2UTnNgUwtAJdV26": Asset.ETH,
-        "D19K6rrppbWAFa4jE1DJUStPnr7cSrqKk5TruGqfc5Ns": Asset.APT,
-        "CU6pPA2E2yQFqMzZKrFCmfjrSBEc6GxfmFrSqpqazygu": Asset.ARB,
-    },
+# ZETAGROUP_PUBKEY_ASSET_MAP = {
+#     # Network.LOCALNET: {
+#     #     "HRobFXQ2HQvSgCLq2CU9ZG3DR2BxRaAffw5SvdNnvk97": Asset.SOL,
+#     #     "CcLF7qQbgRQqUDmQeEkTSP2UbX82N9G91THjV5uRGCMW": Asset.BTC,
+#     #     "8Ccch7LW5hd5j2NW8HdhUbDqB1yUN4dULVMNNHtfbPbV": Asset.ETH,
+#     #     "5QyPHfnRttz4Tq7W7U5XEpKpvj7g3FTvMpE1BzL9w2Qi": Asset.APT,
+#     #     "4fecsFCi8Tx4aFxvc8rAYT74RBmknQ3kqidZTejoqiw7": Asset.ARB,
+#     # },
+#     Network.DEVNET: {
+#         "HRobFXQ2HQvSgCLq2CU9ZG3DR2BxRaAffw5SvdNnvk97": Asset.SOL,
+#         "CcLF7qQbgRQqUDmQeEkTSP2UbX82N9G91THjV5uRGCMW": Asset.BTC,
+#         "8Ccch7LW5hd5j2NW8HdhUbDqB1yUN4dULVMNNHtfbPbV": Asset.ETH,
+#         "5QyPHfnRttz4Tq7W7U5XEpKpvj7g3FTvMpE1BzL9w2Qi": Asset.APT,
+#         "4fecsFCi8Tx4aFxvc8rAYT74RBmknQ3kqidZTejoqiw7": Asset.ARB,
+#     },
+#     Network.MAINNET: {
+#         "CoGhjFdyqzMFr5xVgznuBjULvoFbFtNN4bCdQzRArNK2": Asset.SOL,
+#         "5XC7JWvLGGds4tjaawgY8FwMdotUb5rrEUmxcmyp5ZiW": Asset.BTC,
+#         "HPnqfiRSVvuBjfHN9ah4Kecb6J9et2UTnNgUwtAJdV26": Asset.ETH,
+#         "D19K6rrppbWAFa4jE1DJUStPnr7cSrqKk5TruGqfc5Ns": Asset.APT,
+#         "CU6pPA2E2yQFqMzZKrFCmfjrSBEc6GxfmFrSqpqazygu": Asset.ARB,
+#     },
+# }
+
+USDC_MINT = {
+    #   Network.LOCALNET: Pubkey.from_string("6PEh8n3p7BbCTykufbq1nSJYAZvUp6gSwEANAs1ZhsCX"),
+    Network.DEVNET: Pubkey.from_string("6PEh8n3p7BbCTykufbq1nSJYAZvUp6gSwEANAs1ZhsCX"),
+    Network.MAINNET: Pubkey.from_string("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"),
 }
 
 DEX_PID = {
@@ -88,39 +94,8 @@ PERP_MARKET_ORDER_SPOT_SLIPPAGE = 0.02
 # hitting the rate limit.
 MARKET_LOAD_LIMIT = 12
 
-DEFAULT_ORDERBOOK_DEPTH = 5
-MAX_ORDER_TAG_LENGTH = 4
-
-# From the account itself in account.rs
-# 8 + 32 + 1 + 8 + 1 + 138 + 48 + 5520 + 8
-MARGIN_ACCOUNT_ASSET_OFFSET = 5764
-# 8 + 32 + 1 + 8 + 48 + 2208
-SPREAD_ACCOUNT_ASSET_OFFSET = 2305
-
-
-# These are fixed and shouldn't change in the future.
-NUM_STRIKES = 11
-PRODUCTS_PER_EXPIRY = NUM_STRIKES * 2 + 1  # +1 for the future.
-SERIES_FUTURE_INDEX = PRODUCTS_PER_EXPIRY - 1
-ACTIVE_EXPIRIES = 2
-ACTIVE_MARKETS = ACTIVE_EXPIRIES * PRODUCTS_PER_EXPIRY + 1  # +1 for perp
-TOTAL_EXPIRIES = 5
-TOTAL_MARKETS = PRODUCTS_PER_EXPIRY * (TOTAL_EXPIRIES + 1)
-PERP_INDEX = TOTAL_MARKETS - 1
-ACTIVE_PERP_MARKETS = 5
-UNUSED_PERP_MARKETS = 20
-
-DEFAULT_EXCHANGE_POLL_INTERVAL = 30
-DEFAULT_MARKET_POLL_INTERVAL = 5
-DEFAULT_CLIENT_POLL_INTERVAL = 20
-DEFAULT_CLIENT_TIMER_INTERVAL = 1
-UPDATING_STATE_LIMIT_SECONDS = 10
-
-VOLATILITY_POINTS = 5
-
 # Numbers represented in BN are generally fixed point integers with precision of 6.
 PLATFORM_PRECISION = 6
-PRICING_PRECISION = 12
 MARGIN_PRECISION = 8
 POSITION_PRECISION = 3
 TICK_SIZE = 100
@@ -130,16 +105,13 @@ DEFAULT_ORDER_TAG = "SDK"
 MAX_POSITION_MOVEMENTS = 10
 BPS_DENOMINATOR = 10_000
 
-BID_ORDERS_INDEX = 0
-ASK_ORDERS_INDEX = 1
-
-MAX_TOTAL_SPREAD_ACCOUNT_CONTRACTS = 100_000_000
-
 DEFAULT_MICRO_LAMPORTS_PER_CU_FEE = 1000
 
 
 DEFAULT_COMMITMENT = commitment.Confirmed
-DEFAULT_TX_OPTS: TxOpts = {
-    "skip_preflight": False,
-    "preflight_commitment": DEFAULT_COMMITMENT,
-}
+DEFAULT_TX_OPTS = TxOpts(
+    {
+        "skip_preflight": False,
+        "preflight_commitment": DEFAULT_COMMITMENT,
+    }
+)

@@ -10,8 +10,16 @@ def convert_fixed_int_to_decimal(amount: int) -> float:
     return amount / 10**constants.PLATFORM_PRECISION
 
 
+def convert_decimal_to_fixed_int(amount: float) -> int:
+    return int((amount * 10**constants.PLATFORM_PRECISION / constants.TICK_SIZE) * constants.TICK_SIZE)
+
+
 def convert_fixed_lot_to_decimal(amount: int) -> float:
     return amount / 10**constants.POSITION_PRECISION
+
+
+def convert_decimal_to_fixed_lot(amount: float) -> int:
+    return int(amount * 10**constants.POSITION_PRECISION)
 
 
 def cluster_endpoint(network: Network, tls: bool = True, ws: bool = False) -> str:

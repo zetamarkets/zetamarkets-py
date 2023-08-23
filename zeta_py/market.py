@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import re
-from ast import List
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
@@ -13,6 +12,7 @@ from solders.pubkey import Pubkey
 from zeta_py import constants, pda
 from zeta_py.accounts import Account
 from zeta_py.constants import Asset
+from zeta_py.db import pool
 from zeta_py.pyserum.enums import Side
 from zeta_py.pyserum.market import AsyncMarket as SerumMarket
 from zeta_py.pyserum.market.orderbook import OrderBook
@@ -21,6 +21,8 @@ from zeta_py.zeta_client.accounts.perp_sync_queue import PerpSyncQueue
 
 if TYPE_CHECKING:
     from zeta_py.exchange import Exchange
+
+import logging
 
 
 # Going to use ws for now, can add polling later
@@ -40,16 +42,18 @@ class Market:
     _serum_market: SerumMarket
     _bids_subscription_task: bool = None
     _asks_subscription_task: bool = None
+    _bids_last_update_slot: int = None
+    _asks_last_update_slot: int = None
+    _logger: logging.Logger = None
+    _log_to_db: bool = False
 
     @classmethod
-    async def create(cls, asset: Asset, exchange: Exchange, subscribe: bool = False):
+    async def load(cls, asset: Asset, exchange: Exchange, subscribe: bool = False, log_to_db: bool = False):
         # Initialize
         asset_mint = pda.get_underlying_mint_address(asset, exchange.network)
-        zeta_group_address, _ = pda.get_zeta_group_address(exchange.program.program_id, asset_mint)
-        perp_sync_queue_address, _ = pda.get_perp_sync_queue_address(exchange.program.program_id, zeta_group_address)
-        perp_sync_queue = await Account[PerpSyncQueue].create(
-            perp_sync_queue_address, exchange.connection, PerpSyncQueue
-        )
+        zeta_group_address = pda.get_zeta_group_address(exchange.program_id, asset_mint)
+        perp_sync_queue_address = pda.get_perp_sync_queue_address(exchange.program_id, zeta_group_address)
+        perp_sync_queue = await Account[PerpSyncQueue].load(perp_sync_queue_address, exchange.connection, PerpSyncQueue)
 
         # Load Serum Market
         _serum_market = await SerumMarket.load(
@@ -59,12 +63,17 @@ class Market:
         )
         bids, asks = await _serum_market.load_bids_and_asks()
 
-        instance = cls(asset, exchange, bids, asks, perp_sync_queue, _serum_market)
+        logger = logging.getLogger(f"{__name__}.{cls.__name__}.{asset.name}")
+        instance = cls(
+            asset, exchange, bids, asks, perp_sync_queue, _serum_market, _logger=logger, _log_to_db=log_to_db
+        )
 
         # Subscribe
         if subscribe:
             instance.subscribe_orderbooks()
 
+        if log_to_db:
+            instance.create_table()
         return instance
 
     @property
@@ -106,10 +115,16 @@ class Market:
                 while True:
                     msg = await ws.recv()
                     orderbook = self._serum_market._parse_bids_or_asks(msg[0].result.value.data)
+                    slot = msg[0].result.context.slot
                     if side == Side.BID:
                         self.bids = orderbook
+                        self._bids_last_update_slot = slot
                     else:
                         self.asks = orderbook
+                        self._asks_last_update_slot = slot
+                    self._logger.debug(f"Received websocket message on {self.asset.name}:{side.name} @ {slot}")
+                    if self._log_to_db:
+                        self.insert_to_db(side)
         finally:
             self._subscription_task = None
 
@@ -117,36 +132,83 @@ class Market:
         # Run the subscriptions in the background
         # Subscribe bids
         if self._is_subscribed_bids:
-            print("Already subscribed to bids")
+            self._logger.warn("Already subscribed to bids")
         else:
             self._bids_subscription_task = asyncio.create_task(
                 self._subscribe_orderbook(self._serum_market.state.bids(), side=Side.BID)
             )
-            print(f"Subscribed to {self.asset.name}:bid")
+            self._logger.info(f"Subscribed to {self.asset.name}:bid")
         # Subscribe asks
         if self._is_subscribed_asks:
-            print("Already subscribed to asks")
+            self._logger.warn("Already subscribed to asks")
         else:
             self._asks_subscription_task = asyncio.create_task(
                 self._subscribe_orderbook(self._serum_market.state.asks(), side=Side.ASK)
             )
-            print(f"Subscribed to {self.asset.name}:ask")
+            self._logger.info(f"Subscribed to {self.asset.name}:ask")
 
     async def unsubscribe_orderbooks(self) -> None:
         # Unsubscribe bids
         if not self._is_subscribed_bids:
-            print("Already unsubscribed to bids")
+            self._logger.warn("Already unsubscribed to bids")
         else:
             self._bids_subscription_task.cancel()
             self._bids_subscription_task = None
-            print(f"Unsubscribed to {self.asset.name}:bid")
+            self._logger.info(f"Unsubscribed to {self.asset.name}:bid")
         # Unsubscribe asks
         if not self._is_subscribed_asks:
-            print("Already unsubscribed to asks")
+            self._logger.warn("Already unsubscribed to asks")
         else:
             self._asks_subscription_task.cancel()
             self._asks_subscription_task = None
-            print(f"Unsubscribed to {self.asset.name}:ask")
+            self._logger.info(f"Unsubscribed to {self.asset.name}:ask")
+
+    def create_table(self):
+        with pool.connection() as conn:
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS orderbook (
+                    id SERIAL PRIMARY KEY,
+                    market VARCHAR(50) NOT NULL, 
+                    slot BIGINT NOT NULL,
+                    is_bid BOOLEAN NOT NULL,
+                    price DOUBLE PRECISION NOT NULL,
+                    size DOUBLE PRECISION NOT NULL,
+                    timestamp TIMESTAMP,
+                    UNIQUE (market, slot, is_bid, price, size)
+                );
+                """,
+            )
+            conn.commit()
+
+    def insert_to_db(self, side: Side):
+        with pool.connection() as conn:
+            l2 = self.get_l2(side)
+            slot = self._bids_last_update_slot if side == Side.BID else self._asks_last_update_slot
+            insert_time = datetime.now()
+            try:
+                for level in l2:
+                    conn.execute(
+                        """
+                    INSERT INTO orderbook (market, slot, timestamp, is_bid, price, size) (
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    );
+                    """,
+                        (
+                            self.asset.name + "-PERP",
+                            slot,
+                            insert_time,
+                            side == Side.BID,
+                            level.price,
+                            level.size,
+                        ),
+                    )
+            except Exception as e:
+                self._logger.error(e)
+                conn.rollback()
+            else:
+                conn.commit()
+                self._logger.debug(f"Inserted orderbook into timescaledb {self.asset.name}:{side.name} @ {slot}")
 
     def print_orderbook(self, depth: int = 10, filter_tif: bool = True) -> None:
         print("Ask Orders:")
@@ -164,12 +226,12 @@ class Market:
                 return True
         return False
 
-    def get_l2(self, side: Side, depth: int = None, filter_tif: bool = True) -> List[OrderInfo]:
+    def get_l2(self, side: Side, depth: int = None, filter_tif: bool = True) -> list[OrderInfo]:
         """Get the Level 2 market information."""
         orderbook = self.bids if side == Side.BID else self.asks
         descending = orderbook._is_bids
         # The first element of the inner list is price, the second is quantity.
-        levels: List[List[int]] = []
+        levels: list[list[int]] = []
         for node in orderbook._slab.items(descending):
             seq_num = orderbook._get_seq_num_from_slab(node.key, orderbook._is_bids)
             clock_ts = self.exchange.clock.account.unix_timestamp
