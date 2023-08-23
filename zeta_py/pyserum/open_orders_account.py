@@ -2,13 +2,9 @@ from __future__ import annotations
 
 from typing import NamedTuple, Type, TypeVar
 
-from solana.rpc.api import Client
-from solders.instruction import Instruction
 from solders.pubkey import Pubkey
-from solders.system_program import CreateAccountParams, create_account
 
 from ._layouts.open_orders import OPEN_ORDERS_LAYOUT
-from .instructions import DEFAULT_DEX_PROGRAM_ID
 
 # from .utils import load_bytes_data
 
@@ -71,28 +67,3 @@ class _OpenOrdersAccountCore:  # pylint: disable=too-many-instance-attributes,to
             orders=[int.from_bytes(order, "little") for order in open_order_decoded.orders],
             client_ids=open_order_decoded.client_ids,
         )
-
-
-# class OpenOrdersAccount(_OpenOrdersAccountCore):
-#     @classmethod
-#     def load(cls, conn: Client, address: str) -> OpenOrdersAccount:
-#         addr_pub_key = Pubkey(address)
-#         bytes_data = load_bytes_data(addr_pub_key, conn)
-#         return cls.from_bytes(addr_pub_key, bytes_data)
-
-
-# def make_create_account_instruction(
-#     owner_address: Pubkey,
-#     new_account_address: Pubkey,
-#     lamports: int,
-#     program_id: Pubkey = DEFAULT_DEX_PROGRAM_ID,
-# ) -> Instruction:
-#     return create_account(
-#         CreateAccountParams(
-#             from_pubkey=owner_address,
-#             new_account_pubkey=new_account_address,
-#             lamports=lamports,
-#             space=OPEN_ORDERS_LAYOUT.sizeof(),
-#             program_id=program_id,
-#         )
-#     )

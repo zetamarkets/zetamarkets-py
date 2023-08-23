@@ -3,13 +3,12 @@ from __future__ import annotations
 import math
 
 from construct import Container, Struct
-from solana.rpc.api import Client
 from solana.rpc.async_api import AsyncClient
 from solders.pubkey import Pubkey
 
 from zeta_py.constants import POSITION_PRECISION
 
-from .. import async_utils, utils
+from .. import async_utils
 from .._layouts.market import MARKET_LAYOUT
 from .types import AccountFlags
 
@@ -36,15 +35,6 @@ class MarketState:  # pylint: disable=too-many-public-methods
         if not parsed_market.account_flags.initialized or not parsed_market.account_flags.market:
             raise Exception("Invalid market")
         return parsed_market
-
-    @classmethod
-    def load(cls, conn: Client, market_address: Pubkey, program_id: Pubkey) -> MarketState:
-        bytes_data = utils.load_bytes_data(market_address, conn)
-        parsed_market = cls._make_parsed_market(bytes_data)
-
-        base_mint_decimals = utils.get_mint_decimals(conn, Pubkey(parsed_market.base_mint))
-        quote_mint_decimals = utils.get_mint_decimals(conn, Pubkey(parsed_market.quote_mint))
-        return cls(parsed_market, program_id, base_mint_decimals, quote_mint_decimals)
 
     @classmethod
     async def async_load(cls, conn: AsyncClient, market_address: Pubkey, program_id: Pubkey) -> MarketState:

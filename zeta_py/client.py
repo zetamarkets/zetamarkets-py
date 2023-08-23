@@ -2,6 +2,7 @@ import logging
 from dataclasses import dataclass
 
 from anchorpy import Provider, Wallet
+from solana.blockhash import BlockhashCache
 from solana.rpc.async_api import AsyncClient
 from solana.rpc.types import TxOpts
 from solana.transaction import Transaction
@@ -23,7 +24,6 @@ from zeta_py.zeta_client.instructions import (
     initialize_open_orders_v3,
     place_perp_order_v3,
 )
-from solana.blockhash import BlockhashCache
 
 
 @dataclass

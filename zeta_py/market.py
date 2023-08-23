@@ -9,15 +9,13 @@ from typing import TYPE_CHECKING
 from solana.rpc.websocket_api import connect
 from solders.pubkey import Pubkey
 
-from zeta_py import constants, pda
-from zeta_py.accounts import Account
+from zeta_py import constants
 from zeta_py.constants import Asset
 from zeta_py.db import pool
 from zeta_py.pyserum.enums import Side
 from zeta_py.pyserum.market import AsyncMarket as SerumMarket
 from zeta_py.pyserum.market.orderbook import OrderBook
 from zeta_py.pyserum.market.types import OrderInfo
-from zeta_py.zeta_client.accounts.perp_sync_queue import PerpSyncQueue
 
 if TYPE_CHECKING:
     from zeta_py.exchange import Exchange
@@ -38,7 +36,6 @@ class Market:
     exchange: Exchange
     bids: OrderBook
     asks: OrderBook
-    perp_sync_queue: Account[PerpSyncQueue]
     _serum_market: SerumMarket
     _bids_subscription_task: bool = None
     _asks_subscription_task: bool = None
@@ -50,10 +47,6 @@ class Market:
     @classmethod
     async def load(cls, asset: Asset, exchange: Exchange, subscribe: bool = False, log_to_db: bool = False):
         # Initialize
-        asset_mint = pda.get_underlying_mint_address(asset, exchange.network)
-        zeta_group_address = pda.get_zeta_group_address(exchange.program_id, asset_mint)
-        perp_sync_queue_address = pda.get_perp_sync_queue_address(exchange.program_id, zeta_group_address)
-        perp_sync_queue = await Account[PerpSyncQueue].load(perp_sync_queue_address, exchange.connection, PerpSyncQueue)
 
         # Load Serum Market
         _serum_market = await SerumMarket.load(
@@ -64,9 +57,7 @@ class Market:
         bids, asks = await _serum_market.load_bids_and_asks()
 
         logger = logging.getLogger(f"{__name__}.{cls.__name__}.{asset.name}")
-        instance = cls(
-            asset, exchange, bids, asks, perp_sync_queue, _serum_market, _logger=logger, _log_to_db=log_to_db
-        )
+        instance = cls(asset, exchange, bids, asks, _serum_market, _logger=logger, _log_to_db=log_to_db)
 
         # Subscribe
         if subscribe:

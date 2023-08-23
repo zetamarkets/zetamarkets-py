@@ -8,7 +8,6 @@ from ._internal.slab import Slab, SlabInnerNode, SlabLeafNode
 from .state import MarketState
 
 
-# TODO: add TIF order filtering
 class OrderBook:
     """Represents an order book."""
 

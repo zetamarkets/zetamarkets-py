@@ -16,7 +16,7 @@ from ..async_open_orders_account import AsyncOpenOrdersAccount
 from ..async_utils import load_bytes_data, load_multiple_bytes_data
 from ..enums import OrderType, Side
 from . import types as t
-from ._internal.queue import decode_event_queue  # , decode_request_queue
+from ._internal.queue import decode_event_queue, decode_request_queue
 from .core import MarketCore
 from .orderbook import OrderBook
 from .state import MarketState
@@ -87,9 +87,9 @@ class AsyncMarket(MarketCore):
         bytes_data = await load_bytes_data(self.state.event_queue(), self._conn)
         return decode_event_queue(bytes_data)
 
-    # async def load_request_queue(self) -> list[t.Request]:
-    #     bytes_data = await load_bytes_data(self.state.request_queue(), self._conn)
-    #     return decode_request_queue(bytes_data)
+    async def load_request_queue(self) -> list[t.Request]:
+        bytes_data = await load_bytes_data(self.state.request_queue(), self._conn)
+        return decode_request_queue(bytes_data)
 
     async def load_fills(self, limit=100) -> list[t.FilledOrder]:
         bytes_data = await load_bytes_data(self.state.event_queue(), self._conn)

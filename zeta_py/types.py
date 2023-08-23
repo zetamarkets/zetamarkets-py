@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from enum import Enum, IntEnum
-from typing import NamedTuple, Optional
+from typing import Optional
+
 from solders.hash import Hash
 
 

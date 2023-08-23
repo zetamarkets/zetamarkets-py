@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import itertools
 import logging
-from typing import Union
 
 from solana.transaction import Transaction
 from solders.instruction import Instruction
@@ -20,10 +19,11 @@ from spl.token.instructions import (
 )
 
 from .. import instructions
-from ..async_open_orders_account import AsyncOpenOrdersAccount
+from ..async_open_orders_account import (
+    AsyncOpenOrdersAccount,
+    make_create_open_orders_account_instruction,
+)
 from ..enums import OrderType, SelfTradeBehavior, Side
-
-# from ..open_orders_account import OpenOrdersAccount, make_create_account_instruction
 from . import types as t
 from ._internal.queue import decode_event_queue
 from .orderbook import OrderBook
@@ -105,99 +105,99 @@ class MarketCore:
             fee_cost=event.native_fee_or_rebate * (1 if event.event_flags.maker else -1),
         )
 
-    # def _prepare_new_oo_account(
-    #     self, owner: Keypair, balance_needed: int, signers: list[Keypair], transaction: Transaction
-    # ) -> Pubkey:
-    #     # new_open_orders_account = Account()
-    #     new_open_orders_account = Keypair()
-    #     place_order_open_order_account = new_open_orders_account.pubkey
-    #     transaction.add(
-    #         make_create_account_instruction(
-    #             owner_address=owner.pubkey,
-    #             new_account_address=new_open_orders_account.pubkey,
-    #             lamports=balance_needed,
-    #             program_id=self.state.program_id(),
-    #         )
-    #     )
-    #     signers.append(new_open_orders_account)
-    #     return place_order_open_order_account
+    def _prepare_new_oo_account(
+        self, owner: Keypair, balance_needed: int, signers: list[Keypair], transaction: Transaction
+    ) -> Pubkey:
+        # new_open_orders_account = Account()
+        new_open_orders_account = Keypair()
+        place_order_open_order_account = new_open_orders_account.pubkey
+        transaction.add(
+            make_create_open_orders_account_instruction(
+                owner_address=owner.pubkey,
+                new_account_address=new_open_orders_account.pubkey,
+                lamports=balance_needed,
+                program_id=self.state.program_id(),
+            )
+        )
+        signers.append(new_open_orders_account)
+        return place_order_open_order_account
 
-    # def _prepare_order_transaction(  # pylint: disable=too-many-arguments,too-many-locals
-    #     self,
-    #     transaction: Transaction,
-    #     payer: Pubkey,
-    #     owner: Keypair,
-    #     order_type: OrderType,
-    #     side: Side,
-    #     signers: list[Keypair],
-    #     limit_price: float,
-    #     max_quantity: float,
-    #     client_id: int,
-    #     open_order_accounts: Union[list[OpenOrdersAccount], list[AsyncOpenOrdersAccount]],
-    #     place_order_open_order_account: Pubkey,
-    # ) -> None:
-    #     # unwrapped SOL cannot be used for payment
-    #     if payer == owner.pubkey:
-    #         raise ValueError("Invalid payer account. Cannot use unwrapped SOL.")
+    def _prepare_order_transaction(  # pylint: disable=too-many-arguments,too-many-locals
+        self,
+        transaction: Transaction,
+        payer: Pubkey,
+        owner: Keypair,
+        order_type: OrderType,
+        side: Side,
+        signers: list[Keypair],
+        limit_price: float,
+        max_quantity: float,
+        client_id: int,
+        open_order_accounts: list[AsyncOpenOrdersAccount],
+        place_order_open_order_account: Pubkey,
+    ) -> None:
+        # unwrapped SOL cannot be used for payment
+        if payer == owner.pubkey:
+            raise ValueError("Invalid payer account. Cannot use unwrapped SOL.")
 
-    #     # TODO: add integration test for SOL wrapping.
-    #     should_wrap_sol = (side == Side.BID and self.state.quote_mint() == WRAPPED_SOL_MINT) or (
-    #         side == Side.ASK and self.state.base_mint() == WRAPPED_SOL_MINT
-    #     )
+        # TODO: add integration test for SOL wrapping.
+        should_wrap_sol = (side == Side.BID and self.state.quote_mint() == WRAPPED_SOL_MINT) or (
+            side == Side.ASK and self.state.base_mint() == WRAPPED_SOL_MINT
+        )
 
-    #     if should_wrap_sol:
-    #         # wrapped_sol_account = Account()
-    #         wrapped_sol_account = Keypair()
-    #         payer = wrapped_sol_account.pubkey
-    #         signers.append(wrapped_sol_account)
-    #         transaction.add(
-    #             create_account(
-    #                 CreateAccountParams(
-    #                     from_pubkey=owner.pubkey,
-    #                     new_account_pubkey=wrapped_sol_account.pubkey,
-    #                     lamports=self._get_lamport_need_for_sol_wrapping(
-    #                         limit_price, max_quantity, side, open_order_accounts
-    #                     ),
-    #                     space=ACCOUNT_LEN,
-    #                     program_id=TOKEN_PROGRAM_ID,
-    #                 )
-    #             )
-    #         )
-    #         transaction.add(
-    #             initialize_account(
-    #                 InitializeAccountParams(
-    #                     account=wrapped_sol_account.pubkey,
-    #                     mint=WRAPPED_SOL_MINT,
-    #                     owner=owner.pubkey,
-    #                     program_id=TOKEN_PROGRAM_ID,
-    #                 )
-    #             )
-    #         )
+        if should_wrap_sol:
+            # wrapped_sol_account = Account()
+            wrapped_sol_account = Keypair()
+            payer = wrapped_sol_account.pubkey
+            signers.append(wrapped_sol_account)
+            transaction.add(
+                create_account(
+                    CreateAccountParams(
+                        from_pubkey=owner.pubkey,
+                        new_account_pubkey=wrapped_sol_account.pubkey,
+                        lamports=self._get_lamport_need_for_sol_wrapping(
+                            limit_price, max_quantity, side, open_order_accounts
+                        ),
+                        space=ACCOUNT_LEN,
+                        program_id=TOKEN_PROGRAM_ID,
+                    )
+                )
+            )
+            transaction.add(
+                initialize_account(
+                    InitializeAccountParams(
+                        account=wrapped_sol_account.pubkey,
+                        mint=WRAPPED_SOL_MINT,
+                        owner=owner.pubkey,
+                        program_id=TOKEN_PROGRAM_ID,
+                    )
+                )
+            )
 
-    #     transaction.add(
-    #         self.make_place_order_instruction(
-    #             payer=payer,
-    #             owner=owner,
-    #             order_type=order_type,
-    #             side=side,
-    #             limit_price=limit_price,
-    #             max_quantity=max_quantity,
-    #             client_id=client_id,
-    #             open_order_account=place_order_open_order_account,
-    #         )
-    #     )
+        transaction.add(
+            self.make_place_order_instruction(
+                payer=payer,
+                owner=owner,
+                order_type=order_type,
+                side=side,
+                limit_price=limit_price,
+                max_quantity=max_quantity,
+                client_id=client_id,
+                open_order_account=place_order_open_order_account,
+            )
+        )
 
-    #     if should_wrap_sol:
-    #         transaction.add(
-    #             close_account(
-    #                 CloseAccountParams(
-    #                     account=wrapped_sol_account.pubkey,
-    #                     owner=owner.pubkey,
-    #                     dest=owner.pubkey,
-    #                     program_id=TOKEN_PROGRAM_ID,
-    #                 )
-    #             )
-    #         )
+        if should_wrap_sol:
+            transaction.add(
+                close_account(
+                    CloseAccountParams(
+                        account=wrapped_sol_account.pubkey,
+                        owner=owner.pubkey,
+                        dest=owner.pubkey,
+                        program_id=TOKEN_PROGRAM_ID,
+                    )
+                )
+            )
 
     def _after_oo_mbfre_resp(
         self, mbfre_resp: RPCResult, owner: Keypair, signers: list[Keypair], transaction: Transaction
@@ -206,24 +206,24 @@ class MarketCore:
         place_order_open_order_account = self._prepare_new_oo_account(owner, balance_needed, signers, transaction)
         return place_order_open_order_account
 
-    # @staticmethod
-    # def _get_lamport_need_for_sol_wrapping(
-    #     price: float,
-    #     size: float,
-    #     side: Side,
-    #     open_orders_accounts: Union[list[OpenOrdersAccount], list[AsyncOpenOrdersAccount]],
-    # ) -> int:
-    #     lamports = 0
-    #     if side == Side.BID:
-    #         lamports = round(price * size * 1.01 * LAMPORTS_PER_SOL)
-    #         if open_orders_accounts:
-    #             lamports -= open_orders_accounts[0].quote_token_free
-    #     else:
-    #         lamports = round(size * LAMPORTS_PER_SOL)
-    #         if open_orders_accounts:
-    #             lamports -= open_orders_accounts[0].base_token_free
+    @staticmethod
+    def _get_lamport_need_for_sol_wrapping(
+        price: float,
+        size: float,
+        side: Side,
+        open_orders_accounts: list[AsyncOpenOrdersAccount],
+    ) -> int:
+        lamports = 0
+        if side == Side.BID:
+            lamports = round(price * size * 1.01 * LAMPORTS_PER_SOL)
+            if open_orders_accounts:
+                lamports -= open_orders_accounts[0].quote_token_free
+        else:
+            lamports = round(size * LAMPORTS_PER_SOL)
+            if open_orders_accounts:
+                lamports -= open_orders_accounts[0].base_token_free
 
-    #     return max(lamports, 0) + 10000000
+        return max(lamports, 0) + 10000000
 
     def make_place_order_instruction(  # pylint: disable=too-many-arguments
         self,
@@ -325,101 +325,101 @@ class MarketCore:
         )
         return instructions.match_orders(params)
 
-    # def _build_settle_funds_tx(  # pylint: disable=too-many-arguments
-    #     self,
-    #     owner: Keypair,
-    #     signers: list[Keypair],
-    #     open_orders: Union[OpenOrdersAccount, AsyncOpenOrdersAccount],
-    #     base_wallet: Pubkey,
-    #     quote_wallet: Pubkey,  # TODO: add referrer_quote_wallet.
-    #     min_bal_for_rent_exemption: int,
-    #     should_wrap_sol: bool,
-    # ) -> Transaction:
-    #     # TODO: Handle wrapped sol accounts
-    #     if open_orders.owner != owner.pubkey:
-    #         raise Exception("Invalid open orders account")
-    #     vault_signer = Pubkey.create_program_address(
-    #         [bytes(self.state.public_key()), self.state.vault_signer_nonce().to_bytes(8, byteorder="little")],
-    #         self.state.program_id(),
-    #     )
-    #     transaction = Transaction()
+    def _build_settle_funds_tx(  # pylint: disable=too-many-arguments
+        self,
+        owner: Keypair,
+        signers: list[Keypair],
+        open_orders: AsyncOpenOrdersAccount,
+        base_wallet: Pubkey,
+        quote_wallet: Pubkey,  # TODO: add referrer_quote_wallet.
+        min_bal_for_rent_exemption: int,
+        should_wrap_sol: bool,
+    ) -> Transaction:
+        # TODO: Handle wrapped sol accounts
+        if open_orders.owner != owner.pubkey:
+            raise Exception("Invalid open orders account")
+        vault_signer = Pubkey.create_program_address(
+            [bytes(self.state.public_key()), self.state.vault_signer_nonce().to_bytes(8, byteorder="little")],
+            self.state.program_id(),
+        )
+        transaction = Transaction()
 
-    #     if should_wrap_sol:
-    #         wrapped_sol_account = Keypair()
-    #         signers.append(wrapped_sol_account)
-    #         # make a wrapped SOL account with enough balance to
-    #         # fund the trade, run the program, then send itself back home
-    #         transaction.add(
-    #             create_account(
-    #                 CreateAccountParams(
-    #                     from_pubkey=owner.pubkey,
-    #                     new_account_pubkey=wrapped_sol_account.pubkey,
-    #                     lamports=min_bal_for_rent_exemption,
-    #                     space=ACCOUNT_LEN,
-    #                     program_id=TOKEN_PROGRAM_ID,
-    #                 )
-    #             )
-    #         )
-    #         # this was also broken upstream. it should be minting wrapped SOL, and using the token program ID
-    #         transaction.add(
-    #             initialize_account(
-    #                 InitializeAccountParams(
-    #                     account=wrapped_sol_account.pubkey,
-    #                     mint=WRAPPED_SOL_MINT,
-    #                     owner=owner.pubkey,
-    #                     program_id=TOKEN_PROGRAM_ID,
-    #                 )
-    #             )
-    #         )
+        if should_wrap_sol:
+            wrapped_sol_account = Keypair()
+            signers.append(wrapped_sol_account)
+            # make a wrapped SOL account with enough balance to
+            # fund the trade, run the program, then send itself back home
+            transaction.add(
+                create_account(
+                    CreateAccountParams(
+                        from_pubkey=owner.pubkey,
+                        new_account_pubkey=wrapped_sol_account.pubkey,
+                        lamports=min_bal_for_rent_exemption,
+                        space=ACCOUNT_LEN,
+                        program_id=TOKEN_PROGRAM_ID,
+                    )
+                )
+            )
+            # this was also broken upstream. it should be minting wrapped SOL, and using the token program ID
+            transaction.add(
+                initialize_account(
+                    InitializeAccountParams(
+                        account=wrapped_sol_account.pubkey,
+                        mint=WRAPPED_SOL_MINT,
+                        owner=owner.pubkey,
+                        program_id=TOKEN_PROGRAM_ID,
+                    )
+                )
+            )
 
-    #     transaction.add(
-    #         self.make_settle_funds_instruction(
-    #             open_orders,
-    #             base_wallet if self.state.base_mint() != WRAPPED_SOL_MINT else wrapped_sol_account.pubkey,
-    #             quote_wallet if self.state.quote_mint() != WRAPPED_SOL_MINT else wrapped_sol_account.pubkey,
-    #             vault_signer,
-    #         )
-    #     )
+        transaction.add(
+            self.make_settle_funds_instruction(
+                open_orders,
+                base_wallet if self.state.base_mint() != WRAPPED_SOL_MINT else wrapped_sol_account.pubkey,
+                quote_wallet if self.state.quote_mint() != WRAPPED_SOL_MINT else wrapped_sol_account.pubkey,
+                vault_signer,
+            )
+        )
 
-    #     if should_wrap_sol:
-    #         # close out the account and send the funds home when the trade is completed/cancelled
-    #         transaction.add(
-    #             close_account(
-    #                 CloseAccountParams(
-    #                     account=wrapped_sol_account.pubkey,
-    #                     owner=owner.pubkey,
-    #                     dest=owner.pubkey,
-    #                     program_id=TOKEN_PROGRAM_ID,
-    #                 )
-    #             )
-    #         )
-    #     return transaction
+        if should_wrap_sol:
+            # close out the account and send the funds home when the trade is completed/cancelled
+            transaction.add(
+                close_account(
+                    CloseAccountParams(
+                        account=wrapped_sol_account.pubkey,
+                        owner=owner.pubkey,
+                        dest=owner.pubkey,
+                        program_id=TOKEN_PROGRAM_ID,
+                    )
+                )
+            )
+        return transaction
 
-    # def _settle_funds_should_wrap_sol(self) -> bool:
-    #     return (self.state.quote_mint() == WRAPPED_SOL_MINT) or (self.state.base_mint() == WRAPPED_SOL_MINT)
+    def _settle_funds_should_wrap_sol(self) -> bool:
+        return (self.state.quote_mint() == WRAPPED_SOL_MINT) or (self.state.base_mint() == WRAPPED_SOL_MINT)
 
-    # def make_settle_funds_instruction(
-    #     self,
-    #     open_orders_account: Union[OpenOrdersAccount, AsyncOpenOrdersAccount],
-    #     base_wallet: Pubkey,
-    #     quote_wallet: Pubkey,
-    #     vault_signer: Pubkey,
-    # ) -> Instruction:
-    #     if base_wallet == self.state.base_vault():
-    #         raise ValueError("base_wallet should not be a vault address")
-    #     if quote_wallet == self.state.quote_vault():
-    #         raise ValueError("quote_wallet should not be a vault address")
+    def make_settle_funds_instruction(
+        self,
+        open_orders_account: AsyncOpenOrdersAccount,
+        base_wallet: Pubkey,
+        quote_wallet: Pubkey,
+        vault_signer: Pubkey,
+    ) -> Instruction:
+        if base_wallet == self.state.base_vault():
+            raise ValueError("base_wallet should not be a vault address")
+        if quote_wallet == self.state.quote_vault():
+            raise ValueError("quote_wallet should not be a vault address")
 
-    #     return instructions.settle_funds(
-    #         instructions.SettleFundsParams(
-    #             market=self.state.public_key(),
-    #             open_orders=open_orders_account.address,
-    #             owner=open_orders_account.owner,
-    #             base_vault=self.state.base_vault(),
-    #             quote_vault=self.state.quote_vault(),
-    #             base_wallet=base_wallet,
-    #             quote_wallet=quote_wallet,
-    #             vault_signer=vault_signer,
-    #             program_id=self.state.program_id(),
-    #         )
-    #     )
+        return instructions.settle_funds(
+            instructions.SettleFundsParams(
+                market=self.state.public_key(),
+                open_orders=open_orders_account.address,
+                owner=open_orders_account.owner,
+                base_vault=self.state.base_vault(),
+                quote_vault=self.state.quote_vault(),
+                base_wallet=base_wallet,
+                quote_wallet=quote_wallet,
+                vault_signer=vault_signer,
+                program_id=self.state.program_id(),
+            )
+        )
