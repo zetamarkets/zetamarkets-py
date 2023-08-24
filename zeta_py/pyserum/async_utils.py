@@ -1,3 +1,4 @@
+import typing
 from solana.rpc.async_api import AsyncClient
 from solders.pubkey import Pubkey
 from spl.token.constants import WRAPPED_SOL_MINT
@@ -5,19 +6,18 @@ from spl.token.constants import WRAPPED_SOL_MINT
 from zeta_py.pyserum._layouts.market import MINT_LAYOUT
 
 
-async def load_bytes_data(addr: Pubkey, conn: AsyncClient) -> bytes:
+async def load_bytes_data(addr: Pubkey, conn: AsyncClient) -> typing.Optional[bytes]:
     res = await conn.get_account_info(addr)
     if not hasattr(res, "value"):
         raise Exception("Cannot load byte data.")
-    data = res.value.data
-    return data
+    return res.value.data if res.value is not None else None
 
 
-async def load_multiple_bytes_data(addrs: list[Pubkey], conn: AsyncClient) -> list[bytes]:
+async def load_multiple_bytes_data(addrs: list[Pubkey], conn: AsyncClient) -> list[typing.Optional[bytes]]:
     res = await conn.get_multiple_accounts(addrs)
     if not hasattr(res, "value"):
         raise Exception("Cannot load byte data.")
-    return [v.data for v in res.value]
+    return [v.data if v is not None else None for v in res.value]
 
 
 async def get_mint_decimals(conn: AsyncClient, mint_pub_key: Pubkey) -> int:
@@ -26,6 +26,8 @@ async def get_mint_decimals(conn: AsyncClient, mint_pub_key: Pubkey) -> int:
         return 9
 
     bytes_data = await load_bytes_data(mint_pub_key, conn)
+    if bytes_data is None:
+        return None
     return parse_mint_decimals(bytes_data)
 
 

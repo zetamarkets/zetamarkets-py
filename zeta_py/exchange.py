@@ -39,6 +39,8 @@ class Exchange:
     markets: dict[Asset, Market] = None
     clock: Account[Clock] = None
 
+    _serum_authority_address: Pubkey = None
+
     @classmethod
     async def load(
         cls,
@@ -61,7 +63,10 @@ class Exchange:
         pricing_address = pda.get_pricing_address(program_id)
         pricing = await Account[Pricing].load(pricing_address, connection, Pricing)
 
-        instance = cls(network, connection, program_id, state, pricing)
+        # Addresses
+        _serum_authority_address = pda.get_serum_authority_address(program_id)
+
+        instance = cls(network, connection, program_id, state, pricing, _serum_authority_address)
 
         instance.markets = {asset: await Market.load(asset, instance, subscribe) for asset in assets}
 

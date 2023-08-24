@@ -57,6 +57,7 @@ class Market:
         bids, asks = await _serum_market.load_bids_and_asks()
 
         logger = logging.getLogger(f"{__name__}.{cls.__name__}.{asset.name}")
+
         instance = cls(asset, exchange, bids, asks, _serum_market, _logger=logger, _log_to_db=log_to_db)
 
         # Subscribe

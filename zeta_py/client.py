@@ -11,8 +11,9 @@ from solders.pubkey import Pubkey
 from zeta_py import constants, pda, utils
 from zeta_py.accounts import Account
 from zeta_py.exchange import Exchange
+from zeta_py.pyserum.enums import Side
 from zeta_py.pyserum.market.types import Order
-from zeta_py.types import Asset, Network, OrderOptions, Position
+from zeta_py.types import Asset, Network, OrderOptions, OrderType, Position
 from zeta_py.zeta_client.accounts.cross_margin_account import CrossMarginAccount
 from zeta_py.zeta_client.accounts.cross_margin_account_manager import (
     CrossMarginAccountManager,
@@ -24,7 +25,9 @@ from zeta_py.zeta_client.instructions import (
     initialize_open_orders_v3,
     place_perp_order_v3,
 )
-
+from solders.system_program import ID as SYS_PROGRAM_ID
+from solders.sysvar import RENT
+from spl.token.constants import ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID
 
 @dataclass
 class Client:
@@ -42,6 +45,7 @@ class Client:
     open_orders: list[Asset, list[Order]]
 
     # _margin_account_manager: Account[CrossMarginAccountManager]
+    _open_orders_addresses: dict[Asset, Pubkey]
     _margin_account_manager_address: Pubkey
     _combined_vault_address: Pubkey
     _combined_socialized_loss_address: Pubkey
@@ -82,6 +86,7 @@ class Client:
 
         positions = {}
         open_orders = {}
+        _open_orders_addresses = {}
         for asset in assets:
             # positions per market
             positions[asset] = Position(
@@ -100,6 +105,7 @@ class Client:
                 exchange.markets[asset].address,
                 margin_account.address,
             )
+            _open_orders_addresses[asset] = open_orders_address
             open_orders[asset] = await exchange.markets[asset]._serum_market.load_orders_for_owner(open_orders_address)
 
         # additional addresses to cache
@@ -121,7 +127,7 @@ class Client:
             balance,
             positions,
             open_orders,
-            # _margin_account_manager,
+            _open_orders_addresses,
             _margin_account_manager_address,
             _combined_vault_address,
             _combined_socialized_loss_address,
@@ -144,13 +150,13 @@ class Client:
             )  # None if no manager exists
         return self._margin_account_manager._is_initialized
 
-    async def _check_open_orders_account_exists(self, asset: Asset):
-        if not hasattr(self.open_orders[asset], "_margin_account_manager"):
-            # If they don't have margin account manager this will be null
-            self._margin_account_manager = await Account[CrossMarginAccountManager].load(
-                self._margin_account_manager_address, self.connection, CrossMarginAccountManager
-            )  # None if no manager exists
-        return self._margin_account_manager._is_initialized
+    # async def _check_open_orders_account_exists(self, asset: Asset):
+    #     if not hasattr(self.open_orders[asset], "_margin_account_manager"):
+    #         # If they don't have margin account manager this will be null
+    #         self._margin_account_manager = await Account[CrossMarginAccountManager].load(
+    #             self._margin_account_manager_address, self.connection, CrossMarginAccountManager
+    #         )  # None if no manager exists
+    #     return self._margin_account_manager._is_initialized
 
     # TODO: deposit
     async def deposit(self, amount: float, subaccount_index: int = 0):
@@ -221,27 +227,74 @@ class Client:
 
     # TODO: placeorder
     async def place_order(
-        self, asset: Asset, price: float, size: float, side: str, order_opts: OrderOptions = OrderOptions
+        self, asset: Asset, price: float, size: float, side: Side, order_opts: OrderOptions = OrderOptions
     ):
+        if asset not in self.open_orders:
+            raise Exception(f"Asset {asset.name} not loaded into client, cannot place order")
         tx = Transaction()
-        tx.add(
-            initialize_open_orders_v3(
-                {
-                    "cross_margin_account_manager": self.exchange.markets[asset].address,
-                    "authority": self.provider.wallet.public_key,
-                    "payer": self.margin_account.address,
-                    "zeta_program": self.exchange.program_id,
-                }
+        if self.open_orders[asset] is None:
+            self._logger.info("User has no open orders account, creating one...")
+            tx.add(
+                initialize_open_orders_v3(
+                    {"asset": asset.to_program_type()},
+                    {
+                        "state": self.exchange.state.address,
+                        "dex_program": constants.DEX_PID[self.network],
+                        "system_program": SYS_PROGRAM_ID,
+                        "open_orders": self._open_orders_addresses[asset],
+                        "cross_margin_account": self.margin_account.address,
+                        "authority": self.provider.wallet.public_key,
+                        "payer": self.provider.wallet.public_key,
+                        "market": self.exchange.markets[asset].address,
+                        "rent": RENT,
+                        "serum_authority": self.exchange._serum_authority_address,
+                        "open_orders_map": pda.get_open_orders_map_address(
+                            self.exchange.program_id, self._open_orders_addresses[asset]
+                        ),
+                    },
+                )
             )
-        )
         tx.add(
             place_perp_order_v3(
                 {
-                    "cross_margin_account_manager": self._margin_account_manager_address,
+                    "price": utils.convert_decimal_to_fixed_int(price),
+                    "size": utils.convert_decimal_to_fixed_lot(size),
+                    "side": side.to_program_type(),
+                    "order_type": order_opts.order_type.to_program_type(),
+                    "client_order_id": order_opts.client_order_id,
+                    "tif_offset": None,  # TODO: this later `getTIFOffset`
+                    "tag": order_opts.tag,
+                    "asset": asset.to_program_type(),
+                },
+                {
+                    "state": self.exchange.state.address,
+                    "pricing": self.exchange.pricing.address,
+                    "margin_account": self.margin_account.address,
                     "authority": self.provider.wallet.public_key,
-                    "payer": self.provider.wallet.public_key,
-                    "zeta_program": self.exchange.program_id,
-                }
+                    "dex_program": constants.DEX_PID[self.network],
+                    "token_program": TOKEN_PROGRAM_ID,
+                    "serum_authority": self.exchange._serum_authority_address,
+                    "open_orders": self._open_orders_addresses[asset],
+                    "rent": RENT,
+                    "market_accounts": {
+                        "market": self.exchange.markets[asset].address,
+                        "request_queue": self.exchange.markets[asset]._serum_market.state.request_queue(),
+                        "event_queue": self.exchange.markets[asset]._serum_market.state.event_queue(),
+                        "bids": self.exchange.markets[asset]._serum_market.state.bids(),
+                        "asks": self.exchange.markets[asset]._serum_market.state.asks(),
+                        "coin_vault": self.exchange.markets[asset]._serum_market.state.coin(),
+                        "pc_vault": ,
+                        "order_payer_token_account": ,
+                        "coin_wallet": ,
+                        "pc_wallet": ,
+                    },
+                    "oracle": ,
+                    "oracle_backup_feed": ,
+                    "oracle_backup_program": ,
+                    "market_mint": ,
+                    "mint_authority": ,
+                    "perp_sync_queue": ,
+                },
             )
         )
         raise NotImplementedError

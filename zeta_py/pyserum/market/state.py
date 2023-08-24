@@ -39,6 +39,8 @@ class MarketState:  # pylint: disable=too-many-public-methods
     @classmethod
     async def async_load(cls, conn: AsyncClient, market_address: Pubkey, program_id: Pubkey) -> MarketState:
         bytes_data = await async_utils.load_bytes_data(market_address, conn)
+        if bytes_data is None:
+            return None
         parsed_market = cls._make_parsed_market(bytes_data)
         base_mint_decimals = await async_utils.get_mint_decimals(conn, Pubkey(parsed_market.base_mint))
         quote_mint_decimals = await async_utils.get_mint_decimals(conn, Pubkey(parsed_market.quote_mint))

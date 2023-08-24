@@ -73,6 +73,20 @@ def get_associated_token_address(owner: Pubkey, mint: Pubkey) -> Pubkey:
     )[0]
 
 
+def get_serum_authority_address(program_id: Pubkey) -> Pubkey:
+    return Pubkey.find_program_address(
+        [b"serum"],
+        program_id,
+    )[0]
+
+
+def get_open_orders_map_address(program_id: Pubkey, open_orders: Pubkey) -> Pubkey:
+    return Pubkey.find_program_address(
+        [b"cross-open-orders-map", bytes(open_orders)],
+        program_id,
+    )[0]
+
+
 # def get_zeta_combined_insurance_vault_address(program_id: Pubkey) -> Pubkey:
 #     return Pubkey.find_program_address(
 #         [b"zeta-combined-insurance-vault"],

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import itertools
 import logging
+from typing import Optional
 
 from solana.transaction import Transaction
 from solders.instruction import Instruction
@@ -57,13 +58,12 @@ class MarketCore:
         return OrderBook.from_bytes(self.state, bytes_data)
 
     @staticmethod
-    def _parse_orders_for_owner(bids, asks, open_orders_accounts) -> list[t.Order]:
-        if not open_orders_accounts:
-            return []
+    def _parse_orders_for_owner(bids, asks, open_orders_account) -> Optional[list[t.Order]]:
+        if not open_orders_account:
+            return None
 
         all_orders = itertools.chain(bids.orders(), asks.orders())
-        open_orders_addresses = {str(o.address) for o in open_orders_accounts}
-        orders = [o for o in all_orders if str(o.open_order_address) in open_orders_addresses]
+        orders = [o for o in all_orders if str(o.open_order_address) == str(open_orders_account.address)]
         return orders
 
     def load_base_token_for_owner(self):

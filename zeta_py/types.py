@@ -3,6 +3,9 @@ from enum import Enum, IntEnum
 from typing import Optional
 
 from solders.hash import Hash
+from zeta_py.zeta_client.types import order_type
+
+from zeta_py.zeta_client.types.asset import from_decoded
 
 
 class Asset(Enum):
@@ -18,6 +21,9 @@ class Asset(Enum):
 
     def to_string(self):
         return self.name
+
+    def to_program_type(self):
+        return from_decoded({self.name: self.value})
 
     @staticmethod
     def all():
@@ -43,6 +49,9 @@ class OrderType(IntEnum):
     FILLORKILL = 2
     IMMEDIATEORCANCEL = 3
     POSTONLYSLIDE = 4
+
+    def to_program_type(self):
+        return order_type.from_decoded({self.name: self.value})
 
 
 @dataclass
