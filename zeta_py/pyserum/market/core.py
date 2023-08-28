@@ -19,12 +19,13 @@ from spl.token.instructions import (
     initialize_account,
 )
 
+from zeta_py.types import OrderType, SelfTradeBehavior, Side
+
 from .. import instructions
 from ..async_open_orders_account import (
     AsyncOpenOrdersAccount,
     make_create_open_orders_account_instruction,
 )
-from ..enums import OrderType, SelfTradeBehavior, Side
 from . import types as t
 from ._internal.queue import decode_event_queue
 from .orderbook import OrderBook

@@ -10,11 +10,12 @@ from solders.keypair import Keypair
 from solders.pubkey import Pubkey
 from solders.rpc.responses import RPCResult
 
+from zeta_py.types import OrderType, Side
+
 from .. import instructions
 from .._layouts.open_orders import OPEN_ORDERS_LAYOUT
 from ..async_open_orders_account import AsyncOpenOrdersAccount
 from ..async_utils import load_bytes_data, load_multiple_bytes_data
-from ..enums import OrderType, Side
 from . import types as t
 from ._internal.queue import decode_event_queue, decode_request_queue
 from .core import MarketCore

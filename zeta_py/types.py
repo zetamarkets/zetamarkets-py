@@ -5,7 +5,7 @@ from typing import Optional
 from solders.hash import Hash
 from zeta_py.zeta_client.types import order_type
 
-from zeta_py.zeta_client.types.asset import from_decoded
+from zeta_py.zeta_client.types import side, asset
 
 
 class Asset(Enum):
@@ -23,7 +23,7 @@ class Asset(Enum):
         return self.name
 
     def to_program_type(self):
-        return from_decoded({self.name: self.value})
+        return asset.from_decoded({self.name: self.value})
 
     @staticmethod
     def all():
@@ -51,7 +51,25 @@ class OrderType(IntEnum):
     POSTONLYSLIDE = 4
 
     def to_program_type(self):
-        return order_type.from_decoded({self.name: self.value})
+        return order_type.from_decoded({self.name.title(): self.value})
+
+
+class Side(Enum):
+    """Side of the orderbook to trade."""
+
+    BID = 0
+    """"""
+    ASK = 1
+    """"""
+
+    def to_program_type(self) -> side.SideKind:
+        return side.from_decoded({self.name.title(): self.value})
+
+
+class SelfTradeBehavior(Enum):
+    DECREMENT_TAKE = 0
+    CANCEL_PROVIDE = 1
+    ABORT_TRANSACTION = 2
 
 
 @dataclass
@@ -70,6 +88,6 @@ class TIFOptions:
 class OrderOptions:
     tif_options: TIFOptions = field(default_factory=TIFOptions)
     order_type: Optional[OrderType] = OrderType.LIMIT
-    client_order_id: Optional[int] = 0
+    client_order_id: Optional[int] = None
     tag: Optional[str] = "SDK"
     blockhash: Optional[Hash] = None

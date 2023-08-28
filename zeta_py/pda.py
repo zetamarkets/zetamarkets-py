@@ -59,6 +59,13 @@ def get_combined_vault_address(program_id: Pubkey) -> Pubkey:
     )[0]
 
 
+def get_zeta_vault_address(program_id: Pubkey, mint: Pubkey) -> Pubkey:
+    return Pubkey.find_program_address(
+        [b"zeta-vault", bytes(mint)],
+        program_id,
+    )[0]
+
+
 def get_combined_socialized_loss_address(program_id: Pubkey) -> Pubkey:
     return Pubkey.find_program_address(
         [b"combined-socialized-loss"],
@@ -83,6 +90,13 @@ def get_serum_authority_address(program_id: Pubkey) -> Pubkey:
 def get_open_orders_map_address(program_id: Pubkey, open_orders: Pubkey) -> Pubkey:
     return Pubkey.find_program_address(
         [b"cross-open-orders-map", bytes(open_orders)],
+        program_id,
+    )[0]
+
+
+def get_mint_authority_address(program_id: Pubkey) -> Pubkey:
+    return Pubkey.find_program_address(
+        [b"mint-auth"],
         program_id,
     )[0]
 

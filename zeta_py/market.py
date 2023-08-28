@@ -9,13 +9,13 @@ from typing import TYPE_CHECKING
 from solana.rpc.websocket_api import connect
 from solders.pubkey import Pubkey
 
-from zeta_py import constants
+from zeta_py import constants, pda
 from zeta_py.constants import Asset
 from zeta_py.db import pool
-from zeta_py.pyserum.enums import Side
 from zeta_py.pyserum.market import AsyncMarket as SerumMarket
 from zeta_py.pyserum.market.orderbook import OrderBook
 from zeta_py.pyserum.market.types import OrderInfo
+from zeta_py.types import Side
 
 if TYPE_CHECKING:
     from zeta_py.exchange import Exchange
@@ -37,6 +37,8 @@ class Market:
     bids: OrderBook
     asks: OrderBook
     _serum_market: SerumMarket
+    _base_zeta_vault_address: Pubkey
+    _quote_zeta_vault_address: Pubkey
     _bids_subscription_task: bool = None
     _asks_subscription_task: bool = None
     _bids_last_update_slot: int = None
@@ -56,9 +58,23 @@ class Market:
         )
         bids, asks = await _serum_market.load_bids_and_asks()
 
+        # Addresses
+        _base_zeta_vault_address = pda.get_zeta_vault_address(exchange.program_id, _serum_market.state.base_mint())
+        _quote_zeta_vault_address = pda.get_zeta_vault_address(exchange.program_id, _serum_market.state.quote_mint())
+
         logger = logging.getLogger(f"{__name__}.{cls.__name__}.{asset.name}")
 
-        instance = cls(asset, exchange, bids, asks, _serum_market, _logger=logger, _log_to_db=log_to_db)
+        instance = cls(
+            asset=asset,
+            exchange=exchange,
+            bids=bids,
+            asks=asks,
+            _serum_market=_serum_market,
+            _base_zeta_vault_address=_base_zeta_vault_address,
+            _quote_zeta_vault_address=_quote_zeta_vault_address,
+            _logger=logger,
+            _log_to_db=log_to_db,
+        )
 
         # Subscribe
         if subscribe:
@@ -71,6 +87,10 @@ class Market:
     @property
     def address(self) -> Pubkey:
         return self._serum_market.state.public_key()
+
+    @property
+    def oracle_address(self) -> Pubkey:
+        return self.exchange.pricing.account.oracles[self.asset.to_index()]
 
     @property
     def _is_subscribed_bids(self) -> bool:

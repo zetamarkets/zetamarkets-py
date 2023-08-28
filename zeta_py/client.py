@@ -7,13 +7,16 @@ from solana.rpc.async_api import AsyncClient
 from solana.rpc.types import TxOpts
 from solana.transaction import Transaction
 from solders.pubkey import Pubkey
+from solders.message import Message, MessageV0
+from solders.transaction import VersionedTransaction
+from solana.rpc import commitment
+
 
 from zeta_py import constants, pda, utils
 from zeta_py.accounts import Account
 from zeta_py.exchange import Exchange
-from zeta_py.pyserum.enums import Side
 from zeta_py.pyserum.market.types import Order
-from zeta_py.types import Asset, Network, OrderOptions, OrderType, Position
+from zeta_py.types import Asset, Network, OrderOptions, OrderType, Position, Side
 from zeta_py.zeta_client.accounts.cross_margin_account import CrossMarginAccount
 from zeta_py.zeta_client.accounts.cross_margin_account_manager import (
     CrossMarginAccountManager,
@@ -28,6 +31,7 @@ from zeta_py.zeta_client.instructions import (
 from solders.system_program import ID as SYS_PROGRAM_ID
 from solders.sysvar import RENT
 from spl.token.constants import ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID
+
 
 @dataclass
 class Client:
@@ -51,7 +55,6 @@ class Client:
     _combined_socialized_loss_address: Pubkey
     _user_usdc_address: Pubkey
     _logger: logging.Logger
-    _blockhash_cache = BlockhashCache()
 
     @classmethod
     async def load(
@@ -60,12 +63,18 @@ class Client:
         connection: AsyncClient,
         wallet: Wallet,
         assets: list[Asset] = Asset.all(),
-        tx_opts: TxOpts = constants.DEFAULT_TX_OPTS,
+        tx_opts: TxOpts = None,
         subscribe: bool = False,
     ):
         """
         Create a new client
         """
+        tx_opts = tx_opts or TxOpts(
+            {
+                "skip_preflight": False,
+                "preflight_commitment": connection.commitment,
+            }
+        )
         provider = Provider(
             connection,
             wallet,
@@ -160,10 +169,10 @@ class Client:
 
     # TODO: deposit
     async def deposit(self, amount: float, subaccount_index: int = 0):
-        tx = Transaction()
+        ixs = []
         if not await self._check_margin_account_manager_exists():
             self._logger.info("User has no cross-margin account manager, creating one...")
-            tx.add(
+            ixs.append(
                 initialize_cross_margin_account_manager(
                     {
                         "cross_margin_account_manager": self._margin_account_manager_address,
@@ -176,7 +185,7 @@ class Client:
         # Create margin account if user doesn't have one
         if not self.margin_account._is_initialized:
             self._logger.info("User has no cross-margin account manager, creating one...")
-            tx.add(
+            ixs.append(
                 initialize_cross_margin_account(
                     {"subaccount_index": subaccount_index},
                     {
@@ -190,7 +199,7 @@ class Client:
             )
         # Check they have an existing USDC account
         if await self._check_user_usdc_account_exists():
-            tx.add(
+            ixs.append(
                 deposit_v2(
                     {"amount": utils.convert_decimal_to_fixed_int(amount)},
                     {
@@ -216,8 +225,19 @@ class Client:
         # signature = await self.provider.send(
         #     signed_tx,
         # )
-        resp = await self.connection.send_transaction(tx, self.provider.wallet.payer)
-        signature = resp.value
+
+        # resp = await self.connection.send_transaction(tx, self.provider.wallet.payer)
+        # recent_blockhash = (await self.connection.get_latest_blockhash()).value.blockhash  # self._blockhash_cache.get()
+        recent_blockhash = (
+            self.connection.blockhash_cache.get()
+            if self.connection.blockhash_cache
+            else (await self.connection.get_latest_blockhash(commitment.Finalized)).value.blockhash
+        )
+        msg = MessageV0.try_compile(
+            self.provider.wallet.public_key, ixs, [constants.ZETA_LUT[self.network]], recent_blockhash
+        )
+        tx = VersionedTransaction(msg, [self.provider.wallet.payer])
+        signature = await self.provider.send(tx)
         self._logger.info(f"Deposit of ${amount} USDC to margin account {self.margin_account.address} submitted")
         return signature
 
@@ -231,10 +251,10 @@ class Client:
     ):
         if asset not in self.open_orders:
             raise Exception(f"Asset {asset.name} not loaded into client, cannot place order")
-        tx = Transaction()
+        ixs = []
         if self.open_orders[asset] is None:
             self._logger.info("User has no open orders account, creating one...")
-            tx.add(
+            ixs.append(
                 initialize_open_orders_v3(
                     {"asset": asset.to_program_type()},
                     {
@@ -246,15 +266,15 @@ class Client:
                         "authority": self.provider.wallet.public_key,
                         "payer": self.provider.wallet.public_key,
                         "market": self.exchange.markets[asset].address,
-                        "rent": RENT,
                         "serum_authority": self.exchange._serum_authority_address,
                         "open_orders_map": pda.get_open_orders_map_address(
                             self.exchange.program_id, self._open_orders_addresses[asset]
                         ),
+                        "rent": RENT,
                     },
                 )
             )
-        tx.add(
+        ixs.append(
             place_perp_order_v3(
                 {
                     "price": utils.convert_decimal_to_fixed_int(price),
@@ -282,22 +302,40 @@ class Client:
                         "event_queue": self.exchange.markets[asset]._serum_market.state.event_queue(),
                         "bids": self.exchange.markets[asset]._serum_market.state.bids(),
                         "asks": self.exchange.markets[asset]._serum_market.state.asks(),
-                        "coin_vault": self.exchange.markets[asset]._serum_market.state.coin(),
-                        "pc_vault": ,
-                        "order_payer_token_account": ,
-                        "coin_wallet": ,
-                        "pc_wallet": ,
+                        "coin_vault": self.exchange.markets[asset]._serum_market.state.base_vault(),
+                        "pc_vault": self.exchange.markets[asset]._serum_market.state.quote_vault(),
+                        "order_payer_token_account": self.exchange.markets[asset]._quote_zeta_vault_address
+                        if side == Side.BID
+                        else self.exchange.markets[asset]._base_zeta_vault_address,
+                        "coin_vault": self.exchange.markets[asset]._serum_market.state.base_vault(),
+                        "pc_vault": self.exchange.markets[asset]._serum_market.state.quote_vault(),
+                        "coin_wallet": self.exchange.markets[asset]._base_zeta_vault_address,
+                        "pc_wallet": self.exchange.markets[asset]._quote_zeta_vault_address,
                     },
-                    "oracle": ,
-                    "oracle_backup_feed": ,
-                    "oracle_backup_program": ,
-                    "market_mint": ,
-                    "mint_authority": ,
-                    "perp_sync_queue": ,
+                    "oracle": self.exchange.pricing.account.oracles[asset.to_index()],
+                    "oracle_backup_feed": self.exchange.pricing.account.oracle_backup_feeds[asset.to_index()],
+                    "oracle_backup_program": constants.CHAINLINK_PID,
+                    "market_mint": self.exchange.markets[asset]._serum_market.state.quote_mint()
+                    if side == Side.BID
+                    else self.exchange.markets[asset]._serum_market.state.base_mint(),
+                    "mint_authority": self.exchange._mint_authority_address,
+                    "perp_sync_queue": self.exchange.pricing.account.perp_sync_queues[asset.to_index()],
                 },
             )
         )
-        raise NotImplementedError
+        # TODO: confirm txs
+        recent_blockhash = (
+            self.connection.blockhash_cache.get()
+            if self.connection.blockhash_cache
+            else (await self.connection.get_latest_blockhash(commitment.Finalized)).value.blockhash
+        )
+        msg = MessageV0.try_compile(
+            self.provider.wallet.public_key, ixs, [constants.ZETA_LUT[self.network]], recent_blockhash
+        )
+        tx = VersionedTransaction(msg, [self.provider.wallet.payer])
+        signature = await self.provider.send(tx)
+        self._logger.info(f"Placed {size}x {asset}-PERP {side.name} @ ${price}")
+        return signature
 
     # TODO: cancelorder
     async def cancel_order(self):

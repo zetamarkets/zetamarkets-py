@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import Iterable, Union
 
-from ..enums import Side
+from zeta_py.types import Side
+
 from . import types as t
 from ._internal.slab import Slab, SlabInnerNode, SlabLeafNode
 from .state import MarketState

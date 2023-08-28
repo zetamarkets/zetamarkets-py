@@ -9,8 +9,9 @@ from solders.pubkey import Pubkey
 from solders.sysvar import RENT
 from spl.token.constants import TOKEN_PROGRAM_ID
 
+from zeta_py.types import OrderType, SelfTradeBehavior, Side
+
 from ._layouts.instructions import INSTRUCTIONS_LAYOUT, InstructionType
-from .enums import OrderType, SelfTradeBehavior, Side
 
 # V3
 DEFAULT_DEX_PROGRAM_ID = Pubkey.from_string("zDEXqXEG7gAyxb1Kg9mK5fPnUdENCGKzWrM21RMdWRq")

@@ -40,6 +40,7 @@ class Exchange:
     clock: Account[Clock] = None
 
     _serum_authority_address: Pubkey = None
+    _mint_authority_address: Pubkey = None
 
     @classmethod
     async def load(
@@ -47,11 +48,17 @@ class Exchange:
         network: Network,
         connection: AsyncClient,
         assets: list[Asset] = Asset.all(),
-        tx_opts: TxOpts = constants.DEFAULT_TX_OPTS,
+        tx_opts: TxOpts = None,
         subscribe: bool = False,
         # load_from_store: bool,
         # callback: Optional[Callable[[Asset, EventType, Any], None]] = None,
     ) -> "Exchange":
+        tx_opts = tx_opts or TxOpts(
+            {
+                "skip_preflight": False,
+                "preflight_commitment": connection.commitment,
+            }
+        )
         # if loadConfig.network == "localnet" and loadConfig.loadFromStore:
         #     raise Exception("Cannot load localnet from store")
         program_id = constants.ZETA_PID[network]
@@ -65,8 +72,17 @@ class Exchange:
 
         # Addresses
         _serum_authority_address = pda.get_serum_authority_address(program_id)
+        _mint_authority_address = pda.get_mint_authority_address(program_id)
 
-        instance = cls(network, connection, program_id, state, pricing, _serum_authority_address)
+        instance = cls(
+            network=network,
+            connection=connection,
+            program_id=program_id,
+            state=state,
+            pricing=pricing,
+            _serum_authority_address=_serum_authority_address,
+            _mint_authority_address=_mint_authority_address,
+        )
 
         instance.markets = {asset: await Market.load(asset, instance, subscribe) for asset in assets}
 

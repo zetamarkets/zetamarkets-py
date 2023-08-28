@@ -4,8 +4,9 @@ from typing import NamedTuple
 
 from solders.pubkey import Pubkey
 
+from zeta_py.types import Side
+
 from .._layouts.account_flags import ACCOUNT_FLAGS_LAYOUT
-from ..enums import Side
 
 
 class AccountFlags(NamedTuple):
