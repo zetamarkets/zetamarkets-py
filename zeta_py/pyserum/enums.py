@@ -8,9 +8,9 @@ from zeta_py.zeta_client.types import side
 # class Side(Enum):
 #     """Side of the orderbook to trade."""
 
-#     BID = 0
+#     Bid = 0
 #     """"""
-#     ASK = 1
+#     Ask = 1
 #     """"""
 
 #     def to_program_type(self) -> side.SideKind:

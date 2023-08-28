@@ -274,6 +274,15 @@ class Client:
                     },
                 )
             )
+        tif_offset = (
+            utils.get_tif_offset(
+                order_opts.expiry_ts,
+                self.exchange.markets[asset]._serum_market.state.epoch_length(),
+                self.exchange.clock.account.unix_timestamp,
+            )
+            if order_opts.expiry_ts
+            else None
+        )
         ixs.append(
             place_perp_order_v3(
                 {
@@ -282,7 +291,7 @@ class Client:
                     "side": side.to_program_type(),
                     "order_type": order_opts.order_type.to_program_type(),
                     "client_order_id": order_opts.client_order_id,
-                    "tif_offset": None,  # TODO: this later `getTIFOffset`
+                    "tif_offset": tif_offset,
                     "tag": order_opts.tag,
                     "asset": asset.to_program_type(),
                 },
@@ -305,7 +314,7 @@ class Client:
                         "coin_vault": self.exchange.markets[asset]._serum_market.state.base_vault(),
                         "pc_vault": self.exchange.markets[asset]._serum_market.state.quote_vault(),
                         "order_payer_token_account": self.exchange.markets[asset]._quote_zeta_vault_address
-                        if side == Side.BID
+                        if side == Side.Bid
                         else self.exchange.markets[asset]._base_zeta_vault_address,
                         "coin_vault": self.exchange.markets[asset]._serum_market.state.base_vault(),
                         "pc_vault": self.exchange.markets[asset]._serum_market.state.quote_vault(),
@@ -316,7 +325,7 @@ class Client:
                     "oracle_backup_feed": self.exchange.pricing.account.oracle_backup_feeds[asset.to_index()],
                     "oracle_backup_program": constants.CHAINLINK_PID,
                     "market_mint": self.exchange.markets[asset]._serum_market.state.quote_mint()
-                    if side == Side.BID
+                    if side == Side.Bid
                     else self.exchange.markets[asset]._serum_market.state.base_mint(),
                     "mint_authority": self.exchange._mint_authority_address,
                     "perp_sync_queue": self.exchange.pricing.account.perp_sync_queues[asset.to_index()],

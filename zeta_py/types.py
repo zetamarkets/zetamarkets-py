@@ -44,22 +44,22 @@ class Network(Enum):
 
 
 class OrderType(IntEnum):
-    LIMIT = 0
-    POSTONLY = 1
-    FILLORKILL = 2
-    IMMEDIATEORCANCEL = 3
-    POSTONLYSLIDE = 4
+    Limit = 0
+    PostOnly = 1
+    FillOrKill = 2
+    ImmediateOrCancel = 3
+    PostOnlySlide = 4
 
     def to_program_type(self):
-        return order_type.from_decoded({self.name.title(): self.value})
+        return order_type.from_decoded({self.name: self.value})
 
 
 class Side(Enum):
     """Side of the orderbook to trade."""
 
-    BID = 0
+    Bid = 0
     """"""
-    ASK = 1
+    Ask = 1
     """"""
 
     def to_program_type(self) -> side.SideKind:
@@ -67,9 +67,9 @@ class Side(Enum):
 
 
 class SelfTradeBehavior(Enum):
-    DECREMENT_TAKE = 0
-    CANCEL_PROVIDE = 1
-    ABORT_TRANSACTION = 2
+    DecrementTake = 0
+    CancelProvide = 1
+    AbortTransaction = 2
 
 
 @dataclass
@@ -86,8 +86,9 @@ class TIFOptions:
 
 @dataclass
 class OrderOptions:
-    tif_options: TIFOptions = field(default_factory=TIFOptions)
-    order_type: Optional[OrderType] = OrderType.LIMIT
+    # tif_options: TIFOptions = field(default_factory=TIFOptions)
+    expiry_ts: Optional[int] = None
+    order_type: Optional[OrderType] = OrderType.Limit
     client_order_id: Optional[int] = None
     tag: Optional[str] = "SDK"
     blockhash: Optional[Hash] = None

@@ -80,14 +80,14 @@ class MarketCore:
 
     def parse_fill_event(self, event: t.Event) -> t.FilledOrder:
         if event.event_flags.bid:
-            side = Side.BID
+            side = Side.Bid
             price_before_fees = (
                 event.native_quantity_released + event.native_fee_or_rebate
                 if event.event_flags.maker
                 else event.native_quantity_released - event.native_fee_or_rebate
             )
         else:
-            side = Side.ASK
+            side = Side.Ask
             price_before_fees = (
                 event.native_quantity_released - event.native_fee_or_rebate
                 if event.event_flags.maker
@@ -142,8 +142,8 @@ class MarketCore:
             raise ValueError("Invalid payer account. Cannot use unwrapped SOL.")
 
         # TODO: add integration test for SOL wrapping.
-        should_wrap_sol = (side == Side.BID and self.state.quote_mint() == WRAPPED_SOL_MINT) or (
-            side == Side.ASK and self.state.base_mint() == WRAPPED_SOL_MINT
+        should_wrap_sol = (side == Side.Bid and self.state.quote_mint() == WRAPPED_SOL_MINT) or (
+            side == Side.Ask and self.state.base_mint() == WRAPPED_SOL_MINT
         )
 
         if should_wrap_sol:
@@ -215,7 +215,7 @@ class MarketCore:
         open_orders_accounts: list[AsyncOpenOrdersAccount],
     ) -> int:
         lamports = 0
-        if side == Side.BID:
+        if side == Side.Bid:
             lamports = round(price * size * 1.01 * LAMPORTS_PER_SOL)
             if open_orders_accounts:
                 lamports -= open_orders_accounts[0].quote_token_free
@@ -263,7 +263,7 @@ class MarketCore:
                 order_type=order_type,
                 client_id=client_id,
                 program_id=self.state.program_id(),
-                self_trade_behavior=SelfTradeBehavior.DECREMENT_TAKE,
+                self_trade_behavior=SelfTradeBehavior.DecrementTake,
                 fee_discount_pubkey=fee_discount_pubkey,
                 limit=65535,
             )

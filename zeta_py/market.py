@@ -128,7 +128,7 @@ class Market:
                     msg = await ws.recv()
                     orderbook = self._serum_market._parse_bids_or_asks(msg[0].result.value.data)
                     slot = msg[0].result.context.slot
-                    if side == Side.BID:
+                    if side == Side.Bid:
                         self.bids = orderbook
                         self._bids_last_update_slot = slot
                     else:
@@ -147,7 +147,7 @@ class Market:
             self._logger.warn("Already subscribed to bids")
         else:
             self._bids_subscription_task = asyncio.create_task(
-                self._subscribe_orderbook(self._serum_market.state.bids(), side=Side.BID)
+                self._subscribe_orderbook(self._serum_market.state.bids(), side=Side.Bid)
             )
             self._logger.info(f"Subscribed to {self.asset.name}:bid")
         # Subscribe asks
@@ -155,7 +155,7 @@ class Market:
             self._logger.warn("Already subscribed to asks")
         else:
             self._asks_subscription_task = asyncio.create_task(
-                self._subscribe_orderbook(self._serum_market.state.asks(), side=Side.ASK)
+                self._subscribe_orderbook(self._serum_market.state.asks(), side=Side.Ask)
             )
             self._logger.info(f"Subscribed to {self.asset.name}:ask")
 
@@ -196,7 +196,7 @@ class Market:
     def insert_to_db(self, side: Side):
         with pool.connection() as conn:
             l2 = self.get_l2(side)
-            slot = self._bids_last_update_slot if side == Side.BID else self._asks_last_update_slot
+            slot = self._bids_last_update_slot if side == Side.Bid else self._asks_last_update_slot
             insert_time = datetime.now()
             try:
                 for level in l2:
@@ -210,7 +210,7 @@ class Market:
                             self.asset.name + "-PERP",
                             slot,
                             insert_time,
-                            side == Side.BID,
+                            side == Side.Bid,
                             level.price,
                             level.size,
                         ),
@@ -224,9 +224,9 @@ class Market:
 
     def print_orderbook(self, depth: int = 10, filter_tif: bool = True) -> None:
         print("Ask Orders:")
-        print(*self.get_l2(Side.ASK, depth, filter_tif)[::-1], sep="\n")
+        print(*self.get_l2(Side.Ask, depth, filter_tif)[::-1], sep="\n")
         print("Bid Orders:")
-        print(*self.get_l2(Side.BID, depth, filter_tif), sep="\n")
+        print(*self.get_l2(Side.Bid, depth, filter_tif), sep="\n")
 
     @staticmethod
     def _is_order_expired(
@@ -240,7 +240,7 @@ class Market:
 
     def get_l2(self, side: Side, depth: int = None, filter_tif: bool = True) -> list[OrderInfo]:
         """Get the Level 2 market information."""
-        orderbook = self.bids if side == Side.BID else self.asks
+        orderbook = self.bids if side == Side.Bid else self.asks
         descending = orderbook._is_bids
         # The first element of the inner list is price, the second is quantity.
         levels: list[list[int]] = []

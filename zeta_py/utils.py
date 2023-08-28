@@ -33,3 +33,12 @@ def cluster_endpoint(network: Network, tls: bool = True, ws: bool = False) -> st
         return re.sub(r"^http", "ws", endpoint)
     else:
         return endpoint
+
+
+def get_tif_offset(expiry_ts: int, epoch_length: int, current_ts: int) -> int:
+    if expiry_ts < current_ts:
+        raise Exception(f"Cannot place expired order, current_ts: {current_ts}, expiry_ts: {expiry_ts}")
+    epoch_start = current_ts - (current_ts % epoch_length)
+
+    tif_offset = expiry_ts - epoch_start
+    return min(tif_offset, epoch_length)
