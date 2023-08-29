@@ -3,9 +3,8 @@ from enum import Enum, IntEnum
 from typing import Optional
 
 from solders.hash import Hash
-from zeta_py.zeta_client.types import order_type
 
-from zeta_py.zeta_client.types import side, asset
+from zeta_py.zeta_client.types import asset, order_type, side
 
 
 class Asset(Enum):

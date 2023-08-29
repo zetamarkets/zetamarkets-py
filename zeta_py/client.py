@@ -3,15 +3,18 @@ from dataclasses import dataclass
 
 from anchorpy import Provider, Wallet
 from solana.blockhash import BlockhashCache
+from solana.rpc import commitment
 from solana.rpc.async_api import AsyncClient
+from solana.rpc.core import RPCException
 from solana.rpc.types import TxOpts
 from solana.transaction import Transaction
-from solders.pubkey import Pubkey
+from solders.instruction import Instruction
 from solders.message import MessageV0
+from solders.pubkey import Pubkey
+from solders.system_program import ID as SYS_PROGRAM_ID
+from solders.sysvar import RENT
 from solders.transaction import VersionedTransaction
-from solana.rpc import commitment
-from solana.rpc.core import RPCException
-from zeta_py.zeta_client.errors import from_tx_error
+from spl.token.constants import TOKEN_PROGRAM_ID
 
 from zeta_py import constants, pda, utils
 from zeta_py.accounts import Account
@@ -22,6 +25,7 @@ from zeta_py.zeta_client.accounts.cross_margin_account import CrossMarginAccount
 from zeta_py.zeta_client.accounts.cross_margin_account_manager import (
     CrossMarginAccountManager,
 )
+from zeta_py.zeta_client.errors import from_tx_error
 from zeta_py.zeta_client.instructions import (
     cancel_all_market_orders,
     cancel_order,
@@ -31,10 +35,6 @@ from zeta_py.zeta_client.instructions import (
     initialize_open_orders_v3,
     place_perp_order_v3,
 )
-from solders.system_program import ID as SYS_PROGRAM_ID
-from solders.sysvar import RENT
-from spl.token.constants import TOKEN_PROGRAM_ID
-from solders.instruction import Instruction
 
 
 @dataclass

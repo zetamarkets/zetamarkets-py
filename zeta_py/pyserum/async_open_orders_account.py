@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import NamedTuple, Optional, Type, TypeVar
+
 from solana.rpc.async_api import AsyncClient
 from solders.instruction import Instruction
 from solders.pubkey import Pubkey
@@ -9,8 +11,6 @@ from zeta_py.pyserum._layouts.open_orders import OPEN_ORDERS_LAYOUT
 from zeta_py.pyserum.instructions import DEFAULT_DEX_PROGRAM_ID
 
 from .async_utils import load_bytes_data
-
-from typing import NamedTuple, Optional, Type, TypeVar
 
 
 class ProgramAccount(NamedTuple):

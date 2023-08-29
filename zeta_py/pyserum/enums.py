@@ -4,7 +4,6 @@ from enum import Enum
 
 from zeta_py.zeta_client.types import side
 
-
 # class Side(Enum):
 #     """Side of the orderbook to trade."""
 
