@@ -11,7 +11,7 @@ def convert_fixed_int_to_decimal(amount: int) -> float:
 
 
 def convert_decimal_to_fixed_int(amount: float) -> int:
-    return int((amount * 10**constants.PLATFORM_PRECISION / constants.TICK_SIZE) * constants.TICK_SIZE)
+    return int((amount * 10**constants.PLATFORM_PRECISION / constants.TICK_SIZE)) * constants.TICK_SIZE
 
 
 def convert_fixed_lot_to_decimal(amount: int) -> float:

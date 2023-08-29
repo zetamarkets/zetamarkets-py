@@ -87,7 +87,7 @@ class Account(Generic[AnchorpyAccountType]):
                     self.account = account
                     self.last_update_slot = msg[0].result.context.slot
         except Exception as e:
-            self._logger.error(f"Error subscribing to {self.account.__class__.__name__}: ", e)
+            self._logger.error(f"Error subscribing to {self.account.__class__.__name__}: {e}")
         finally:
             self._subscription_task = None
 

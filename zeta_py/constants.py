@@ -116,6 +116,7 @@ DEFAULT_MICRO_LAMPORTS_PER_CU_FEE = 1000
 #         # "preflight_commitment": DEFAULT_COMMITMENT,
 #     }
 # )
+BLOCKHASH_COMMITMENT = commitment.Finalized
 
 ZETA_LUT = {
     # Network.LOCALNET: None,

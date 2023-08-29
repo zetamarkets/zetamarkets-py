@@ -10,7 +10,8 @@ from solders.pubkey import Pubkey
 from solders.message import MessageV0
 from solders.transaction import VersionedTransaction
 from solana.rpc import commitment
-
+from solana.rpc.core import RPCException
+from zeta_py.zeta_client.errors import from_tx_error
 
 from zeta_py import constants, pda, utils
 from zeta_py.accounts import Account
@@ -22,6 +23,7 @@ from zeta_py.zeta_client.accounts.cross_margin_account_manager import (
     CrossMarginAccountManager,
 )
 from zeta_py.zeta_client.instructions import (
+    cancel_all_market_orders,
     cancel_order,
     deposit_v2,
     initialize_cross_margin_account,
@@ -32,6 +34,7 @@ from zeta_py.zeta_client.instructions import (
 from solders.system_program import ID as SYS_PROGRAM_ID
 from solders.sysvar import RENT
 from spl.token.constants import TOKEN_PROGRAM_ID
+from solders.instruction import Instruction
 
 
 @dataclass
@@ -164,6 +167,11 @@ class Client:
         return oo
 
     async def deposit(self, amount: float, subaccount_index: int = 0):
+        ixs = await self._deposit_ixs(amount, subaccount_index)
+        self._logger.info(f"Depositing {amount} USDC to margin account")
+        return await self._send_versioned_transaction(ixs)
+
+    async def _deposit_ixs(self, amount: float, subaccount_index: int = 0) -> list[Instruction]:
         ixs = []
         if not await self._check_margin_account_manager_exists():
             self._logger.info("User has no cross-margin account manager, creating one...")
@@ -211,28 +219,22 @@ class Client:
         else:
             raise Exception("User has no USDC, cannot deposit to margin account")
 
-        # TODO: prefetch blockhash (look into blockhash cache)
-        recent_blockhash = (
-            self.connection.blockhash_cache.get()
-            if self.connection.blockhash_cache
-            else (await self.connection.get_latest_blockhash(commitment.Finalized)).value.blockhash
-        )
-        msg = MessageV0.try_compile(
-            self.provider.wallet.public_key, ixs, [constants.ZETA_LUT[self.network]], recent_blockhash
-        )
-        tx = VersionedTransaction(msg, [self.provider.wallet.payer])
-        signature = await self.provider.send(tx)
-        self._logger.info(f"Deposit of ${amount} USDC to margin account {self.margin_account.address} submitted")
-        return signature
+        return ixs
 
     # TODO: withdraw (and optionally close)
     async def withdraw(self):
         raise NotImplementedError
 
-    # TODO: placeorder
     async def place_order(
         self, asset: Asset, price: float, size: float, side: Side, order_opts: OrderOptions = OrderOptions
     ):
+        ixs = self._place_order_ixs(asset, price, size, side, order_opts)
+        self._logger.info(f"Placed {size}x {asset}-PERP {side.name} @ ${price}")
+        return await self._send_versioned_transaction(ixs)
+
+    def _place_order_ixs(
+        self, asset: Asset, price: float, size: float, side: Side, order_opts: OrderOptions = OrderOptions
+    ) -> list[Instruction]:
         if asset not in self.open_orders:
             raise Exception(f"Asset {asset.name} not loaded into client, cannot place order")
         ixs = []
@@ -314,21 +316,14 @@ class Client:
                 },
             )
         )
-        recent_blockhash = (
-            self.connection.blockhash_cache.get()
-            if self.connection.blockhash_cache
-            else (await self.connection.get_latest_blockhash(commitment.Finalized)).value.blockhash
-        )
-        msg = MessageV0.try_compile(
-            self.provider.wallet.public_key, ixs, [constants.ZETA_LUT[self.network]], recent_blockhash
-        )
-        tx = VersionedTransaction(msg, [self.provider.wallet.payer])
-        signature = await self.provider.send(tx)
-        self._logger.info(f"Placed {size}x {asset}-PERP {side.name} @ ${price}")
-        return signature
+        return ixs
 
-    # TODO: cancelorder
     async def cancel_order(self, asset: Asset, order_id: int, side: Side):
+        ixs = await self._cancel_order_ixs(asset, order_id, side)
+        self._logger.info(f"Cancelling order {order_id} for {asset}")
+        return await self._send_versioned_transaction(ixs)
+
+    def _cancel_order_ixs(self, asset: Asset, order_id: int, side: Side) -> list[Instruction]:
         ixs = []
         ixs.append(
             cancel_order(
@@ -349,25 +344,73 @@ class Client:
                 },
             )
         )
+        return ixs
+
+    # TODO: cancelorderbyclientorderid
+
+    def _cancel_orders_for_market_ixs(self, asset: Asset):
+        ixs = []
+        ixs.append(
+            cancel_all_market_orders(
+                {"asset": asset.to_program_type()},
+                {
+                    "authority": self.provider.wallet.public_key,
+                    "cancel_accounts": {
+                        "state": self.exchange.state.address,
+                        "margin_account": self.margin_account.address,
+                        "dex_program": constants.DEX_PID[self.network],
+                        "serum_authority": self.exchange._serum_authority_address,
+                        "open_orders": self._open_orders_addresses[asset],
+                        "market": self.exchange.markets[asset].address,
+                        "bids": self.exchange.markets[asset]._serum_market.state.bids(),
+                        "asks": self.exchange.markets[asset]._serum_market.state.asks(),
+                        "event_queue": self.exchange.markets[asset]._serum_market.state.event_queue(),
+                    },
+                },
+            )
+        )
+        return ixs
+
+    async def replace_quote(
+        self,
+        asset: Asset,
+        bid_price: float,
+        bid_size: float,
+        ask_price: float,
+        ask_size: float,
+        order_opts: OrderOptions = OrderOptions,
+    ):
+        cancel_ixs = self._cancel_orders_for_market_ixs(asset)
+        bid_place_ixs = self._place_order_ixs(asset, bid_price, bid_size, Side.Bid, order_opts)
+        ask_place_ixs = self._place_order_ixs(asset, ask_price, ask_size, Side.Ask, order_opts)
+        ixs = cancel_ixs + bid_place_ixs + ask_place_ixs
+        self._logger.info(
+            f"Replacing {asset} orders: {bid_size}x {Side.Bid.name} @ ${bid_price}, {ask_size}x {Side.Ask.name} @ ${ask_price}"
+        )
+        return await self._send_versioned_transaction(ixs)
+
+    # TODO: liquidate
+    async def liquidate(self):
+        raise NotImplementedError
+
+    async def _send_versioned_transaction(self, ixs):
+        # TODO: prefetch blockhash (look into blockhash cache)
         recent_blockhash = (
             self.connection.blockhash_cache.get()
             if self.connection.blockhash_cache
-            else (await self.connection.get_latest_blockhash(commitment.Finalized)).value.blockhash
+            else (await self.connection.get_latest_blockhash(constants.BLOCKHASH_COMMITMENT)).value.blockhash
         )
         msg = MessageV0.try_compile(
             self.provider.wallet.public_key, ixs, [constants.ZETA_LUT[self.network]], recent_blockhash
         )
         tx = VersionedTransaction(msg, [self.provider.wallet.payer])
-        signature = await self.provider.send(tx)
-        self._logger.info(f"Cancelled order {order_id} for {asset}")
+        try:
+            signature = await self.provider.send(tx)
+        except RPCException as exc:
+            # This won't work on zDEX errors
+            parsed = from_tx_error(exc)
+            self._logger.error(parsed)
+            if parsed is not None:
+                raise parsed from exc
+            raise exc
         return signature
-
-    # TODO: cancelorderbyclientorderid
-
-    # TODO: cancelorderformarket
-
-    # TODO: cancelplace
-
-    # TODO: liquidate
-    async def liquidate(self):
-        raise NotImplementedError
