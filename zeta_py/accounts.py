@@ -79,13 +79,15 @@ class Account(Generic[AnchorpyAccountType]):
                     commitment=commitment,
                     encoding="base64",
                 )
-                first_resp = await asyncio.wait_for(ws.recv(), timeout=self._TIMEOUT)
+                first_resp = await ws.recv()
                 first_resp[0].result
                 while True:
-                    msg = await asyncio.wait_for(ws.recv(), timeout=self._TIMEOUT)
+                    msg = await ws.recv()
                     account = self.decode(msg[0].result.value.data)
                     self.account = account
                     self.last_update_slot = msg[0].result.context.slot
+        except Exception as e:
+            self._logger.error(f"Error subscribing to {self.account.__class__.__name__}: ", e)
         finally:
             self._subscription_task = None
 

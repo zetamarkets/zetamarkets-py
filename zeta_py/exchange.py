@@ -54,10 +54,7 @@ class Exchange:
         # callback: Optional[Callable[[Asset, EventType, Any], None]] = None,
     ) -> "Exchange":
         tx_opts = tx_opts or TxOpts(
-            {
-                "skip_preflight": False,
-                "preflight_commitment": connection.commitment,
-            }
+            {"skip_preflight": False, "preflight_commitment": connection.commitment, "skip_confirmation": False}
         )
         # if loadConfig.network == "localnet" and loadConfig.loadFromStore:
         #     raise Exception("Cannot load localnet from store")
@@ -93,8 +90,8 @@ class Exchange:
         instance.clock = await Account[Clock].load(CLOCK, connection, Clock)
 
         # TODO: Maybe disable polling/subscriptions by default and have helper to enable bulk
+        instance.clock.subscribe(network, connection.commitment)
         if subscribe:
-            instance.clock.subscribe(network, connection.commitment)
             instance.pricing.subscribe(network, connection.commitment)
 
         return instance
