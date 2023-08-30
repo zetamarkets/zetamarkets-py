@@ -23,9 +23,8 @@ with open(idl_path, "r") as f:
     idl = Idl.from_json(f.read())
 
 
-# TODO: change to use attrs/cattrs
 # TODO: add logging e.g. logger = logging.getLogger("pyserum.market.Market")
-# TODO: change all to factory method init
+# TODO: migrate to serum IDL
 
 
 @dataclass
@@ -89,7 +88,6 @@ class Exchange:
         # Load Clock
         instance.clock = await Account[Clock].load(CLOCK, connection, Clock)
 
-        # TODO: Maybe disable polling/subscriptions by default and have helper to enable bulk
         instance.clock.subscribe(network, connection.commitment)
         if subscribe:
             instance.pricing.subscribe(network, connection.commitment)
@@ -108,6 +106,8 @@ class Exchange:
     def toggle_auto_priority_fee(self):
         self._use_auto_priority_fee = not self._use_auto_priority_fee
 
+    # TODO: add auto priority fee
+    # TODO: add to solders
     def update_auto_fee(self):
         account_list = []
 

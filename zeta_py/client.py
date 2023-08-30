@@ -2,12 +2,9 @@ import logging
 from dataclasses import dataclass
 
 from anchorpy import Provider, Wallet
-from solana.blockhash import BlockhashCache
-from solana.rpc import commitment
 from solana.rpc.async_api import AsyncClient
 from solana.rpc.core import RPCException
 from solana.rpc.types import TxOpts
-from solana.transaction import Transaction
 from solders.instruction import Instruction
 from solders.message import MessageV0
 from solders.pubkey import Pubkey
@@ -20,7 +17,7 @@ from zeta_py import constants, pda, utils
 from zeta_py.accounts import Account
 from zeta_py.exchange import Exchange
 from zeta_py.pyserum.market.types import Order
-from zeta_py.types import Asset, Network, OrderOptions, OrderType, Position, Side
+from zeta_py.types import Asset, Network, OrderOptions, Position, Side
 from zeta_py.zeta_client.accounts.cross_margin_account import CrossMarginAccount
 from zeta_py.zeta_client.accounts.cross_margin_account_manager import (
     CrossMarginAccountManager,
@@ -385,7 +382,8 @@ class Client:
         ask_place_ixs = self._place_order_ixs(asset, ask_price, ask_size, Side.Ask, order_opts)
         ixs = cancel_ixs + bid_place_ixs + ask_place_ixs
         self._logger.info(
-            f"Replacing {asset} orders: {bid_size}x {Side.Bid.name} @ ${bid_price}, {ask_size}x {Side.Ask.name} @ ${ask_price}"
+            f"Replacing {asset} orders: \
+                {bid_size}x {Side.Bid.name} @ ${bid_price}, {ask_size}x {Side.Ask.name} @ ${ask_price}"
         )
         return await self._send_versioned_transaction(ixs)
 

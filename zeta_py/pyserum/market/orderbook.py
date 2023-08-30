@@ -64,7 +64,6 @@ class OrderBook:
         # The first element of the inner list is price, the second is quantity.
         levels: list[list[int]] = []
         for node in self._slab.items(descending):
-            # TODO: Filter expired TIF orders
             price = self._get_price_from_slab(node)
             if len(levels) > 0 and levels[len(levels) - 1][0] == price:
                 levels[len(levels) - 1][1] += node.quantity

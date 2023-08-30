@@ -71,7 +71,7 @@ class Account(Generic[AnchorpyAccountType]):
         self.account = await self.fetch(conn, self.address)
 
     async def _subscribe(self, network: Network, commitment: Commitment) -> None:
-        ws_endpoint = utils.cluster_endpoint(network, ws=True)
+        ws_endpoint = utils.cluster_endpoint(network, ws=True, whirligig=False)
         try:
             async with connect(ws_endpoint) as ws:
                 await ws.account_subscribe(
