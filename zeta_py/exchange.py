@@ -25,7 +25,7 @@ with open(idl_path, "r") as f:
 
 # TODO: add logging e.g. logger = logging.getLogger("pyserum.market.Market")
 # TODO: migrate to serum IDL
-
+# TODO: make websockets more robust e.g. reconnection
 
 @dataclass
 class Exchange:

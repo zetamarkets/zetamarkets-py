@@ -316,7 +316,7 @@ class Client:
         return ixs
 
     async def cancel_order(self, asset: Asset, order_id: int, side: Side):
-        ixs = await self._cancel_order_ixs(asset, order_id, side)
+        ixs = self._cancel_order_ixs(asset, order_id, side)
         self._logger.info(f"Cancelling order {order_id} for {asset}")
         return await self._send_versioned_transaction(ixs)
 
