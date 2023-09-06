@@ -33,6 +33,13 @@ from zeta_py.zeta_client.instructions import (
     place_perp_order_v3,
 )
 
+# TODO: simplify to just client, no exchange?
+# TODO: simplify and remove generic programAccount classes and handle bare minimum bids,asks,slots
+# TODO: refactor markets to get rid of cancerous pyserum shit and standardise
+# TODO: make client and markets stateless (don't hold self.data) - i.e. callback driven model
+# TODO: remove timescaledb stuff - make client as lightweight as possible and leave this to external MMs to define
+# TODO: simplify client args e.g. preflight commitment etc
+# TODO: add trade and liq subscriptions
 
 @dataclass
 class Client:
@@ -49,7 +56,6 @@ class Client:
     positions: dict[Asset, Position]
     open_orders: list[Asset, list[Order]]
 
-    # _margin_account_manager: Account[CrossMarginAccountManager]
     _open_orders_addresses: dict[Asset, Pubkey]
     _margin_account_manager_address: Pubkey
     _combined_vault_address: Pubkey

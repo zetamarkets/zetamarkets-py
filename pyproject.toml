@@ -21,6 +21,8 @@ isort = "^5.12.0"
 black = {extras = ["jupyter"], version = "^23.7.0"}
 python-dotenv = "^1.0.0"
 ccxt = "^4.0.78"
+cryptofeed = "^2.3.2"
+nest-asyncio = "^1.5.7"
 
 [tool.poe]
 poetry_command = ""

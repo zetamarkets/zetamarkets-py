@@ -4,7 +4,7 @@ import asyncio
 import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable
 
 from solana.rpc.websocket_api import connect
 from solders.pubkey import Pubkey
@@ -113,32 +113,51 @@ class Market:
     def poll_orderbooks(self, interval: int = 1):
         return asyncio.create_task(self._poll_orderbooks(interval))
 
-    async def _subscribe_orderbook(self, address: Pubkey, side: Side) -> None:
+    def _handle_orderbook_update(self, side: Side, data: bytes, slot: int) -> OrderBook:
+        orderbook = self._serum_market._parse_bids_or_asks(data)
+        if side == Side.Bid:
+            self.bids = orderbook
+            self._bids_last_update_slot = slot
+        else:
+            self.asks = orderbook
+            self._asks_last_update_slot = slot
+        return orderbook
+
+    async def _subscribe_orderbook(
+        self, side: Side, callback: Callable[[OrderBook], Any] = None, max_retries: int = 3
+    ) -> None:
         ws_endpoint = re.sub(r"^http", "ws", self.exchange.connection._provider.endpoint_uri)
-        try:
+        retries = max_retries
+        while True:
             async with connect(ws_endpoint) as ws:
-                await ws.account_subscribe(
-                    address,
-                    commitment=self.exchange.connection.commitment,
-                    encoding="base64",
-                )
-                first_resp = await ws.recv()
-                first_resp[0].result
-                while True:
-                    msg = await ws.recv()
-                    orderbook = self._serum_market._parse_bids_or_asks(msg[0].result.value.data)
-                    slot = msg[0].result.context.slot
-                    if side == Side.Bid:
-                        self.bids = orderbook
-                        self._bids_last_update_slot = slot
-                    else:
-                        self.asks = orderbook
-                        self._asks_last_update_slot = slot
-                    self._logger.debug(f"Received websocket message on {self.asset.name}:{side.name} @ {slot}")
-                    if self._log_to_db:
-                        self.insert_to_db(side)
-        finally:
-            self._subscription_task = None
+                try:
+                    await ws.account_subscribe(
+                        self.address,
+                        commitment=self.exchange.connection.commitment,
+                        encoding="base64+zstd",
+                    )
+                    first_resp = await ws.recv()
+                    subscription_id = first_resp[0].result
+                    async for msg in ws:
+                        try:
+                            orderbook = self._handle_orderbook_update(
+                                side, msg[0].result.value.data, msg[0].result.context.slot
+                            )
+                            if callback:
+                                callback(orderbook)
+                        except Exception as e:
+                            self._logger.error(f"Error decoding account: {e}")
+                    await ws.account_unsubscribe(subscription_id)
+                except asyncio.CancelledError:
+                    self._logger.info("WebSocket subscription task cancelled.")
+                    break
+                # solana_py.SubscriptionError?
+                except Exception as e:
+                    self._logger.error(f"Error subscribing to {self.account.__class__.__name__}: {e}")
+                    retries -= 1
+                    await asyncio.sleep(2)  # Pause for a while before retrying
+                finally:
+                    self._subscription_task = None
 
     def subscribe_orderbooks(self) -> None:
         # Run the subscriptions in the background

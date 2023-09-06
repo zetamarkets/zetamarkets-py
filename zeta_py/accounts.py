@@ -70,34 +70,49 @@ class Account(Generic[AnchorpyAccountType]):
     async def update(self, conn: AsyncClient) -> None:
         self.account = await self.fetch(conn, self.address)
 
-    async def _subscribe(self, network: Network, commitment: Commitment) -> None:
+    async def _subscribe(
+        self, network: Network, commitment: Commitment, callback: callable = None, max_retries: int = 3
+    ) -> None:
         ws_endpoint = utils.cluster_endpoint(network, ws=True, whirligig=False)
-        try:
+        retries = max_retries
+        while True:
             async with connect(ws_endpoint) as ws:
-                await ws.account_subscribe(
-                    self.address,
-                    commitment=commitment,
-                    encoding="base64",
-                )
-                first_resp = await ws.recv()
-                first_resp[0].result
-                while True:
-                    msg = await ws.recv()
-                    account = self.decode(msg[0].result.value.data)
-                    self.account = account
-                    self.last_update_slot = msg[0].result.context.slot
-        except Exception as e:
-            self._logger.error(f"Error subscribing to {self.account.__class__.__name__}: {e}")
-        finally:
-            self._subscription_task = None
+                try:
+                    await ws.account_subscribe(
+                        self.address,
+                        commitment=commitment,
+                        encoding="base64+zstd",
+                    )
+                    first_resp = await ws.recv()
+                    subscription_id = first_resp[0].result
+                    async for msg in ws:
+                        try:
+                            account = self.decode(msg[0].result.value.data)
+                            self.account = account
+                            self.last_update_slot = msg[0].result.context.slot
+                            if callback:
+                                callback(account)
+                        except Exception as e:
+                            self._logger.error(f"Error decoding account: {e}")
+                    await ws.account_unsubscribe(subscription_id)
+                except asyncio.CancelledError:
+                    self._logger.info("WebSocket subscription task cancelled.")
+                    break
+                # solana_py.SubscriptionError?
+                except Exception as e:
+                    self._logger.error(f"Error subscribing to {self.account.__class__.__name__}: {e}")
+                    retries -= 1
+                    await asyncio.sleep(2)  # Pause for a while before retrying
+                finally:
+                    self._subscription_task = None
 
-    def subscribe(self, network: Network, commitment: Commitment) -> None:
+    def subscribe(self, network: Network, commitment: Commitment, callback: callable = None) -> None:
         if self._is_subscribed:
             self._logger.warn(f"Already subscribed to {self.account.__class__.__name__}")
             return
         # Run the subscription in the background
         # TODO: worth threading this??
-        self._subscription_task = asyncio.create_task(self._subscribe(network, commitment))
+        self._subscription_task = asyncio.create_task(self._subscribe(network, commitment, callback))
         self._logger.info(f"Subscribed to {self.account.__class__.__name__}")
 
     def unsubscribe(self) -> None:

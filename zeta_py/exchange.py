@@ -5,7 +5,7 @@ import statistics
 from dataclasses import dataclass
 
 import requests
-from anchorpy import Idl
+from anchorpy import Idl, Program
 from solana.rpc.async_api import AsyncClient
 from solana.rpc.types import TxOpts
 from solders.pubkey import Pubkey
@@ -27,12 +27,14 @@ with open(idl_path, "r") as f:
 # TODO: migrate to serum IDL
 # TODO: make websockets more robust e.g. reconnection
 
+
 @dataclass
 class Exchange:
     # Initialize
     network: Network
     connection: AsyncClient
     program_id: Pubkey
+    program: Program
     state: Account[State]
     pricing: Account[Pricing]
     markets: dict[Asset, Market] = None
@@ -49,15 +51,13 @@ class Exchange:
         assets: list[Asset] = Asset.all(),
         tx_opts: TxOpts = None,
         subscribe: bool = False,
-        # load_from_store: bool,
-        # callback: Optional[Callable[[Asset, EventType, Any], None]] = None,
     ) -> "Exchange":
         tx_opts = tx_opts or TxOpts(
             {"skip_preflight": False, "preflight_commitment": connection.commitment, "skip_confirmation": False}
         )
-        # if loadConfig.network == "localnet" and loadConfig.loadFromStore:
-        #     raise Exception("Cannot load localnet from store")
         program_id = constants.ZETA_PID[network]
+
+        program = Program(idl, program_id)
 
         # Accounts
         state_address = pda.get_state_address(program_id)
@@ -74,6 +74,7 @@ class Exchange:
             network=network,
             connection=connection,
             program_id=program_id,
+            program=program,
             state=state,
             pricing=pricing,
             _serum_authority_address=_serum_authority_address,
@@ -81,9 +82,6 @@ class Exchange:
         )
 
         instance.markets = {asset: await Market.load(asset, instance, subscribe) for asset in assets}
-
-        # TODO add risk
-        #   cls._riskCalculator = RiskCalculator(self.assets)
 
         # Load Clock
         instance.clock = await Account[Clock].load(CLOCK, connection, Clock)
