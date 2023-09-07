@@ -23,6 +23,9 @@ python-dotenv = "^1.0.0"
 ccxt = "^4.0.78"
 cryptofeed = "^2.3.2"
 nest-asyncio = "^1.5.7"
+binance-futures-connector = "^4.0.0"
+matplotlib = "^3.7.2"
+ipympl = "^0.9.3"
 
 [tool.poe]
 poetry_command = ""

@@ -11,7 +11,6 @@ from solders.pubkey import Pubkey
 
 from zeta_py import constants, pda
 from zeta_py.constants import Asset
-from zeta_py.db import pool
 from zeta_py.pyserum.market import AsyncMarket as SerumMarket
 from zeta_py.pyserum.market.orderbook import OrderBook
 from zeta_py.pyserum.market.types import OrderInfo
@@ -44,10 +43,9 @@ class Market:
     _bids_last_update_slot: int = None
     _asks_last_update_slot: int = None
     _logger: logging.Logger = None
-    _log_to_db: bool = False
 
     @classmethod
-    async def load(cls, asset: Asset, exchange: Exchange, subscribe: bool = False, log_to_db: bool = False):
+    async def load(cls, asset: Asset, exchange: Exchange, subscribe: bool = False):
         # Initialize
 
         # Load Serum Market
@@ -73,15 +71,12 @@ class Market:
             _base_zeta_vault_address=_base_zeta_vault_address,
             _quote_zeta_vault_address=_quote_zeta_vault_address,
             _logger=logger,
-            _log_to_db=log_to_db,
         )
 
         # Subscribe
         if subscribe:
             instance.subscribe_orderbooks()
 
-        if log_to_db:
-            instance.create_table()
         return instance
 
     @property
@@ -193,53 +188,6 @@ class Market:
             self._asks_subscription_task.cancel()
             self._asks_subscription_task = None
             self._logger.info(f"Unsubscribed to {self.asset.name}:ask")
-
-    def create_table(self):
-        with pool.connection() as conn:
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS orderbook (
-                    id SERIAL PRIMARY KEY,
-                    market VARCHAR(50) NOT NULL, 
-                    slot BIGINT NOT NULL,
-                    is_bid BOOLEAN NOT NULL,
-                    price DOUBLE PRECISION NOT NULL,
-                    size DOUBLE PRECISION NOT NULL,
-                    timestamp TIMESTAMP,
-                    UNIQUE (market, slot, is_bid, price, size)
-                );
-                """,
-            )
-            conn.commit()
-
-    def insert_to_db(self, side: Side):
-        with pool.connection() as conn:
-            l2 = self.get_l2(side)
-            slot = self._bids_last_update_slot if side == Side.Bid else self._asks_last_update_slot
-            insert_time = datetime.now()
-            try:
-                for level in l2:
-                    conn.execute(
-                        """
-                    INSERT INTO orderbook (market, slot, timestamp, is_bid, price, size) (
-                    VALUES (%s, %s, %s, %s, %s, %s)
-                    );
-                    """,
-                        (
-                            self.asset.name + "-PERP",
-                            slot,
-                            insert_time,
-                            side == Side.Bid,
-                            level.price,
-                            level.size,
-                        ),
-                    )
-            except Exception as e:
-                self._logger.error(e)
-                conn.rollback()
-            else:
-                conn.commit()
-                self._logger.debug(f"Inserted orderbook into timescaledb {self.asset.name}:{side.name} @ {slot}")
 
     def print_orderbook(self, depth: int = 10, filter_tif: bool = True) -> None:
         print("Ask Orders:")
