@@ -5,7 +5,7 @@ import statistics
 from dataclasses import dataclass
 
 import requests
-from anchorpy import Idl, Program
+from anchorpy import Idl, Program, Provider, Wallet
 from solana.rpc.async_api import AsyncClient
 from solana.rpc.types import TxOpts
 from solders.pubkey import Pubkey
@@ -57,7 +57,8 @@ class Exchange:
         )
         program_id = constants.ZETA_PID[network]
 
-        program = Program(idl, program_id)
+        provider = Provider(connection, Wallet.dummy())
+        program = Program(idl, program_id, provider)
 
         # Accounts
         state_address = pda.get_state_address(program_id)
