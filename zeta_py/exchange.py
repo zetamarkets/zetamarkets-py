@@ -31,7 +31,6 @@ with open(idl_path, "r") as f:
 @dataclass
 class Exchange:
     # Initialize
-    network: Network
     connection: AsyncClient
     program_id: Pubkey
     program: Program
@@ -50,7 +49,6 @@ class Exchange:
         connection: AsyncClient,
         assets: list[Asset] = Asset.all(),
         tx_opts: TxOpts = None,
-        subscribe: bool = False,
     ) -> "Exchange":
         tx_opts = tx_opts or TxOpts(
             {"skip_preflight": False, "preflight_commitment": connection.commitment, "skip_confirmation": False}
@@ -72,7 +70,6 @@ class Exchange:
         _mint_authority_address = pda.get_mint_authority_address(program_id)
 
         instance = cls(
-            network=network,
             connection=connection,
             program_id=program_id,
             program=program,
@@ -82,14 +79,17 @@ class Exchange:
             _mint_authority_address=_mint_authority_address,
         )
 
-        instance.markets = {asset: await Market.load(asset, instance, subscribe) for asset in assets}
+        instance.markets = {
+            asset: await Market.load(network, connection, asset, pricing.account.markets[asset.to_index()])
+            for asset in assets
+        }
 
         # Load Clock
-        instance.clock = await Account[Clock].load(CLOCK, connection, Clock)
+        # instance.clock = await Account[Clock].load(CLOCK, connection, Clock)
 
-        instance.clock.subscribe(network, connection.commitment)
-        if subscribe:
-            instance.pricing.subscribe(network, connection.commitment)
+        # instance.clock.subscribe(network, connection.commitment)
+        # if subscribe:
+        #     instance.pricing.subscribe(network, connection.commitment)
 
         return instance
 

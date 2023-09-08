@@ -4,16 +4,12 @@ from __future__ import annotations
 from typing import Optional, Tuple
 
 from solana.rpc.async_api import AsyncClient
-from solana.rpc.types import TxOpts
-from solana.transaction import Transaction
-from solders.keypair import Keypair
 from solders.pubkey import Pubkey
-from solders.rpc.responses import RPCResult
 
-from zeta_py.types import OrderType, Side
+from zeta_py.constants import DEX_PID
+from zeta_py.types import Network
 
-from .. import instructions
-from .._layouts.open_orders import OPEN_ORDERS_LAYOUT
+# from .. import instructions
 from ..async_open_orders_account import AsyncOpenOrdersAccount
 from ..async_utils import load_bytes_data, load_multiple_bytes_data
 from . import types as t
@@ -43,7 +39,7 @@ class AsyncMarket(MarketCore):
         cls,
         conn: AsyncClient,
         market_address: Pubkey,
-        program_id: Pubkey = instructions.DEFAULT_DEX_PROGRAM_ID,
+        program_id: Pubkey = DEX_PID[Network.MAINNET],
     ) -> AsyncMarket:
         """Factory method to create a Market.
 
@@ -53,11 +49,6 @@ class AsyncMarket(MarketCore):
         """
         market_state = await MarketState.async_load(conn, market_address, program_id)
         return cls(conn, market_state)
-
-    # async def find_open_orders_accounts_for_owner(self, owner_address: Pubkey) -> list[AsyncOpenOrdersAccount]:
-    #     return await AsyncOpenOrdersAccount.find_for_market_and_owner(
-    #         self._conn, self.state.public_key(), owner_address, self.state.program_id(), self._conn.commitment
-    #     )
 
     async def load_bids(self) -> Optional[OrderBook]:
         """Load the bid order book"""
@@ -109,85 +100,3 @@ class AsyncMarket(MarketCore):
         if bytes_data is None:
             return None
         return self._parse_fills(bytes_data, limit)
-
-    async def place_order(  # pylint: disable=too-many-arguments,too-many-locals
-        self,
-        payer: Pubkey,
-        owner: Keypair,
-        order_type: OrderType,
-        side: Side,
-        limit_price: float,
-        max_quantity: float,
-        client_id: int = 0,
-        opts: TxOpts = TxOpts(),
-    ) -> RPCResult:  # TODO: Add open_orders_address_key param and fee_discount_pubkey
-        transaction = Transaction()
-        signers: list[Keypair] = [owner]
-        open_order_accounts = await self.find_open_orders_accounts_for_owner(owner.public_key)
-        if open_order_accounts:
-            place_order_open_order_account = open_order_accounts[0].address
-        else:
-            mbfre_resp = await self._conn.get_minimum_balance_for_rent_exemption(OPEN_ORDERS_LAYOUT.sizeof())
-            place_order_open_order_account = self._after_oo_mbfre_resp(
-                mbfre_resp=mbfre_resp, owner=owner, signers=signers, transaction=transaction
-            )
-            # TODO: Cache new_open_orders_account
-        # TODO: Handle fee_discount_pubkey
-
-        self._prepare_order_transaction(
-            transaction=transaction,
-            payer=payer,
-            owner=owner,
-            order_type=order_type,
-            side=side,
-            signers=signers,
-            limit_price=limit_price,
-            max_quantity=max_quantity,
-            client_id=client_id,
-            open_order_accounts=open_order_accounts,
-            place_order_open_order_account=place_order_open_order_account,
-        )
-        return await self._conn.send_transaction(transaction, *signers, opts=opts)
-
-    async def cancel_order_by_client_id(
-        self, owner: Keypair, open_orders_account: Pubkey, client_id: int, opts: TxOpts = TxOpts()
-    ) -> RPCResult:
-        txs = self._build_cancel_order_by_client_id_tx(
-            owner=owner, open_orders_account=open_orders_account, client_id=client_id
-        )
-        return await self._conn.send_transaction(txs, owner, opts=opts)
-
-    async def cancel_order(self, owner: Keypair, order: t.Order, opts: TxOpts = TxOpts()) -> RPCResult:
-        txn = self._build_cancel_order_tx(owner=owner, order=order)
-        return await self._conn.send_transaction(txn, owner, opts=opts)
-
-    async def match_orders(self, fee_payer: Keypair, limit: int, opts: TxOpts = TxOpts()) -> RPCResult:
-        txn = self._build_match_orders_tx(limit)
-        return await self._conn.send_transaction(txn, fee_payer, opts=opts)
-
-    async def settle_funds(  # pylint: disable=too-many-arguments
-        self,
-        owner: Keypair,
-        open_orders: AsyncOpenOrdersAccount,
-        base_wallet: Pubkey,
-        quote_wallet: Pubkey,  # TODO: add referrer_quote_wallet.
-        opts: TxOpts = TxOpts(),
-    ) -> RPCResult:
-        # TODO: Handle wrapped sol accounts
-        should_wrap_sol = self._settle_funds_should_wrap_sol()
-        if should_wrap_sol:
-            mbfre_resp = await self._conn.get_minimum_balance_for_rent_exemption(165)
-            min_bal_for_rent_exemption = mbfre_resp["result"]
-        else:
-            min_bal_for_rent_exemption = 0  # value only matters if should_wrap_sol
-        signers = [owner]
-        transaction = self._build_settle_funds_tx(
-            owner=owner,
-            signers=signers,
-            open_orders=open_orders,
-            base_wallet=base_wallet,
-            quote_wallet=quote_wallet,
-            min_bal_for_rent_exemption=min_bal_for_rent_exemption,
-            should_wrap_sol=should_wrap_sol,
-        )
-        return await self._conn.send_transaction(transaction, *signers, opts=opts)

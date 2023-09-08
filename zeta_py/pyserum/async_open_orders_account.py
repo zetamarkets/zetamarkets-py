@@ -3,12 +3,9 @@ from __future__ import annotations
 from typing import NamedTuple, Optional, Type, TypeVar
 
 from solana.rpc.async_api import AsyncClient
-from solders.instruction import Instruction
 from solders.pubkey import Pubkey
-from solders.system_program import CreateAccountParams, create_account
 
 from zeta_py.pyserum._layouts.open_orders import OPEN_ORDERS_LAYOUT
-from zeta_py.pyserum.instructions import DEFAULT_DEX_PROGRAM_ID
 
 from .async_utils import load_bytes_data
 
@@ -80,20 +77,3 @@ class AsyncOpenOrdersAccount(_OpenOrdersAccountCore):
         if bytes_data is None:
             return None
         return cls.from_bytes(address, bytes_data)
-
-
-def make_create_open_orders_account_instruction(
-    owner_address: Pubkey,
-    new_account_address: Pubkey,
-    lamports: int,
-    program_id: Pubkey = DEFAULT_DEX_PROGRAM_ID,
-) -> Instruction:
-    return create_account(
-        CreateAccountParams(
-            from_pubkey=owner_address,
-            new_account_pubkey=new_account_address,
-            lamports=lamports,
-            space=OPEN_ORDERS_LAYOUT.sizeof(),
-            program_id=program_id,
-        )
-    )

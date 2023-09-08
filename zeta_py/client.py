@@ -19,9 +19,6 @@ from zeta_py.exchange import Exchange
 from zeta_py.pyserum.market.types import Order
 from zeta_py.types import Asset, Network, OrderOptions, Position, Side
 from zeta_py.zeta_client.accounts.cross_margin_account import CrossMarginAccount
-from zeta_py.zeta_client.accounts.cross_margin_account_manager import (
-    CrossMarginAccountManager,
-)
 from zeta_py.zeta_client.errors import from_tx_error
 from zeta_py.zeta_client.instructions import (
     cancel_all_market_orders,
@@ -37,9 +34,9 @@ from zeta_py.zeta_client.instructions import (
 # TODO: simplify and remove generic programAccount classes and handle bare minimum bids,asks,slots
 # TODO: refactor markets to get rid of cancerous pyserum shit and standardise
 # TODO: make client and markets stateless (don't hold self.data) - i.e. callback driven model
-# TODO: remove timescaledb stuff - make client as lightweight as possible and leave this to external MMs to define
 # TODO: simplify client args e.g. preflight commitment etc
 # TODO: add trade and liq subscriptions
+
 
 @dataclass
 class Client:
@@ -71,7 +68,6 @@ class Client:
         wallet: Wallet,
         assets: list[Asset] = Asset.all(),
         tx_opts: TxOpts = None,
-        subscribe: bool = False,
     ):
         """
         Create a new client
@@ -89,7 +85,6 @@ class Client:
             connection=connection,
             assets=assets,
             tx_opts=tx_opts,
-            subscribe=subscribe,
         )
         # TODO: ideally batch these fetches
         margin_account_address = pda.get_margin_account_address(exchange.program_id, wallet.public_key, 0)
@@ -119,8 +114,7 @@ class Client:
                 margin_account.address,
             )
             _open_orders_addresses[asset] = open_orders_address
-            # TODO: figure out open order subscription
-            open_orders[asset] = await exchange.markets[asset]._serum_market.load_orders_for_owner(open_orders_address)
+            open_orders[asset] = await exchange.markets[asset].load_orders_for_owner(open_orders_address)
 
         # additional addresses to cache
         _margin_account_manager_address = pda.get_cross_margin_account_manager_address(

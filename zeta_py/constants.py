@@ -10,6 +10,12 @@ ZETA_PID = {
     Network.MAINNET: Pubkey.from_string("ZETAxsqBRek56DhiGXrn75yj2NHU3aYUnxvHXpkf3aD"),
 }
 
+DEX_PID = {
+    # Network.LOCALNET: Pubkey.from_string("5CmWtUihvSrJpaUrpJ3H1jUa9DRjYz4v2xs6c3EgQWMf"),
+    Network.DEVNET: Pubkey.from_string("5CmWtUihvSrJpaUrpJ3H1jUa9DRjYz4v2xs6c3EgQWMf"),
+    Network.MAINNET: Pubkey.from_string("zDEXqXEG7gAyxb1Kg9mK5fPnUdENCGKzWrM21RMdWRq"),
+}
+
 # Asset keys are wormhole from mainnet.
 MINTS = {
     Asset.SOL: Pubkey.from_string("So11111111111111111111111111111111111111112"),
@@ -63,12 +69,6 @@ USDC_MINT = {
     Network.MAINNET: Pubkey.from_string("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"),
 }
 
-DEX_PID = {
-    # Network.LOCALNET: Pubkey.from_string("5CmWtUihvSrJpaUrpJ3H1jUa9DRjYz4v2xs6c3EgQWMf"),
-    Network.DEVNET: Pubkey.from_string("5CmWtUihvSrJpaUrpJ3H1jUa9DRjYz4v2xs6c3EgQWMf"),
-    Network.MAINNET: Pubkey.from_string("zDEXqXEG7gAyxb1Kg9mK5fPnUdENCGKzWrM21RMdWRq"),
-}
-
 CHAINLINK_PID = Pubkey.from_string("HEvSKofvBgfaexv23kMabbYqxasxU3mQ4ibBMEmJWHny")
 
 MAX_SETTLE_AND_CLOSE_PER_TX = 4
@@ -106,6 +106,10 @@ MAX_POSITION_MOVEMENTS = 10
 BPS_DENOMINATOR = 10_000
 
 DEFAULT_MICRO_LAMPORTS_PER_CU_FEE = 1000
+
+# DEX
+BASE_MINT_DECIMALS = 0
+QUOTE_MINT_DECIMALS = 6
 
 
 # DEFAULT_COMMITMENT = commitment.Confirmed
