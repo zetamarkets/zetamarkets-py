@@ -15,7 +15,6 @@ from ..program_id import PROGRAM_ID
 
 @dataclass
 class EventQueue:
-    discriminator: typing.ClassVar = b"\x73\x65\x72\x75\x6D"
     layout: typing.ClassVar = borsh.CStruct(
         "header" / types.queue.QueueHeader.layout,
         "nodes" / types.queue.Event.layout[lambda this: this.header.count],
@@ -61,9 +60,7 @@ class EventQueue:
 
     @classmethod
     def decode(cls, data: bytes) -> "EventQueue":
-        if data[: len(cls.discriminator)] != cls.discriminator:
-            raise AccountInvalidDiscriminator("The discriminator for this account is invalid")
-        dec = EventQueue.layout.parse(data[len(cls.discriminator) :])
+        dec = EventQueue.layout.parse(data)
         return cls(
             header=types.queue.QueueHeader.from_decoded(dec.header),
             nodes=list(
