@@ -3,6 +3,7 @@ from enum import Enum, IntEnum
 from typing import Optional
 
 from solders.hash import Hash
+from solders.pubkey import Pubkey
 
 from zeta_py.zeta_client.types import asset, order_type, side
 
@@ -91,3 +92,30 @@ class OrderOptions:
     client_order_id: Optional[int] = None
     tag: Optional[str] = "SDK"
     blockhash: Optional[Hash] = None
+
+
+@dataclass
+class OrderInfo:
+    price: float
+    size: float
+
+
+@dataclass
+class Order:
+    order_id: int
+    client_id: int
+    open_order_address: Pubkey
+    open_order_slot: int
+    fee_tier: int
+    info: OrderInfo
+    side: Side
+    tif_offset: int
+
+
+@dataclass
+class FilledOrder:
+    order_id: int
+    side: Side
+    price: float
+    size: float
+    fee_cost: int

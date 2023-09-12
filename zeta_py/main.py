@@ -28,7 +28,7 @@ async def async_ws(network: Network):
         await websocket.account_subscribe(
             pda.get_pricing_address(program_id.PROGRAM_ID)[0],
             commitment="confirmed",
-            encoding="base64",
+            encoding="base64+zstd",
         )
         first_resp = await websocket.recv()
         print(first_resp)

@@ -1,27 +1,36 @@
+import asyncio
 import logging
+import time
 from dataclasses import dataclass
+from typing import Any, Awaitable, Callable, TypeVar
 
-from anchorpy import Provider, Wallet
+from anchorpy import Event, EventParser, Provider, Wallet
 from solana.rpc.async_api import AsyncClient
+from solana.rpc.commitment import Commitment, Confirmed
 from solana.rpc.core import RPCException
 from solana.rpc.types import TxOpts
+from solana.rpc.websocket_api import connect
 from solders.instruction import Instruction
 from solders.message import MessageV0
 from solders.pubkey import Pubkey
+from solders.rpc.config import RpcTransactionLogsFilterMentions
 from solders.system_program import ID as SYS_PROGRAM_ID
 from solders.sysvar import RENT
 from solders.transaction import VersionedTransaction
 from spl.token.constants import TOKEN_PROGRAM_ID
 
 from zeta_py import constants, pda, utils
-from zeta_py.accounts import Account
+from zeta_py.events import (
+    LiquidationEvent,
+    OrderCompleteEvent,
+    TradeEventV3,
+    TransactionEventType,
+)
 from zeta_py.exchange import Exchange
-from zeta_py.pyserum.market.types import Order
+from zeta_py.orderbook import Orderbook
+from zeta_py.serum_client.accounts.orderbook import OrderbookAccount
 from zeta_py.types import Asset, Network, OrderOptions, Position, Side
 from zeta_py.zeta_client.accounts.cross_margin_account import CrossMarginAccount
-from zeta_py.zeta_client.accounts.cross_margin_account_manager import (
-    CrossMarginAccountManager,
-)
 from zeta_py.zeta_client.errors import from_tx_error
 from zeta_py.zeta_client.instructions import (
     cancel_all_market_orders,
@@ -33,6 +42,9 @@ from zeta_py.zeta_client.instructions import (
     place_perp_order_v3,
 )
 
+# TODO: simplify client args e.g. preflight commitment etc
+# TODO: add trade and liq subscriptions
+
 
 @dataclass
 class Client:
@@ -43,13 +55,12 @@ class Client:
     provider: Provider
     network: Network
     connection: AsyncClient
+    endpoint: str
+    ws_endpoint: str
     exchange: Exchange
-    margin_account: Account[CrossMarginAccount]
-    balance: int
-    positions: dict[Asset, Position]
-    open_orders: list[Asset, list[Order]]
+    margin_account: CrossMarginAccount
 
-    # _margin_account_manager: Account[CrossMarginAccountManager]
+    _margin_account_address: Pubkey
     _open_orders_addresses: dict[Asset, Pubkey]
     _margin_account_manager_address: Pubkey
     _combined_vault_address: Pubkey
@@ -60,19 +71,28 @@ class Client:
     @classmethod
     async def load(
         cls,
-        network: Network,
-        connection: AsyncClient,
-        wallet: Wallet,
+        endpoint: str,
+        ws_endpoint: str = None,
+        commitment: Commitment = Confirmed,
+        wallet: Wallet = None,
         assets: list[Asset] = Asset.all(),
         tx_opts: TxOpts = None,
-        subscribe: bool = False,
+        network: Network = Network.MAINNET,
     ):
         """
         Create a new client
         """
+        logger = logging.getLogger(f"{__name__}.{cls.__name__}")
+        if wallet is None:
+            wallet = Wallet.dummy()
+            logger.warning("Client in read-only mode, pass in `wallet` to enable transactions")
+        if ws_endpoint is None:
+            ws_endpoint = utils.cluster_endpoint(network, ws=True, whirligig=False)
+        # TODO fix this opts stuff up
         tx_opts = tx_opts or TxOpts(
-            {"skip_preflight": False, "preflight_commitment": connection.commitment, "skip_confirmation": False}
+            {"skip_preflight": False, "preflight_commitment": commitment, "skip_confirmation": False}
         )
+        connection = AsyncClient(endpoint=endpoint, commitment=commitment, blockhash_cache=False)
         provider = Provider(
             connection,
             wallet,
@@ -83,38 +103,20 @@ class Client:
             connection=connection,
             assets=assets,
             tx_opts=tx_opts,
-            subscribe=subscribe,
         )
         # TODO: ideally batch these fetches
-        margin_account_address = pda.get_margin_account_address(exchange.program_id, wallet.public_key, 0)
-        margin_account = await Account[CrossMarginAccount].load(margin_account_address, connection, CrossMarginAccount)
+        _margin_account_address = pda.get_margin_account_address(exchange.program_id, wallet.public_key, 0)
+        margin_account = await CrossMarginAccount.fetch(connection, _margin_account_address, connection.commitment)
 
-        balance = utils.convert_fixed_int_to_decimal(margin_account.account.balance)
-
-        positions = {}
-        open_orders = {}
         _open_orders_addresses = {}
         for asset in assets:
-            # positions per market
-            positions[asset] = Position(
-                utils.convert_fixed_lot_to_decimal(
-                    margin_account.account.product_ledgers[asset.to_index()].position.size
-                ),
-                utils.convert_fixed_int_to_decimal(
-                    margin_account.account.product_ledgers[asset.to_index()].position.cost_of_trades
-                ),
-            )
-
-            # open orders per market
             open_orders_address = pda.get_open_orders_address(
                 exchange.program_id,
                 constants.DEX_PID[network],
                 exchange.markets[asset].address,
-                margin_account.address,
+                _margin_account_address,
             )
             _open_orders_addresses[asset] = open_orders_address
-            # TODO: figure out open order subscription
-            open_orders[asset] = await exchange.markets[asset]._serum_market.load_orders_for_owner(open_orders_address)
 
         # additional addresses to cache
         _margin_account_manager_address = pda.get_cross_margin_account_manager_address(
@@ -124,17 +126,15 @@ class Client:
         _combined_socialized_loss_address = pda.get_combined_socialized_loss_address(exchange.program_id)
         _user_usdc_address = pda.get_associated_token_address(provider.wallet.public_key, constants.USDC_MINT[network])
 
-        logger = logging.getLogger(f"{__name__}.{cls.__name__}")
-
         return cls(
             provider,
             network,
             connection,
+            endpoint,
+            ws_endpoint,
             exchange,
             margin_account,
-            balance,
-            positions,
-            open_orders,
+            _margin_account_address,
             _open_orders_addresses,
             _margin_account_manager_address,
             _combined_vault_address,
@@ -144,24 +144,153 @@ class Client:
         )
 
     async def _check_user_usdc_account_exists(self):
-        if not hasattr(self, "_user_usdc_account"):
+        if not hasattr(self, "_user_usdc_account_exists"):
             # If they don't have USDC wallet this will be null
-            resp = await self.connection.get_account_info_json_parsed(self._user_usdc_address)
-            self._user_usdc_account = resp.value
-        return self._user_usdc_account is not None
+            resp = await self.connection.get_account_info(self._user_usdc_address)
+            self._user_usdc_account_exists = resp.value is not None
+        return self._user_usdc_account_exists
 
     async def _check_margin_account_manager_exists(self):
-        if not hasattr(self, "_margin_account_manager"):
+        if not hasattr(self, "_margin_account_manager_exists"):
             # If they don't have margin account manager this will be null
-            self._margin_account_manager = await Account[CrossMarginAccountManager].load(
-                self._margin_account_manager_address, self.connection, CrossMarginAccountManager
-            )  # None if no manager exists
-        return self._margin_account_manager._is_initialized
+            resp = await self.connection.get_account_info(self._margin_account_manager_address)
+            self._margin_account_manager_exists = resp.value is not None
+        return self._margin_account_manager_exists
+
+    async def _check_margin_account_exists(self):
+        if not hasattr(self, "_margin_account_exists"):
+            # If they don't have margin account this will be null
+            resp = await self.connection.get_account_info(self._margin_account_address)
+            self._margin_account_exists = resp.value is not None
+        return self._margin_account_exists
+
+    async def _check_open_orders_account_exists(self, asset: Asset):
+        if not hasattr(self, "_open_orders_account_exists"):
+            self._open_orders_account_exists = {}
+        if asset not in self._open_orders_account_exists:
+            resp = await self.connection.get_account_info(self._open_orders_addresses[asset])
+            self._open_orders_account_exists[asset] = resp.value is not None
+        return self._open_orders_account_exists[asset]
+
+    async def fetch_balance(self):
+        margin_account = await self.margin_account.fetch(
+            self.connection, self._margin_account_address, self.connection.commitment
+        )
+        balance = utils.convert_fixed_int_to_decimal(margin_account.balance)
+        return balance
+
+    async def fetch_position(self, asset: Asset):
+        margin_account = await self.margin_account.fetch(
+            self.connection, self._margin_account_address, self.connection.commitment
+        )
+        position = Position(
+            utils.convert_fixed_lot_to_decimal(margin_account.product_ledgers[asset.to_index()].position.size),
+            utils.convert_fixed_int_to_decimal(
+                margin_account.product_ledgers[asset.to_index()].position.cost_of_trades
+            ),
+        )
+        return position
 
     async def fetch_open_orders(self, asset: Asset):
-        oo = await self.exchange.markets[asset]._serum_market.load_orders_for_owner(self._open_orders_addresses[asset])
-        self.open_orders[asset] = oo
+        # Fetches 1. bids 2. asks 3. open_orders
+        oo = await self.exchange.markets[asset].load_orders_for_owner(self._open_orders_addresses[asset])
+        # TODO: caching layer
+        # self.open_orders[asset] = oo
         return oo
+
+    AccountType = TypeVar("AccountType")
+
+    async def _account_subscribe(
+        self,
+        address: Pubkey,
+        ws_endpoint: str,
+        commitment: Commitment,
+        callback: Callable[[AccountType], Any],
+        max_retries: int = 3,
+        encoding: str = "base64+zstd",
+    ) -> None:
+        retries = max_retries
+        while True:
+            async with connect(ws_endpoint) as ws:
+                try:
+                    await ws.account_subscribe(
+                        address,
+                        commitment=commitment,
+                        encoding=encoding,
+                    )
+                    first_resp = await ws.recv()
+                    subscription_id = first_resp[0].result
+                    async for msg in ws:
+                        await callback(msg[0].result.value.data)
+                    await ws.account_unsubscribe(subscription_id)
+                except asyncio.CancelledError:
+                    self._logger.info("WebSocket subscription task cancelled.")
+                    break
+                # solana_py.SubscriptionError?
+                except Exception as e:
+                    self._logger.error(f"Error subscribing to {self.__class__.__name__}: {e}")
+                    retries -= 1
+                    await asyncio.sleep(2)  # Pause for a while before retrying
+                finally:
+                    # self._subscription_task = None
+                    pass
+
+    async def subscribe_orderbook(self, asset: Asset, side: Side, callback: Callable[[Orderbook], Awaitable[Any]]):
+        ws_endpoint = utils.cluster_endpoint(self.network, ws=True, whirligig=False)
+        address = (
+            self.exchange.markets[asset]._market_state.bids
+            if side == Side.Bid
+            else self.exchange.markets[asset]._market_state.asks
+        )
+
+        # Wrap callback in order to parse account data correctly
+        async def _callback(data: bytes):
+            account = OrderbookAccount.decode(data)
+            orderbook = Orderbook(side, account, self.exchange.markets[asset]._market_state)
+            return await callback(orderbook)
+
+        self._logger.info(f"Subscribing to Orderbook:{side}.")
+        await self._account_subscribe(
+            address,
+            ws_endpoint,
+            self.connection.commitment,
+            _callback,
+        )
+
+    # TODO: add retry logic
+    # TODO: decode and format event data
+    async def subscribe_transaction(
+        self,
+        order_complete_callback: Callable[[OrderCompleteEvent], Awaitable[Any]],
+        trade_callback: Callable[[TradeEventV3], Awaitable[Any]],
+        liquidation_callback: Callable[[LiquidationEvent], Awaitable[Any]],
+    ):
+        async with connect(self.ws_endpoint) as ws:
+            await ws.logs_subscribe(
+                commitment=self.connection.commitment,
+                filter_=RpcTransactionLogsFilterMentions(self.exchange.program_id),
+            )
+            first_resp = await ws.recv()
+            first_resp[0].result
+            async for msg in ws:
+                logs = msg[0].result.value.logs
+                parser = EventParser(self.exchange.program_id, self.exchange.program.coder)
+                parsed: list[Event] = []
+                parser.parse_logs(logs, lambda evt: parsed.append(evt))
+                for event in parsed:
+                    if event.name == TransactionEventType.ORDERCOMPLETE.value:
+                        if event.data.margin_account == self._margin_account_address:
+                            await order_complete_callback(event)
+                    elif event.name == TransactionEventType.TRADE.value:
+                        if event.data.margin_account == self._margin_account_address:
+                            await trade_callback(event)
+                    elif event.name == TransactionEventType.LIQUIDATION.value:
+                        if event.data.margin_account == self._margin_account_address:
+                            await liquidation_callback(event)
+                    else:
+                        pass
+
+    # Instructions
 
     async def deposit(self, amount: float, subaccount_index: int = 0):
         ixs = await self._deposit_ixs(amount, subaccount_index)
@@ -183,13 +312,13 @@ class Client:
                 )
             )
         # Create margin account if user doesn't have one
-        if not self.margin_account._is_initialized:
+        if not await self._check_margin_account_exists():
             self._logger.info("User has no cross-margin account manager, creating one...")
             ixs.append(
                 initialize_cross_margin_account(
                     {"subaccount_index": subaccount_index},
                     {
-                        "cross_margin_account": self.margin_account.address,
+                        "cross_margin_account": self._margin_account_address,
                         "cross_margin_account_manager": self._margin_account_manager_address,
                         "authority": self.provider.wallet.public_key,
                         "payer": self.provider.wallet.public_key,
@@ -203,13 +332,13 @@ class Client:
                 deposit_v2(
                     {"amount": utils.convert_decimal_to_fixed_int(amount)},
                     {
-                        "margin_account": self.margin_account.address,
+                        "margin_account": self._margin_account_address,
                         "vault": self._combined_vault_address,
                         "user_token_account": self._user_usdc_address,
                         "socialized_loss_account": self._combined_socialized_loss_address,
                         "authority": self.provider.wallet.public_key,
-                        "state": self.exchange.state.address,
-                        "pricing": self.exchange.pricing.address,
+                        "state": self.exchange._state_address,
+                        "pricing": self.exchange._pricing_address,
                     },
                 )
             )
@@ -225,27 +354,27 @@ class Client:
     async def place_order(
         self, asset: Asset, price: float, size: float, side: Side, order_opts: OrderOptions = OrderOptions
     ):
-        ixs = self._place_order_ixs(asset, price, size, side, order_opts)
+        ixs = await self._place_order_ixs(asset, price, size, side, order_opts)
         self._logger.info(f"Placed {size}x {asset}-PERP {side.name} @ ${price}")
         return await self._send_versioned_transaction(ixs)
 
-    def _place_order_ixs(
+    async def _place_order_ixs(
         self, asset: Asset, price: float, size: float, side: Side, order_opts: OrderOptions = OrderOptions
     ) -> list[Instruction]:
-        if asset not in self.open_orders:
+        if asset not in self.exchange.assets:
             raise Exception(f"Asset {asset.name} not loaded into client, cannot place order")
         ixs = []
-        if self.open_orders[asset] is None:
+        if not await self._check_open_orders_account_exists(asset):
             self._logger.info("User has no open orders account, creating one...")
             ixs.append(
                 initialize_open_orders_v3(
                     {"asset": asset.to_program_type()},
                     {
-                        "state": self.exchange.state.address,
+                        "state": self.exchange._state_address,
                         "dex_program": constants.DEX_PID[self.network],
                         "system_program": SYS_PROGRAM_ID,
                         "open_orders": self._open_orders_addresses[asset],
-                        "cross_margin_account": self.margin_account.address,
+                        "cross_margin_account": self._margin_account_address,
                         "authority": self.provider.wallet.public_key,
                         "payer": self.provider.wallet.public_key,
                         "market": self.exchange.markets[asset].address,
@@ -257,11 +386,12 @@ class Client:
                     },
                 )
             )
+        unix_timestamp = int(time.time())
         tif_offset = (
             utils.get_tif_offset(
                 order_opts.expiry_ts,
-                self.exchange.markets[asset]._serum_market.state.epoch_length(),
-                self.exchange.clock.account.unix_timestamp,
+                self.exchange.markets[asset]._market_state.epoch_length,
+                unix_timestamp,  # self.exchange.clock.account.unix_timestamp,
             )
             if order_opts.expiry_ts
             else None
@@ -279,9 +409,9 @@ class Client:
                     "asset": asset.to_program_type(),
                 },
                 {
-                    "state": self.exchange.state.address,
-                    "pricing": self.exchange.pricing.address,
-                    "margin_account": self.margin_account.address,
+                    "state": self.exchange._state_address,
+                    "pricing": self.exchange._pricing_address,
+                    "margin_account": self._margin_account_address,
                     "authority": self.provider.wallet.public_key,
                     "dex_program": constants.DEX_PID[self.network],
                     "token_program": TOKEN_PROGRAM_ID,
@@ -290,26 +420,26 @@ class Client:
                     "rent": RENT,
                     "market_accounts": {
                         "market": self.exchange.markets[asset].address,
-                        "request_queue": self.exchange.markets[asset]._serum_market.state.request_queue(),
-                        "event_queue": self.exchange.markets[asset]._serum_market.state.event_queue(),
-                        "bids": self.exchange.markets[asset]._serum_market.state.bids(),
-                        "asks": self.exchange.markets[asset]._serum_market.state.asks(),
-                        "coin_vault": self.exchange.markets[asset]._serum_market.state.base_vault(),
-                        "pc_vault": self.exchange.markets[asset]._serum_market.state.quote_vault(),
+                        "request_queue": self.exchange.markets[asset]._market_state.request_queue,
+                        "event_queue": self.exchange.markets[asset]._market_state.event_queue,
+                        "bids": self.exchange.markets[asset]._market_state.bids,
+                        "asks": self.exchange.markets[asset]._market_state.asks,
+                        "coin_vault": self.exchange.markets[asset]._market_state.base_vault,
+                        "pc_vault": self.exchange.markets[asset]._market_state.quote_vault,
                         "order_payer_token_account": self.exchange.markets[asset]._quote_zeta_vault_address
                         if side == Side.Bid
                         else self.exchange.markets[asset]._base_zeta_vault_address,
                         "coin_wallet": self.exchange.markets[asset]._base_zeta_vault_address,
                         "pc_wallet": self.exchange.markets[asset]._quote_zeta_vault_address,
                     },
-                    "oracle": self.exchange.pricing.account.oracles[asset.to_index()],
-                    "oracle_backup_feed": self.exchange.pricing.account.oracle_backup_feeds[asset.to_index()],
+                    "oracle": self.exchange.pricing.oracles[asset.to_index()],
+                    "oracle_backup_feed": self.exchange.pricing.oracle_backup_feeds[asset.to_index()],
                     "oracle_backup_program": constants.CHAINLINK_PID,
-                    "market_mint": self.exchange.markets[asset]._serum_market.state.quote_mint()
+                    "market_mint": self.exchange.markets[asset]._market_state.quote_mint
                     if side == Side.Bid
-                    else self.exchange.markets[asset]._serum_market.state.base_mint(),
+                    else self.exchange.markets[asset]._market_state.base_mint,
                     "mint_authority": self.exchange._mint_authority_address,
-                    "perp_sync_queue": self.exchange.pricing.account.perp_sync_queues[asset.to_index()],
+                    "perp_sync_queue": self.exchange.pricing.perp_sync_queues[asset.to_index()],
                 },
             )
         )
@@ -328,15 +458,15 @@ class Client:
                 {
                     "authority": self.provider.wallet.public_key,
                     "cancel_accounts": {
-                        "state": self.exchange.state.address,
-                        "margin_account": self.margin_account.address,
+                        "state": self.exchange._state_address,
+                        "margin_account": self._margin_account_address,
                         "dex_program": constants.DEX_PID[self.network],
                         "serum_authority": self.exchange._serum_authority_address,
                         "open_orders": self._open_orders_addresses[asset],
                         "market": self.exchange.markets[asset].address,
-                        "bids": self.exchange.markets[asset]._serum_market.state.bids(),
-                        "asks": self.exchange.markets[asset]._serum_market.state.asks(),
-                        "event_queue": self.exchange.markets[asset]._serum_market.state.event_queue(),
+                        "bids": self.exchange.markets[asset]._market_state.bids,
+                        "asks": self.exchange.markets[asset]._market_state.asks,
+                        "event_queue": self.exchange.markets[asset]._market_state.event_queue,
                     },
                 },
             )
@@ -353,15 +483,15 @@ class Client:
                 {
                     "authority": self.provider.wallet.public_key,
                     "cancel_accounts": {
-                        "state": self.exchange.state.address,
-                        "margin_account": self.margin_account.address,
+                        "state": self.exchange._state_address,
+                        "margin_account": self._margin_account_address,
                         "dex_program": constants.DEX_PID[self.network],
                         "serum_authority": self.exchange._serum_authority_address,
                         "open_orders": self._open_orders_addresses[asset],
                         "market": self.exchange.markets[asset].address,
-                        "bids": self.exchange.markets[asset]._serum_market.state.bids(),
-                        "asks": self.exchange.markets[asset]._serum_market.state.asks(),
-                        "event_queue": self.exchange.markets[asset]._serum_market.state.event_queue(),
+                        "bids": self.exchange.markets[asset]._market_state.bids,
+                        "asks": self.exchange.markets[asset]._market_state.asks,
+                        "event_queue": self.exchange.markets[asset]._market_state.event_queue,
                     },
                 },
             )
@@ -378,12 +508,11 @@ class Client:
         order_opts: OrderOptions = OrderOptions,
     ):
         cancel_ixs = self._cancel_orders_for_market_ixs(asset)
-        bid_place_ixs = self._place_order_ixs(asset, bid_price, bid_size, Side.Bid, order_opts)
-        ask_place_ixs = self._place_order_ixs(asset, ask_price, ask_size, Side.Ask, order_opts)
+        bid_place_ixs = await self._place_order_ixs(asset, bid_price, bid_size, Side.Bid, order_opts)
+        ask_place_ixs = await self._place_order_ixs(asset, ask_price, ask_size, Side.Ask, order_opts)
         ixs = cancel_ixs + bid_place_ixs + ask_place_ixs
         self._logger.info(
-            f"Replacing {asset} orders: \
-                {bid_size}x {Side.Bid.name} @ ${bid_price}, {ask_size}x {Side.Ask.name} @ ${ask_price}"
+            f"Replacing {asset} orders: {bid_size}x {Side.Bid.name} @ ${bid_price}, {ask_size}x {Side.Ask.name} @ ${ask_price}"
         )
         return await self._send_versioned_transaction(ixs)
 

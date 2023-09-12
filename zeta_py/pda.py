@@ -101,13 +101,6 @@ def get_mint_authority_address(program_id: Pubkey) -> Pubkey:
     )[0]
 
 
-# def get_zeta_combined_insurance_vault_address(program_id: Pubkey) -> Pubkey:
-#     return Pubkey.find_program_address(
-#         [b"zeta-combined-insurance-vault"],
-#         program_id,
-#     )
-
-
 def get_underlying_mint_address(asset: Asset, network: Network) -> Pubkey:
     if asset in MINTS:
         return MINTS[asset]

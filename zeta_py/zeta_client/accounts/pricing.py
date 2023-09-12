@@ -12,7 +12,6 @@ from solders.pubkey import Pubkey
 
 from .. import types
 from ..program_id import PROGRAM_ID
-from . import AnchorpyAccount
 
 
 class PricingJSON(typing.TypedDict):
@@ -52,7 +51,7 @@ class PricingJSON(typing.TypedDict):
 
 
 @dataclass
-class Pricing(AnchorpyAccount):
+class Pricing:
     discriminator: typing.ClassVar = b"\xbe{\xd2\xb6\x8f\x0b\x98\x88"
     layout: typing.ClassVar = borsh.CStruct(
         "nonce" / borsh.U8,

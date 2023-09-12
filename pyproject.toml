@@ -9,7 +9,6 @@ python = "^3.9"
 solana = "^0.30.2"
 solders = "^0.18.1"
 requests = "^2.31.0"
-# anchorpy = { path = "../anchorpy" }
 anchorpy = "^0.18.0"
 psycopg = {extras = ["binary", "pool"], version = "^3.1.10"}
 
@@ -21,6 +20,11 @@ isort = "^5.12.0"
 black = {extras = ["jupyter"], version = "^23.7.0"}
 python-dotenv = "^1.0.0"
 ccxt = "^4.0.78"
+cryptofeed = "^2.3.2"
+nest-asyncio = "^1.5.7"
+binance-futures-connector = "^4.0.0"
+matplotlib = "^3.7.2"
+ipympl = "^0.9.3"
 
 [tool.poe]
 poetry_command = ""
@@ -33,7 +37,7 @@ lint = "ruff check zeta_py"
 
 [tool.ruff]
 line-length=120
-exclude = ["zeta_py/zeta_client", ".venv"]
+exclude = ["zeta_py/zeta_client", "zeta_py/serum_client", ".venv"]
 
 [tool.black]
 line-length=120
