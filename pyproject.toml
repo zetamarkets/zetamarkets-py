@@ -9,7 +9,6 @@ python = "^3.9"
 solana = "^0.30.2"
 solders = "^0.18.1"
 requests = "^2.31.0"
-# anchorpy = { path = "../anchorpy" }
 anchorpy = "^0.18.0"
 psycopg = {extras = ["binary", "pool"], version = "^3.1.10"}
 
@@ -38,7 +37,7 @@ lint = "ruff check zeta_py"
 
 [tool.ruff]
 line-length=120
-exclude = ["zeta_py/zeta_client", ".venv"]
+exclude = ["zeta_py/zeta_client", "zeta_py/serum_client", ".venv"]
 
 [tool.black]
 line-length=120

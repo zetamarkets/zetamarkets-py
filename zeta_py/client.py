@@ -1,13 +1,15 @@
 import asyncio
 import logging
-from dataclasses import dataclass
 import time
-from typing import Any, Callable, TypeVar
+from dataclasses import dataclass
+from typing import Any, Awaitable, Callable, TypeVar
 
 from anchorpy import Provider, Wallet
 from solana.rpc.async_api import AsyncClient
+from solana.rpc.commitment import Commitment, Confirmed
 from solana.rpc.core import RPCException
 from solana.rpc.types import TxOpts
+from solana.rpc.websocket_api import connect
 from solders.instruction import Instruction
 from solders.message import MessageV0
 from solders.pubkey import Pubkey
@@ -17,16 +19,12 @@ from solders.transaction import VersionedTransaction
 from spl.token.constants import TOKEN_PROGRAM_ID
 
 from zeta_py import constants, pda, utils
-from zeta_py.accounts import Account
 from zeta_py.exchange import Exchange
-from zeta_py.pyserum.market.types import Order
+from zeta_py.orderbook import Orderbook
 from zeta_py.serum_client.accounts.orderbook import OrderbookAccount
 from zeta_py.types import Asset, Network, OrderOptions, Position, Side
 from zeta_py.zeta_client.accounts.cross_margin_account import CrossMarginAccount
 from zeta_py.zeta_client.errors import from_tx_error
-from solana.rpc.commitment import Commitment
-from solana.rpc.websocket_api import connect
-
 from zeta_py.zeta_client.instructions import (
     cancel_all_market_orders,
     cancel_order,
@@ -37,9 +35,6 @@ from zeta_py.zeta_client.instructions import (
     place_perp_order_v3,
 )
 
-# TODO: simplify to just client, no exchange?
-# TODO: simplify and remove generic programAccount classes and handle bare minimum bids,asks,slots
-# TODO: make client and markets stateless (don't hold self.data) - i.e. callback driven model
 # TODO: simplify client args e.g. preflight commitment etc
 # TODO: add trade and liq subscriptions
 
@@ -55,9 +50,6 @@ class Client:
     connection: AsyncClient
     exchange: Exchange
     margin_account: CrossMarginAccount
-    # balance: int
-    # positions: dict[Asset, Position]
-    # open_orders: list[Asset, list[Order]]
 
     _margin_account_address: Pubkey
     _open_orders_addresses: dict[Asset, Pubkey]
@@ -70,19 +62,24 @@ class Client:
     @classmethod
     async def load(
         cls,
-        network: Network,
-        connection: AsyncClient,
-        wallet: Wallet,
+        endpoint: str,
+        commitment: Commitment = Confirmed,
+        wallet: Wallet = Wallet.dummy(),
         assets: list[Asset] = Asset.all(),
         tx_opts: TxOpts = None,
+        network: Network = Network.MAINNET,
     ):
         """
         Create a new client
         """
+        logger = logging.getLogger(f"{__name__}.{cls.__name__}")
+        if wallet == Wallet.dummy():
+            logger.info("Client in read-only mode, pass in `wallet` to enable transactions")
         # TODO fix this opts stuff up
         tx_opts = tx_opts or TxOpts(
-            {"skip_preflight": False, "preflight_commitment": connection.commitment, "skip_confirmation": False}
+            {"skip_preflight": False, "preflight_commitment": commitment, "skip_confirmation": False}
         )
+        connection = AsyncClient(endpoint=endpoint, commitment=commitment, blockhash_cache=False)
         provider = Provider(
             connection,
             wallet,
@@ -97,23 +94,9 @@ class Client:
         # TODO: ideally batch these fetches
         _margin_account_address = pda.get_margin_account_address(exchange.program_id, wallet.public_key, 0)
         margin_account = await CrossMarginAccount.fetch(connection, _margin_account_address, connection.commitment)
-        # margin_account = await Account[CrossMarginAccount].load(_margin_account_address, connection, CrossMarginAccount)
 
-        # balance = utils.convert_fixed_int_to_decimal(margin_account.account.balance)
-
-        # positions = {}
-        # open_orders = {}
         _open_orders_addresses = {}
         for asset in assets:
-            # positions per market
-            # positions[asset] = Position(
-            #     utils.convert_fixed_lot_to_decimal(margin_account.product_ledgers[asset.to_index()].position.size),
-            #     utils.convert_fixed_int_to_decimal(
-            #         margin_account.product_ledgers[asset.to_index()].position.cost_of_trades
-            #     ),
-            # )
-
-            # open orders per market
             open_orders_address = pda.get_open_orders_address(
                 exchange.program_id,
                 constants.DEX_PID[network],
@@ -121,7 +104,6 @@ class Client:
                 _margin_account_address,
             )
             _open_orders_addresses[asset] = open_orders_address
-            # open_orders[asset] = await exchange.markets[asset].load_orders_for_owner(open_orders_address)
 
         # additional addresses to cache
         _margin_account_manager_address = pda.get_cross_margin_account_manager_address(
@@ -131,8 +113,6 @@ class Client:
         _combined_socialized_loss_address = pda.get_combined_socialized_loss_address(exchange.program_id)
         _user_usdc_address = pda.get_associated_token_address(provider.wallet.public_key, constants.USDC_MINT[network])
 
-        logger = logging.getLogger(f"{__name__}.{cls.__name__}")
-
         return cls(
             provider,
             network,
@@ -140,9 +120,6 @@ class Client:
             exchange,
             margin_account,
             _margin_account_address,
-            # balance,
-            # positions,
-            # open_orders,
             _open_orders_addresses,
             _margin_account_manager_address,
             _combined_vault_address,
@@ -171,6 +148,14 @@ class Client:
             resp = await self.connection.get_account_info(self._margin_account_address)
             self._margin_account_exists = resp.value is not None
         return self._margin_account_exists
+
+    async def _check_open_orders_account_exists(self, asset: Asset):
+        if not hasattr(self, "_open_orders_account_exists"):
+            self._open_orders_account_exists = {}
+        if asset not in self._open_orders_account_exists:
+            resp = await self.connection.get_account_info(self._open_orders_addresses[asset])
+            self._open_orders_account_exists[asset] = resp.value is not None
+        return self._open_orders_account_exists[asset]
 
     async def fetch_balance(self):
         margin_account = await self.margin_account.fetch(
@@ -209,7 +194,6 @@ class Client:
         max_retries: int = 3,
         encoding: str = "base64+zstd",
     ) -> None:
-        # ws_endpoint = utils.cluster_endpoint(network, ws=True, whirligig=False)
         retries = max_retries
         while True:
             async with connect(ws_endpoint) as ws:
@@ -222,14 +206,7 @@ class Client:
                     first_resp = await ws.recv()
                     subscription_id = first_resp[0].result
                     async for msg in ws:
-                        # try:
-                        # account = self.decode(msg[0].result.value.data)
-                        # self.account = account
-                        # self.last_update_slot = msg[0].result.context.slot
-                        # if callback:
-                        callback(msg[0].result.value.data)
-                        # except Exception as e:
-                        # self._logger.error(f"Error decoding account: {e}")
+                        await callback(msg[0].result.value.data)
                     await ws.account_unsubscribe(subscription_id)
                 except asyncio.CancelledError:
                     self._logger.info("WebSocket subscription task cancelled.")
@@ -243,7 +220,7 @@ class Client:
                     # self._subscription_task = None
                     pass
 
-    async def subscribe_orderbook(self, asset: Asset, side: Side, callback: Callable[[OrderbookAccount], Any]):
+    async def subscribe_orderbook(self, asset: Asset, side: Side, callback: Callable[[Orderbook], Awaitable[Any]]):
         ws_endpoint = utils.cluster_endpoint(self.network, ws=True, whirligig=False)
         address = (
             self.exchange.markets[asset]._market_state.bids
@@ -254,8 +231,10 @@ class Client:
         # Wrap callback in order to parse account data correctly
         async def _callback(data: bytes):
             account = OrderbookAccount.decode(data)
-            return callback(account)
+            orderbook = Orderbook(side, account, self.exchange.markets[asset]._market_state)
+            return await callback(orderbook)
 
+        self._logger.info(f"Subscribing to Orderbook:{side}.")
         await self._account_subscribe(
             address,
             ws_endpoint,
@@ -310,8 +289,8 @@ class Client:
                         "user_token_account": self._user_usdc_address,
                         "socialized_loss_account": self._combined_socialized_loss_address,
                         "authority": self.provider.wallet.public_key,
-                        "state": self.exchange.state.address,
-                        "pricing": self.exchange.pricing.address,
+                        "state": self.exchange._state_address,
+                        "pricing": self.exchange._pricing_address,
                     },
                 )
             )
@@ -327,23 +306,23 @@ class Client:
     async def place_order(
         self, asset: Asset, price: float, size: float, side: Side, order_opts: OrderOptions = OrderOptions
     ):
-        ixs = self._place_order_ixs(asset, price, size, side, order_opts)
+        ixs = await self._place_order_ixs(asset, price, size, side, order_opts)
         self._logger.info(f"Placed {size}x {asset}-PERP {side.name} @ ${price}")
         return await self._send_versioned_transaction(ixs)
 
-    def _place_order_ixs(
+    async def _place_order_ixs(
         self, asset: Asset, price: float, size: float, side: Side, order_opts: OrderOptions = OrderOptions
     ) -> list[Instruction]:
         if asset not in self.exchange.assets:
             raise Exception(f"Asset {asset.name} not loaded into client, cannot place order")
         ixs = []
-        if self.open_orders[asset] is None:
+        if not await self._check_open_orders_account_exists(asset):
             self._logger.info("User has no open orders account, creating one...")
             ixs.append(
                 initialize_open_orders_v3(
                     {"asset": asset.to_program_type()},
                     {
-                        "state": self.exchange.state.address,
+                        "state": self.exchange._state_address,
                         "dex_program": constants.DEX_PID[self.network],
                         "system_program": SYS_PROGRAM_ID,
                         "open_orders": self._open_orders_addresses[asset],
@@ -363,7 +342,7 @@ class Client:
         tif_offset = (
             utils.get_tif_offset(
                 order_opts.expiry_ts,
-                self.exchange.markets[asset]._market_state.epoch_length(),
+                self.exchange.markets[asset]._market_state.epoch_length,
                 unix_timestamp,  # self.exchange.clock.account.unix_timestamp,
             )
             if order_opts.expiry_ts
@@ -382,8 +361,8 @@ class Client:
                     "asset": asset.to_program_type(),
                 },
                 {
-                    "state": self.exchange.state.address,
-                    "pricing": self.exchange.pricing.address,
+                    "state": self.exchange._state_address,
+                    "pricing": self.exchange._pricing_address,
                     "margin_account": self._margin_account_address,
                     "authority": self.provider.wallet.public_key,
                     "dex_program": constants.DEX_PID[self.network],
@@ -431,7 +410,7 @@ class Client:
                 {
                     "authority": self.provider.wallet.public_key,
                     "cancel_accounts": {
-                        "state": self.exchange.state.address,
+                        "state": self.exchange._state_address,
                         "margin_account": self._margin_account_address,
                         "dex_program": constants.DEX_PID[self.network],
                         "serum_authority": self.exchange._serum_authority_address,
@@ -456,7 +435,7 @@ class Client:
                 {
                     "authority": self.provider.wallet.public_key,
                     "cancel_accounts": {
-                        "state": self.exchange.state.address,
+                        "state": self.exchange._state_address,
                         "margin_account": self._margin_account_address,
                         "dex_program": constants.DEX_PID[self.network],
                         "serum_authority": self.exchange._serum_authority_address,
@@ -481,12 +460,11 @@ class Client:
         order_opts: OrderOptions = OrderOptions,
     ):
         cancel_ixs = self._cancel_orders_for_market_ixs(asset)
-        bid_place_ixs = self._place_order_ixs(asset, bid_price, bid_size, Side.Bid, order_opts)
-        ask_place_ixs = self._place_order_ixs(asset, ask_price, ask_size, Side.Ask, order_opts)
+        bid_place_ixs = await self._place_order_ixs(asset, bid_price, bid_size, Side.Bid, order_opts)
+        ask_place_ixs = await self._place_order_ixs(asset, ask_price, ask_size, Side.Ask, order_opts)
         ixs = cancel_ixs + bid_place_ixs + ask_place_ixs
         self._logger.info(
-            f"Replacing {asset} orders: \
-                {bid_size}x {Side.Bid.name} @ ${bid_price}, {ask_size}x {Side.Ask.name} @ ${ask_price}"
+            f"Replacing {asset} orders: {bid_size}x {Side.Bid.name} @ ${bid_price}, {ask_size}x {Side.Ask.name} @ ${ask_price}"
         )
         return await self._send_versioned_transaction(ixs)
 

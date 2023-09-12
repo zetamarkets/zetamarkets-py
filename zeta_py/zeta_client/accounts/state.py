@@ -53,7 +53,7 @@ class StateJSON(typing.TypedDict):
 
 
 @dataclass
-class State(AnchorpyAccount):
+class State:
     discriminator: typing.ClassVar = b"\xd8\x92k^hK\xb6\xb1"
     layout: typing.ClassVar = borsh.CStruct(
         "admin" / BorshPubkey,

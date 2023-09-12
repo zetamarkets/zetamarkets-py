@@ -1,19 +1,16 @@
 from __future__ import annotations
 
 import os
-import statistics
 from dataclasses import dataclass
 
-import requests
 from anchorpy import Idl, Program, Provider, Wallet
 from solana.rpc.async_api import AsyncClient
 from solana.rpc.types import TxOpts
 from solders.pubkey import Pubkey
-from solders.sysvar import CLOCK
 
 from zeta_py import constants, pda
-from zeta_py.accounts import Account, Clock
 from zeta_py.market import Market
+from zeta_py.solana_client.accounts.clock import Clock
 from zeta_py.types import Asset, Network
 from zeta_py.zeta_client.accounts.pricing import Pricing
 from zeta_py.zeta_client.accounts.state import State
@@ -24,8 +21,6 @@ with open(idl_path, "r") as f:
 
 
 # TODO: add logging e.g. logger = logging.getLogger("pyserum.market.Market")
-# TODO: migrate to serum IDL
-# TODO: make websockets more robust e.g. reconnection
 
 
 @dataclass
@@ -39,6 +34,8 @@ class Exchange:
     markets: dict[Asset, Market] = None
     clock: Clock = None
 
+    _state_address: Pubkey = None
+    _pricing_address: Pubkey = None
     _serum_authority_address: Pubkey = None
     _mint_authority_address: Pubkey = None
 
@@ -60,11 +57,9 @@ class Exchange:
         # Accounts
         state_address = pda.get_state_address(program_id)
         state = await State.fetch(connection, state_address, connection.commitment)
-        # state = await Account[State].load(state_address, connection, State)
 
         pricing_address = pda.get_pricing_address(program_id)
         pricing = await Pricing.fetch(connection, pricing_address, connection.commitment)
-        # pricing = await Account[Pricing].load(pricing_address, connection, Pricing)
 
         # Addresses
         _serum_authority_address = pda.get_serum_authority_address(program_id)
@@ -76,6 +71,8 @@ class Exchange:
             program=program,
             state=state,
             pricing=pricing,
+            _state_address=state_address,
+            _pricing_address=pricing_address,
             _serum_authority_address=_serum_authority_address,
             _mint_authority_address=_mint_authority_address,
         )
@@ -85,11 +82,7 @@ class Exchange:
         }
 
         # Load Clock
-        # instance.clock = await Account[Clock].load(CLOCK, connection, Clock)
-
-        # instance.clock.subscribe(network, connection.commitment)
-        # if subscribe:
-        #     instance.pricing.subscribe(network, connection.commitment)
+        # instance.clock = await Clock.fetch(connection, connection.commitment)
 
         return instance
 
@@ -107,35 +100,35 @@ class Exchange:
 
     # TODO: add auto priority fee
     # TODO: add to solders
-    def update_auto_fee(self):
-        account_list = []
+    # def update_auto_fee(self):
+    #     account_list = []
 
-        # Query the most written-to accounts
-        # Note: getRecentPrioritizationFees() will account for global fees too if no one is writing to our accs
-        for market in self.markets.values():
-            account_list.append(market.address.perp_sync_queue_address)
+    #     # Query the most written-to accounts
+    #     # Note: getRecentPrioritizationFees() will account for global fees too if no one is writing to our accs
+    #     for market in self.markets.values():
+    #         account_list.append(market.address.perp_sync_queue_address)
 
-        try:
-            data = requests.post(
-                self.endpoint,
-                json={
-                    "jsonrpc": "2.0",
-                    "id": 1,
-                    "method": "getRecentPrioritizationFees",
-                    "params": [[account_list]],
-                },
-            )
+    #     try:
+    #         data = requests.post(
+    #             self.endpoint,
+    #             json={
+    #                 "jsonrpc": "2.0",
+    #                 "id": 1,
+    #                 "method": "getRecentPrioritizationFees",
+    #                 "params": [[account_list]],
+    #             },
+    #         )
 
-            fees = sorted(
-                [obj["prioritizationFee"] for obj in data.json()["result"]],
-                key=lambda x: x["slot"],
-                reverse=True,
-            )[
-                :20
-            ]  # Grab the latest 20
+    #         fees = sorted(
+    #             [obj["prioritizationFee"] for obj in data.json()["result"]],
+    #             key=lambda x: x["slot"],
+    #             reverse=True,
+    #         )[
+    #             :20
+    #         ]  # Grab the latest 20
 
-            median = statistics.median(fees)
-            self.priority_fee = min(median, self._auto_priority_fee_upper_limit)
-            print(f"AutoUpdate priority fee. New fee = {self.priority_fee} microlamports per compute unit")
-        except Exception as e:
-            print(f"updateAutoFee failed {e}")
+    #         median = statistics.median(fees)
+    #         self.priority_fee = min(median, self._auto_priority_fee_upper_limit)
+    #         print(f"AutoUpdate priority fee. New fee = {self.priority_fee} microlamports per compute unit")
+    #     except Exception as e:
+    #         print(f"updateAutoFee failed {e}")

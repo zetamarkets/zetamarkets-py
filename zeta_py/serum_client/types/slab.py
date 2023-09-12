@@ -4,8 +4,8 @@ import typing
 from dataclasses import dataclass
 
 import borsh_construct as borsh
-from construct import Container, Padding, Switch
 from anchorpy.borsh_extension import BorshPubkey
+from construct import Container, Padding, Switch
 from solders.pubkey import Pubkey
 
 

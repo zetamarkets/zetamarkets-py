@@ -4,7 +4,7 @@ import typing
 from dataclasses import dataclass
 
 import borsh_construct as borsh
-from construct import BitStruct, BitsSwapped, Const, Container, BitsInteger, Flag
+from construct import BitsInteger, BitsSwapped, BitStruct, Const, Container, Flag
 
 
 class AccountFlagsJSON(typing.TypedDict):

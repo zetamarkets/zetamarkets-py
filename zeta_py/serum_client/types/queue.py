@@ -4,8 +4,8 @@ import typing
 from dataclasses import dataclass
 
 import borsh_construct as borsh
-from construct import BitStruct, BitsSwapped, Container, Padding, Flag
 from anchorpy.borsh_extension import BorshPubkey
+from construct import BitsSwapped, BitStruct, Container, Flag, Padding
 from solders.pubkey import Pubkey
 
 from zeta_py.serum_client import types

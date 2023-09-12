@@ -1,14 +1,15 @@
 import time
 from typing import Iterable, Union
+
+from solana.rpc.async_api import AsyncClient
+from solana.rpc.commitment import Commitment
+from solders.pubkey import Pubkey
+
 from zeta_py import utils
 from zeta_py.serum_client.accounts.market_state import MarketState
 from zeta_py.serum_client.accounts.orderbook import OrderbookAccount
 from zeta_py.serum_client.types.slab import SlabInnerNode, SlabLeafNode
-
 from zeta_py.types import Order, OrderInfo, Side
-from solana.rpc.async_api import AsyncClient
-from solders.pubkey import Pubkey
-from solana.rpc.commitment import Commitment
 
 
 class Orderbook:

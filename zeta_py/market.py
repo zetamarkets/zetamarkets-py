@@ -2,16 +2,12 @@ from __future__ import annotations
 
 import asyncio
 import itertools
-import re
+import logging
 from dataclasses import dataclass
-from datetime import datetime, timedelta
-import time
-from typing import TYPE_CHECKING, Any, Callable, Optional, Tuple
+from typing import Optional, Tuple
 
-from solana.rpc.websocket_api import connect
-from solders.pubkey import Pubkey
 from solana.rpc.async_api import AsyncClient
-from solana.rpc.commitment import Commitment
+from solders.pubkey import Pubkey
 
 from zeta_py import constants, pda, utils
 from zeta_py.constants import Asset
@@ -27,8 +23,6 @@ from zeta_py.types import FilledOrder, Network, Order, Side
 # if TYPE_CHECKING:
 #     from zeta_py.exchange import Exchange
 
-import logging
-
 
 # Going to use ws for now, can add polling later
 @dataclass
@@ -42,8 +36,6 @@ class Market:
     connection: AsyncClient
     program_id: Pubkey
     asset: Asset
-    # bids: Orderbook
-    # asks: Orderbook
 
     _market_state: MarketState
     _base_zeta_vault_address: Pubkey
@@ -61,7 +53,6 @@ class Market:
 
         # Load Market State
         _market_state = await MarketState.fetch(connection, market_state_address, connection.commitment)
-        # bids, asks = await cls.load_bids_and_asks()
 
         # Addresses
         _base_zeta_vault_address = pda.get_zeta_vault_address(program_id, _market_state.base_mint)
@@ -73,17 +64,11 @@ class Market:
             connection=connection,
             program_id=program_id,
             asset=asset,
-            # bids=bids,
-            # asks=asks,
             _market_state=_market_state,
             _base_zeta_vault_address=_base_zeta_vault_address,
             _quote_zeta_vault_address=_quote_zeta_vault_address,
             _logger=logger,
         )
-
-        # Subscribe
-        # if subscribe:
-        #     instance.subscribe_orderbooks()
 
         return instance
 
@@ -98,88 +83,6 @@ class Market:
     @property
     def _is_subscribed_asks(self) -> bool:
         return self._asks_subscription_task is not None
-
-    # def _handle_orderbook_update(self, side: Side, data: bytes, slot: int) -> Orderbook:
-    #     ob_account = OrderbookAccount.decode(data)
-    #     orderbook = Orderbook(side, ob_account, self._market_state)
-    #     # if side == Side.Bid:
-    #     #     self.bids = orderbook
-    #     #     self._bids_last_update_slot = slot
-    #     # else:
-    #     #     self.asks = orderbook
-    #     #     self._asks_last_update_slot = slot
-    #     return orderbook
-
-    # async def _subscribe_orderbook(
-    #     self, side: Side, callback: Callable[[Orderbook], Any] = None, max_retries: int = 3
-    # ) -> None:
-    #     ws_endpoint = re.sub(r"^http", "ws", self.connection._provider.endpoint_uri)
-    #     retries = max_retries
-    #     while True:
-    #         async with connect(ws_endpoint) as ws:
-    #             try:
-    #                 await ws.account_subscribe(
-    #                     self.address,
-    #                     commitment=self.connection.commitment,
-    #                     encoding="base64+zstd",
-    #                 )
-    #                 first_resp = await ws.recv()
-    #                 subscription_id = first_resp[0].result
-    #                 async for msg in ws:
-    #                     try:
-    #                         orderbook = self._handle_orderbook_update(
-    #                             side, msg[0].result.value.data, msg[0].result.context.slot
-    #                         )
-    #                         if callback:
-    #                             callback(orderbook)
-    #                     except Exception as e:
-    #                         self._logger.error(f"Error decoding account: {e}")
-    #                 await ws.account_unsubscribe(subscription_id)
-    #             except asyncio.CancelledError:
-    #                 self._logger.info("WebSocket subscription task cancelled.")
-    #                 break
-    #             # solana_py.SubscriptionError?
-    #             except Exception as e:
-    #                 self._logger.error(f"Error subscribing to {self.account.__class__.__name__}: {e}")
-    #                 retries -= 1
-    #                 await asyncio.sleep(2)  # Pause for a while before retrying
-    #             finally:
-    #                 self._subscription_task = None
-
-    # def subscribe_orderbooks(self) -> None:
-    #     # Run the subscriptions in the background
-    #     # Subscribe bids
-    #     if self._is_subscribed_bids:
-    #         self._logger.warn("Already subscribed to bids")
-    #     else:
-    #         self._bids_subscription_task = asyncio.create_task(
-    #             self._subscribe_orderbook(self._market_state.bids, side=Side.Bid)
-    #         )
-    #         self._logger.info(f"Subscribed to {self.asset.name}:bid")
-    #     # Subscribe asks
-    #     if self._is_subscribed_asks:
-    #         self._logger.warn("Already subscribed to asks")
-    #     else:
-    #         self._asks_subscription_task = asyncio.create_task(
-    #             self._subscribe_orderbook(self._market_state.asks, side=Side.Ask)
-    #         )
-    #         self._logger.info(f"Subscribed to {self.asset.name}:ask")
-
-    # async def unsubscribe_orderbooks(self) -> None:
-    #     # Unsubscribe bids
-    #     if not self._is_subscribed_bids:
-    #         self._logger.warn("Already unsubscribed to bids")
-    #     else:
-    #         self._bids_subscription_task.cancel()
-    #         self._bids_subscription_task = None
-    #         self._logger.info(f"Unsubscribed to {self.asset.name}:bid")
-    #     # Unsubscribe asks
-    #     if not self._is_subscribed_asks:
-    #         self._logger.warn("Already unsubscribed to asks")
-    #     else:
-    #         self._asks_subscription_task.cancel()
-    #         self._asks_subscription_task = None
-    #         self._logger.info(f"Unsubscribed to {self.asset.name}:ask")
 
     def print_orderbook(self, depth: int = 10, filter_tif: bool = True) -> None:
         print("Ask Orders:")
