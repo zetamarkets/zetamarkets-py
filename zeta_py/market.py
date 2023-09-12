@@ -12,16 +12,12 @@ from solders.pubkey import Pubkey
 from zeta_py import constants, pda, utils
 from zeta_py.constants import Asset
 from zeta_py.orderbook import Orderbook
-from zeta_py.pyserum.market.types import OrderInfo
 from zeta_py.serum_client.accounts.market_state import MarketState
 from zeta_py.serum_client.accounts.open_orders import OpenOrders
 from zeta_py.serum_client.accounts.orderbook import OrderbookAccount
 from zeta_py.serum_client.accounts.queue import EventQueue
 from zeta_py.serum_client.types.queue import Event
-from zeta_py.types import FilledOrder, Network, Order, Side
-
-# if TYPE_CHECKING:
-#     from zeta_py.exchange import Exchange
+from zeta_py.types import FilledOrder, Network, Order, OrderInfo, Side
 
 
 # Going to use ws for now, can add polling later

@@ -64,7 +64,7 @@ class Client:
         cls,
         endpoint: str,
         commitment: Commitment = Confirmed,
-        wallet: Wallet = Wallet.dummy(),
+        wallet: Wallet = None,
         assets: list[Asset] = Asset.all(),
         tx_opts: TxOpts = None,
         network: Network = Network.MAINNET,
@@ -73,8 +73,9 @@ class Client:
         Create a new client
         """
         logger = logging.getLogger(f"{__name__}.{cls.__name__}")
-        if wallet == Wallet.dummy():
-            logger.info("Client in read-only mode, pass in `wallet` to enable transactions")
+        if wallet is None:
+            wallet = Wallet.dummy()
+            logger.warning("Client in read-only mode, pass in `wallet` to enable transactions")
         # TODO fix this opts stuff up
         tx_opts = tx_opts or TxOpts(
             {"skip_preflight": False, "preflight_commitment": commitment, "skip_confirmation": False}

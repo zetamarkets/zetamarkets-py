@@ -12,7 +12,6 @@ from solders.pubkey import Pubkey
 
 from .. import types
 from ..program_id import PROGRAM_ID
-from . import AnchorpyAccount
 
 
 class StateJSON(typing.TypedDict):
