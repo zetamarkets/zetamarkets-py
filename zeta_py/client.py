@@ -4,7 +4,7 @@ import time
 from dataclasses import dataclass
 from typing import Any, Awaitable, Callable, TypeVar
 
-from anchorpy import Provider, Wallet
+from anchorpy import Event, EventParser, Provider, Wallet
 from solana.rpc.async_api import AsyncClient
 from solana.rpc.commitment import Commitment, Confirmed
 from solana.rpc.core import RPCException
@@ -13,12 +13,19 @@ from solana.rpc.websocket_api import connect
 from solders.instruction import Instruction
 from solders.message import MessageV0
 from solders.pubkey import Pubkey
+from solders.rpc.config import RpcTransactionLogsFilterMentions
 from solders.system_program import ID as SYS_PROGRAM_ID
 from solders.sysvar import RENT
 from solders.transaction import VersionedTransaction
 from spl.token.constants import TOKEN_PROGRAM_ID
 
 from zeta_py import constants, pda, utils
+from zeta_py.events import (
+    LiquidationEvent,
+    OrderCompleteEvent,
+    TradeEventV3,
+    TransactionEventType,
+)
 from zeta_py.exchange import Exchange
 from zeta_py.orderbook import Orderbook
 from zeta_py.serum_client.accounts.orderbook import OrderbookAccount
@@ -48,6 +55,8 @@ class Client:
     provider: Provider
     network: Network
     connection: AsyncClient
+    endpoint: str
+    ws_endpoint: str
     exchange: Exchange
     margin_account: CrossMarginAccount
 
@@ -63,6 +72,7 @@ class Client:
     async def load(
         cls,
         endpoint: str,
+        ws_endpoint: str = None,
         commitment: Commitment = Confirmed,
         wallet: Wallet = None,
         assets: list[Asset] = Asset.all(),
@@ -76,6 +86,8 @@ class Client:
         if wallet is None:
             wallet = Wallet.dummy()
             logger.warning("Client in read-only mode, pass in `wallet` to enable transactions")
+        if ws_endpoint is None:
+            ws_endpoint = utils.cluster_endpoint(network, ws=True, whirligig=False)
         # TODO fix this opts stuff up
         tx_opts = tx_opts or TxOpts(
             {"skip_preflight": False, "preflight_commitment": commitment, "skip_confirmation": False}
@@ -118,6 +130,8 @@ class Client:
             provider,
             network,
             connection,
+            endpoint,
+            ws_endpoint,
             exchange,
             margin_account,
             _margin_account_address,
@@ -242,6 +256,39 @@ class Client:
             self.connection.commitment,
             _callback,
         )
+
+    # TODO: add retry logic
+    # TODO: decode and format event data
+    async def subscribe_transaction(
+        self,
+        order_complete_callback: Callable[[OrderCompleteEvent], Awaitable[Any]],
+        trade_callback: Callable[[TradeEventV3], Awaitable[Any]],
+        liquidation_callback: Callable[[LiquidationEvent], Awaitable[Any]],
+    ):
+        async with connect(self.ws_endpoint) as ws:
+            await ws.logs_subscribe(
+                commitment=self.connection.commitment,
+                filter_=RpcTransactionLogsFilterMentions(self.exchange.program_id),
+            )
+            first_resp = await ws.recv()
+            first_resp[0].result
+            async for msg in ws:
+                logs = msg[0].result.value.logs
+                parser = EventParser(self.exchange.program_id, self.exchange.program.coder)
+                parsed: list[Event] = []
+                parser.parse_logs(logs, lambda evt: parsed.append(evt))
+                for event in parsed:
+                    if event.name == TransactionEventType.ORDERCOMPLETE.value:
+                        if event.data.margin_account == self._margin_account_address:
+                            await order_complete_callback(event)
+                    elif event.name == TransactionEventType.TRADE.value:
+                        if event.data.margin_account == self._margin_account_address:
+                            await trade_callback(event)
+                    elif event.name == TransactionEventType.LIQUIDATION.value:
+                        if event.data.margin_account == self._margin_account_address:
+                            await liquidation_callback(event)
+                    else:
+                        pass
 
     # Instructions
 

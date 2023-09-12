@@ -1,51 +1,59 @@
+from dataclasses import dataclass
 from enum import Enum
 
+from solders.pubkey import Pubkey
 
-class EventType(Enum):
-    """
-    Refers to events that reflect a change in the exchange state.
-    """
+from zeta_py.zeta_client.types.asset import AssetKind
+from zeta_py.zeta_client.types.order_complete_type import OrderCompleteTypeKind
+from zeta_py.zeta_client.types.side import SideKind
 
-    EXCHANGE = 0
-    """
-    Expiration event for a zeta group.
-    """
-    EXPIRY = 1
-    """
-    Events that reflect a change in user state
-    i.e. Margin account or orders
-    """
-    USER = 2
-    """
-    A change in the clock account.
-    """
-    CLOCK = 3
-    """
-    A trade event for the user margin account.
-    """
-    TRADE = 4
-    """
-    A trade v2 event for the user margin account.
-    """
-    TRADEV2 = 5
-    """
-    A trade v3 event for the user margin account.
-    """
-    TRADEV3 = 6
+
+class TransactionEventType(Enum):
     """
     An OrderComplete event for the user margin account.
     Happens when an order is either fully filled or cancelled
     """
-    ORDERCOMPLETE = 7
+
+    ORDERCOMPLETE = "OrderCompleteEvent"
     """
-    An update in the orderbook.
+    A trade v3 event for the user margin account.
     """
-    ORDERBOOK = 8
+    TRADE = "TradeEventV3"
     """
-    On oracle account change.
+    A liquidation event for the user margin account.
     """
-    ORACLE = 9
-    """
-    On pricing account change
-    """
-    PRICING = 10
+    LIQUIDATION = "LiquidationEvent"
+
+
+@dataclass
+class OrderCompleteEvent:
+    margin_account: Pubkey
+    user: Pubkey
+    asset: AssetKind
+    market_index: int
+    side: SideKind
+    unfilled_size: int
+    order_id: int
+    client_order_id: int
+    order_complete_type: OrderCompleteTypeKind
+
+
+@dataclass
+class TradeEventV3:
+    margin_account: Pubkey
+    index: int
+    size: int
+    cost_of_trades: int
+    is_bid: bool
+    client_order_id: int
+    order_id: int
+    asset: AssetKind
+    user: Pubkey
+    is_taker: bool
+    sequence_number: int
+    fee: int
+
+
+@dataclass
+class LiquidationEvent:
+    pass
