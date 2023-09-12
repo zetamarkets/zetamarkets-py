@@ -34,10 +34,10 @@ class Exchange:
     connection: AsyncClient
     program_id: Pubkey
     program: Program
-    state: Account[State]
-    pricing: Account[Pricing]
+    state: State
+    pricing: Pricing
     markets: dict[Asset, Market] = None
-    clock: Account[Clock] = None
+    clock: Clock = None
 
     _serum_authority_address: Pubkey = None
     _mint_authority_address: Pubkey = None
@@ -54,16 +54,17 @@ class Exchange:
             {"skip_preflight": False, "preflight_commitment": connection.commitment, "skip_confirmation": False}
         )
         program_id = constants.ZETA_PID[network]
-
         provider = Provider(connection, Wallet.dummy())
         program = Program(idl, program_id, provider)
 
         # Accounts
         state_address = pda.get_state_address(program_id)
-        state = await Account[State].load(state_address, connection, State)
+        state = await State.fetch(connection, state_address, connection.commitment)
+        # state = await Account[State].load(state_address, connection, State)
 
         pricing_address = pda.get_pricing_address(program_id)
-        pricing = await Account[Pricing].load(pricing_address, connection, Pricing)
+        pricing = await Pricing.fetch(connection, pricing_address, connection.commitment)
+        # pricing = await Account[Pricing].load(pricing_address, connection, Pricing)
 
         # Addresses
         _serum_authority_address = pda.get_serum_authority_address(program_id)
@@ -80,8 +81,7 @@ class Exchange:
         )
 
         instance.markets = {
-            asset: await Market.load(network, connection, asset, pricing.account.markets[asset.to_index()])
-            for asset in assets
+            asset: await Market.load(network, connection, asset, pricing.markets[asset.to_index()]) for asset in assets
         }
 
         # Load Clock

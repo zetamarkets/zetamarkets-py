@@ -13,14 +13,15 @@ from solders.pubkey import Pubkey
 from solana.rpc.async_api import AsyncClient
 from solana.rpc.commitment import Commitment
 
-from zeta_py import constants, pda
+from zeta_py import constants, pda, utils
 from zeta_py.constants import Asset
 from zeta_py.orderbook import Orderbook
-from zeta_py.pyserum.market import AsyncMarket as SerumMarket
 from zeta_py.pyserum.market.types import OrderInfo
 from zeta_py.serum_client.accounts.market_state import MarketState
 from zeta_py.serum_client.accounts.open_orders import OpenOrders
 from zeta_py.serum_client.accounts.orderbook import OrderbookAccount
+from zeta_py.serum_client.accounts.queue import EventQueue
+from zeta_py.serum_client.types.queue import Event
 from zeta_py.types import FilledOrder, Network, Order, Side
 
 # if TYPE_CHECKING:
@@ -47,8 +48,8 @@ class Market:
     _market_state: MarketState
     _base_zeta_vault_address: Pubkey
     _quote_zeta_vault_address: Pubkey
-    _bids_subscription_task: bool = None
-    _asks_subscription_task: bool = None
+    _bids_subscription_task: asyncio.Task = None
+    _asks_subscription_task: asyncio.Task = None
     _bids_last_update_slot: int = None
     _asks_last_update_slot: int = None
     _logger: logging.Logger = None
@@ -90,10 +91,6 @@ class Market:
     def address(self) -> Pubkey:
         return self._market_state.own_address
 
-    # @property
-    # def oracle_address(self) -> Pubkey:
-    #     return self.exchange.pricing.account.oracles[self.asset.to_index()]
-
     @property
     def _is_subscribed_bids(self) -> bool:
         return self._bids_subscription_task is not None
@@ -102,102 +99,93 @@ class Market:
     def _is_subscribed_asks(self) -> bool:
         return self._asks_subscription_task is not None
 
-    def _handle_orderbook_update(self, side: Side, data: bytes, slot: int) -> Orderbook:
-        orderbook = self._serum_market._parse_bids_or_asks(data)
-        if side == Side.Bid:
-            self.bids = orderbook
-            self._bids_last_update_slot = slot
-        else:
-            self.asks = orderbook
-            self._asks_last_update_slot = slot
-        return orderbook
+    # def _handle_orderbook_update(self, side: Side, data: bytes, slot: int) -> Orderbook:
+    #     ob_account = OrderbookAccount.decode(data)
+    #     orderbook = Orderbook(side, ob_account, self._market_state)
+    #     # if side == Side.Bid:
+    #     #     self.bids = orderbook
+    #     #     self._bids_last_update_slot = slot
+    #     # else:
+    #     #     self.asks = orderbook
+    #     #     self._asks_last_update_slot = slot
+    #     return orderbook
 
-    async def _subscribe_orderbook(
-        self, side: Side, callback: Callable[[Orderbook], Any] = None, max_retries: int = 3
-    ) -> None:
-        ws_endpoint = re.sub(r"^http", "ws", self.connection._provider.endpoint_uri)
-        retries = max_retries
-        while True:
-            async with connect(ws_endpoint) as ws:
-                try:
-                    await ws.account_subscribe(
-                        self.address,
-                        commitment=self.connection.commitment,
-                        encoding="base64+zstd",
-                    )
-                    first_resp = await ws.recv()
-                    subscription_id = first_resp[0].result
-                    async for msg in ws:
-                        try:
-                            orderbook = self._handle_orderbook_update(
-                                side, msg[0].result.value.data, msg[0].result.context.slot
-                            )
-                            if callback:
-                                callback(orderbook)
-                        except Exception as e:
-                            self._logger.error(f"Error decoding account: {e}")
-                    await ws.account_unsubscribe(subscription_id)
-                except asyncio.CancelledError:
-                    self._logger.info("WebSocket subscription task cancelled.")
-                    break
-                # solana_py.SubscriptionError?
-                except Exception as e:
-                    self._logger.error(f"Error subscribing to {self.account.__class__.__name__}: {e}")
-                    retries -= 1
-                    await asyncio.sleep(2)  # Pause for a while before retrying
-                finally:
-                    self._subscription_task = None
+    # async def _subscribe_orderbook(
+    #     self, side: Side, callback: Callable[[Orderbook], Any] = None, max_retries: int = 3
+    # ) -> None:
+    #     ws_endpoint = re.sub(r"^http", "ws", self.connection._provider.endpoint_uri)
+    #     retries = max_retries
+    #     while True:
+    #         async with connect(ws_endpoint) as ws:
+    #             try:
+    #                 await ws.account_subscribe(
+    #                     self.address,
+    #                     commitment=self.connection.commitment,
+    #                     encoding="base64+zstd",
+    #                 )
+    #                 first_resp = await ws.recv()
+    #                 subscription_id = first_resp[0].result
+    #                 async for msg in ws:
+    #                     try:
+    #                         orderbook = self._handle_orderbook_update(
+    #                             side, msg[0].result.value.data, msg[0].result.context.slot
+    #                         )
+    #                         if callback:
+    #                             callback(orderbook)
+    #                     except Exception as e:
+    #                         self._logger.error(f"Error decoding account: {e}")
+    #                 await ws.account_unsubscribe(subscription_id)
+    #             except asyncio.CancelledError:
+    #                 self._logger.info("WebSocket subscription task cancelled.")
+    #                 break
+    #             # solana_py.SubscriptionError?
+    #             except Exception as e:
+    #                 self._logger.error(f"Error subscribing to {self.account.__class__.__name__}: {e}")
+    #                 retries -= 1
+    #                 await asyncio.sleep(2)  # Pause for a while before retrying
+    #             finally:
+    #                 self._subscription_task = None
 
-    def subscribe_orderbooks(self) -> None:
-        # Run the subscriptions in the background
-        # Subscribe bids
-        if self._is_subscribed_bids:
-            self._logger.warn("Already subscribed to bids")
-        else:
-            self._bids_subscription_task = asyncio.create_task(
-                self._subscribe_orderbook(self._market_state.bids, side=Side.Bid)
-            )
-            self._logger.info(f"Subscribed to {self.asset.name}:bid")
-        # Subscribe asks
-        if self._is_subscribed_asks:
-            self._logger.warn("Already subscribed to asks")
-        else:
-            self._asks_subscription_task = asyncio.create_task(
-                self._subscribe_orderbook(self._market_state.asks, side=Side.Ask)
-            )
-            self._logger.info(f"Subscribed to {self.asset.name}:ask")
+    # def subscribe_orderbooks(self) -> None:
+    #     # Run the subscriptions in the background
+    #     # Subscribe bids
+    #     if self._is_subscribed_bids:
+    #         self._logger.warn("Already subscribed to bids")
+    #     else:
+    #         self._bids_subscription_task = asyncio.create_task(
+    #             self._subscribe_orderbook(self._market_state.bids, side=Side.Bid)
+    #         )
+    #         self._logger.info(f"Subscribed to {self.asset.name}:bid")
+    #     # Subscribe asks
+    #     if self._is_subscribed_asks:
+    #         self._logger.warn("Already subscribed to asks")
+    #     else:
+    #         self._asks_subscription_task = asyncio.create_task(
+    #             self._subscribe_orderbook(self._market_state.asks, side=Side.Ask)
+    #         )
+    #         self._logger.info(f"Subscribed to {self.asset.name}:ask")
 
-    async def unsubscribe_orderbooks(self) -> None:
-        # Unsubscribe bids
-        if not self._is_subscribed_bids:
-            self._logger.warn("Already unsubscribed to bids")
-        else:
-            self._bids_subscription_task.cancel()
-            self._bids_subscription_task = None
-            self._logger.info(f"Unsubscribed to {self.asset.name}:bid")
-        # Unsubscribe asks
-        if not self._is_subscribed_asks:
-            self._logger.warn("Already unsubscribed to asks")
-        else:
-            self._asks_subscription_task.cancel()
-            self._asks_subscription_task = None
-            self._logger.info(f"Unsubscribed to {self.asset.name}:ask")
+    # async def unsubscribe_orderbooks(self) -> None:
+    #     # Unsubscribe bids
+    #     if not self._is_subscribed_bids:
+    #         self._logger.warn("Already unsubscribed to bids")
+    #     else:
+    #         self._bids_subscription_task.cancel()
+    #         self._bids_subscription_task = None
+    #         self._logger.info(f"Unsubscribed to {self.asset.name}:bid")
+    #     # Unsubscribe asks
+    #     if not self._is_subscribed_asks:
+    #         self._logger.warn("Already unsubscribed to asks")
+    #     else:
+    #         self._asks_subscription_task.cancel()
+    #         self._asks_subscription_task = None
+    #         self._logger.info(f"Unsubscribed to {self.asset.name}:ask")
 
     def print_orderbook(self, depth: int = 10, filter_tif: bool = True) -> None:
         print("Ask Orders:")
         print(*self.get_l2(Side.Ask, depth, filter_tif)[::-1], sep="\n")
         print("Bid Orders:")
         print(*self.get_l2(Side.Bid, depth, filter_tif), sep="\n")
-
-    @staticmethod
-    def _is_order_expired(
-        clock_ts: int, tif_offset: int, epoch_start_ts: int, seq_num: int, epoch_start_seq_num: int
-    ) -> int:
-        """ """
-        if tif_offset > 0:
-            if epoch_start_ts + tif_offset < clock_ts or seq_num <= epoch_start_seq_num:
-                return True
-        return False
 
     async def load_bids(self) -> Optional[Orderbook]:
         """Load the bid order book"""
@@ -230,63 +218,24 @@ class Market:
         )
         return self._parse_orders_for_owner(bids, asks, open_orders_account, open_orders_account_address)
 
-    async def load_event_queue(self) -> Optional[list[t.Event]]:
+    async def load_event_queue(self) -> Optional[list[Event]]:
         """Load the event queue which includes the fill item and out item. For any trades two fill items are added to
         the event queue. And in case of a trade, cancel or IOC order that missed, out items are added to the event
         queue.
         """
-        bytes_data = await load_bytes_data(self.state.event_queue(), self._conn)
-        if bytes_data is None:
-            return None
-        return decode_event_queue(bytes_data)
+        eq = await EventQueue.fetch(self.connection, self._market_state.event_queue, self.connection.commitment)
+        if not (eq.header.account_flags.initialized and eq.header.account_flags.event_queue):
+            raise Exception("Invalid events queue, either not initialized or not a event queue.")
+        return eq
 
-    # async def load_request_queue(self) -> Optional[list[t.Request]]:
-    #     bytes_data = await load_bytes_data(self.state.request_queue(), self._conn)
-    #     if bytes_data is None:
-    #         return None
-    #     return decode_request_queue(bytes_data)
+    async def load_fills(self, limit=100) -> Optional[list[FilledOrder]]:
+        events = await self.load_event_queue()
+        return self._parse_fills(events, limit)
 
-    async def load_fills(self, limit=100) -> Optional[list[t.FilledOrder]]:
-        bytes_data = await load_bytes_data(self.state.event_queue(), self._conn)
-        if bytes_data is None:
-            return None
-        return self._parse_fills(bytes_data, limit)
-
-    def get_l2(self, side: Side, depth: int = None, filter_tif: bool = True) -> list[OrderInfo]:
+    async def get_l2(self, side: Side, depth: int = None, filter_tif: bool = True) -> list[OrderInfo]:
         """Get the Level 2 market information."""
-        orderbook = self.bids if side == Side.Bid else self.asks
-        descending = orderbook._is_bids
-        # The first element of the inner list is price, the second is quantity.
-        levels: list[list[int]] = []
-        for node in orderbook._slab.items(descending):
-            seq_num = orderbook._get_seq_num_from_slab(node.key, orderbook._is_bids)
-            # using local time as a hack as opposed to self.exchange.clock.account.unix_timestamp
-            clock_ts = time.time()
-            order_expired = self._is_order_expired(
-                clock_ts,
-                node.tif_offset,
-                self._serum_market.state.epoch_start_ts(),
-                seq_num,
-                self._serum_market.state.start_epoch_seq_num(),
-            )
-            if filter_tif and order_expired:
-                continue
-            price = orderbook._get_price_from_slab(node)
-            if len(levels) > 0 and levels[len(levels) - 1][0] == price:
-                levels[len(levels) - 1][1] += node.quantity
-            elif len(levels) == depth:
-                break
-            else:
-                levels.append([price, node.quantity])
-        return [
-            OrderInfo(
-                price=orderbook._market_state.price_lots_to_number(price_lots),
-                size=orderbook._market_state.base_size_lots_to_number(size_lots),
-                price_lots=price_lots,
-                size_lots=size_lots,
-            )
-            for price_lots, size_lots in levels
-        ]
+        orderbook = await (self.load_bids() if side == Side.Bid else self.load_asks())
+        return orderbook._get_l2(depth, filter_tif)
 
     @staticmethod
     def _parse_orders_for_owner(
@@ -298,15 +247,14 @@ class Market:
         orders = [o for o in all_orders if str(o.open_order_address) == str(open_orders_account_address)]
         return orders
 
-    def _parse_fills(self, bytes_data: bytes, limit: int) -> list[FilledOrder]:
-        events = decode_event_queue(bytes_data, limit)
+    def _parse_fills(self, events: list[Event], limit: int) -> list[FilledOrder]:
         return [
-            self.parse_fill_event(event)
+            self._parse_fill_event(event)
             for event in events
             if event.event_flags.fill and event.native_quantity_paid > 0
         ]
 
-    def parse_fill_event(self, event: t.Event) -> t.FilledOrder:
+    def _parse_fill_event(self, event: Event) -> FilledOrder:
         if event.event_flags.bid:
             side = Side.Bid
             price_before_fees = (
@@ -322,11 +270,14 @@ class Market:
                 else event.native_quantity_released + event.native_fee_or_rebate
             )
 
-        price = (price_before_fees * self.state.base_spl_token_multiplier()) / (
-            self.state.quote_spl_token_multiplier() * event.native_quantity_paid
-        )
-        size = event.native_quantity_paid / self.state.base_spl_token_multiplier()
-        return t.FilledOrder(
+        # price = (price_before_fees * self.state.base_spl_token_multiplier()) / (
+        #     self.state.quote_spl_token_multiplier() * event.native_quantity_paid
+        # )
+        # size = event.native_quantity_paid / self.state.base_spl_token_multiplier()
+        # TODO: check if this is correct
+        price = utils.convert_fixed_int_to_decimal(price_before_fees / event.native_quantity_paid)
+        size = utils.convert_fixed_lot_to_decimal(event.native_quantity_paid)
+        return FilledOrder(
             order_id=event.order_id,
             side=side,
             price=price,

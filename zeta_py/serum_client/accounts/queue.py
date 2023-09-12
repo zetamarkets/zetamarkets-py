@@ -2,8 +2,6 @@ import typing
 from dataclasses import dataclass
 
 import borsh_construct as borsh
-from anchorpy.borsh_extension import BorshPubkey
-from anchorpy.error import AccountInvalidDiscriminator
 from anchorpy.utils.rpc import get_multiple_accounts
 from solana.rpc.async_api import AsyncClient
 from solana.rpc.commitment import Commitment

@@ -1,3 +1,4 @@
+import time
 from typing import Iterable, Union
 from zeta_py import utils
 from zeta_py.serum_client.accounts.market_state import MarketState
@@ -36,7 +37,7 @@ class Orderbook:
         return node.key >> 64
 
     @staticmethod
-    def _get_seq_num_from_slab(key: int, is_bid: bool) -> int:
+    def _get_seq_num_from_slab(key: int, side: Side) -> int:
         """Get sequence number from a slab node key.
 
         The key is constructed as the (price << 64) + (seq_no if ask_order else !seq_no).
@@ -48,18 +49,40 @@ class Orderbook:
         # Mask off highest 64 bits
         UPPER_64_BITMASK = 0x0000000000000000FFFFFFFFFFFFFFFF
         lower = key & UPPER_64_BITMASK
-        if is_bid:
+        if side == Side.Bid:
             # Bitwise NOT (since python doesn't have unsigned ints)
             return (1 << 64) - 1 - lower
         else:
             return lower
 
-    def _get_l2(self, depth: int) -> list[OrderInfo]:
+    @staticmethod
+    def _is_order_expired(
+        clock_ts: int, tif_offset: int, epoch_start_ts: int, seq_num: int, epoch_start_seq_num: int
+    ) -> int:
+        """ """
+        if tif_offset > 0:
+            if epoch_start_ts + tif_offset < clock_ts or seq_num <= epoch_start_seq_num:
+                return True
+        return False
+
+    def _get_l2(self, depth: int, filter_tif: bool = True) -> list[OrderInfo]:
         """Get the Level 2 market information."""
         descending = self.side == Side.Bid
         # The first element of the inner list is price, the second is quantity.
         levels: list[list[int]] = []
         for node in self._slab.items(descending):
+            seq_num = self._get_seq_num_from_slab(node.key, self.side)
+            # using local time as a hack as opposed to self.exchange.clock.account.unix_timestamp
+            clock_ts = time.time()
+            order_expired = self._is_order_expired(
+                clock_ts,
+                node.tif_offset,
+                self._market_state.epoch_start_ts,
+                seq_num,
+                self._market_state.start_epoch_seq_num,
+            )
+            if filter_tif and order_expired:
+                continue
             price = self._get_price_from_slab(node)
             if len(levels) > 0 and levels[len(levels) - 1][0] == price:
                 levels[len(levels) - 1][1] += node.quantity
