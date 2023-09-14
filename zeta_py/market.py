@@ -13,7 +13,6 @@ from zeta_py import constants, pda, utils
 from zeta_py.constants import Asset
 from zeta_py.orderbook import Orderbook
 from zeta_py.serum_client.accounts.market_state import MarketState
-from zeta_py.serum_client.accounts.open_orders import OpenOrders
 from zeta_py.serum_client.accounts.orderbook import OrderbookAccount
 from zeta_py.serum_client.accounts.queue import EventQueue
 from zeta_py.serum_client.types.queue import Event
@@ -112,12 +111,9 @@ class Market:
     async def load_orders_for_owner(self, open_orders_account_address: Pubkey) -> Optional[list[Order]]:
         """Load orders for owner."""
         bids, asks = await self.load_bids_and_asks()
-        open_orders_account = await OpenOrders.fetch(
-            self.connection, open_orders_account_address, self.connection.commitment
-        )
-        return self._parse_orders_for_owner(bids, asks, open_orders_account, open_orders_account_address)
+        return self._parse_orders_for_owner(bids, asks, open_orders_account_address)
 
-    async def load_event_queue(self) -> Optional[list[Event]]:
+    async def load_event_queue(self) -> Optional[EventQueue]:
         """Load the event queue which includes the fill item and out item. For any trades two fill items are added to
         the event queue. And in case of a trade, cancel or IOC order that missed, out items are added to the event
         queue.
@@ -128,8 +124,11 @@ class Market:
         return eq
 
     async def load_fills(self, limit=100) -> Optional[list[FilledOrder]]:
-        events = await self.load_event_queue()
-        return self._parse_fills(events, limit)
+        """Note: this method may not work since we've modified our event queue (TODO: check this))"""
+        raise NotImplementedError
+        # event_queue = await self.load_event_queue()
+        # events = event_queue.nodes
+        # return self._parse_fills(events, limit)
 
     async def get_l2(self, side: Side, depth: int = None, filter_tif: bool = True) -> list[OrderInfo]:
         """Get the Level 2 market information."""
@@ -138,9 +137,9 @@ class Market:
 
     @staticmethod
     def _parse_orders_for_owner(
-        bids: Orderbook, asks: Orderbook, open_orders_account: OpenOrders, open_orders_account_address: Pubkey
+        bids: Orderbook, asks: Orderbook, open_orders_account_address: Pubkey
     ) -> Optional[list[Order]]:
-        if not open_orders_account:
+        if not open_orders_account_address:
             return None
         all_orders = itertools.chain(bids.orders(), asks.orders())
         orders = [o for o in all_orders if str(o.open_order_address) == str(open_orders_account_address)]

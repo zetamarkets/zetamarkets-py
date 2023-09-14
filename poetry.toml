@@ -2,4 +2,3 @@
 in-project = true
 
 [installer]
-# no-binary = ["perspective-python"]

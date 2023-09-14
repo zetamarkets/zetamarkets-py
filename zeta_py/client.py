@@ -2,9 +2,10 @@ import asyncio
 import logging
 import time
 from dataclasses import dataclass
-from typing import Any, Awaitable, Callable, TypeVar
+from typing import Any, Awaitable, Callable, Optional, TypeVar
 
 from anchorpy import Event, EventParser, Provider, Wallet
+from anchorpy.provider import DEFAULT_OPTIONS
 from solana.rpc.async_api import AsyncClient
 from solana.rpc.commitment import Commitment, Confirmed
 from solana.rpc.core import RPCException
@@ -60,12 +61,12 @@ class Client:
     exchange: Exchange
     margin_account: CrossMarginAccount
 
-    _margin_account_address: Pubkey
-    _open_orders_addresses: dict[Asset, Pubkey]
-    _margin_account_manager_address: Pubkey
+    _margin_account_address: Optional[Pubkey]
+    _open_orders_addresses: Optional[dict[Asset, Pubkey]]
+    _margin_account_manager_address: Optional[Pubkey]
+    _user_usdc_address: Optional[Pubkey]
     _combined_vault_address: Pubkey
     _combined_socialized_loss_address: Pubkey
-    _user_usdc_address: Pubkey
     _logger: logging.Logger
 
     @classmethod
@@ -76,55 +77,54 @@ class Client:
         commitment: Commitment = Confirmed,
         wallet: Wallet = None,
         assets: list[Asset] = Asset.all(),
-        tx_opts: TxOpts = None,
+        tx_opts: TxOpts = DEFAULT_OPTIONS,
         network: Network = Network.MAINNET,
     ):
         """
         Create a new client
         """
         logger = logging.getLogger(f"{__name__}.{cls.__name__}")
+        connection = AsyncClient(endpoint=endpoint, commitment=commitment, blockhash_cache=False)
+        exchange = await Exchange.load(
+            network=network,
+            connection=connection,
+            assets=assets,
+        )
         if wallet is None:
             wallet = Wallet.dummy()
             logger.warning("Client in read-only mode, pass in `wallet` to enable transactions")
+            _margin_account_manager_address = None
+            _user_usdc_address = None
+            _margin_account_address = None
+            margin_account = None
+            _open_orders_addresses = None
+        else:
+            _margin_account_manager_address = pda.get_cross_margin_account_manager_address(
+                exchange.program_id, wallet.public_key
+            )
+            _user_usdc_address = pda.get_associated_token_address(wallet.public_key, constants.USDC_MINT[network])
+            _margin_account_address = pda.get_margin_account_address(exchange.program_id, wallet.public_key, 0)
+            margin_account = await CrossMarginAccount.fetch(connection, _margin_account_address, connection.commitment)
+            _open_orders_addresses = {}
+            for asset in assets:
+                open_orders_address = pda.get_open_orders_address(
+                    exchange.program_id,
+                    constants.DEX_PID[network],
+                    exchange.markets[asset].address,
+                    _margin_account_address,
+                )
+                _open_orders_addresses[asset] = open_orders_address
         if ws_endpoint is None:
             ws_endpoint = utils.cluster_endpoint(network, ws=True, whirligig=False)
-        # TODO fix this opts stuff up
-        tx_opts = tx_opts or TxOpts(
-            {"skip_preflight": False, "preflight_commitment": commitment, "skip_confirmation": False}
-        )
-        connection = AsyncClient(endpoint=endpoint, commitment=commitment, blockhash_cache=False)
         provider = Provider(
             connection,
             wallet,
             tx_opts,
         )
-        exchange = await Exchange.load(
-            network=network,
-            connection=connection,
-            assets=assets,
-            tx_opts=tx_opts,
-        )
-        # TODO: ideally batch these fetches
-        _margin_account_address = pda.get_margin_account_address(exchange.program_id, wallet.public_key, 0)
-        margin_account = await CrossMarginAccount.fetch(connection, _margin_account_address, connection.commitment)
-
-        _open_orders_addresses = {}
-        for asset in assets:
-            open_orders_address = pda.get_open_orders_address(
-                exchange.program_id,
-                constants.DEX_PID[network],
-                exchange.markets[asset].address,
-                _margin_account_address,
-            )
-            _open_orders_addresses[asset] = open_orders_address
 
         # additional addresses to cache
-        _margin_account_manager_address = pda.get_cross_margin_account_manager_address(
-            exchange.program_id, provider.wallet.public_key
-        )
         _combined_vault_address = pda.get_combined_vault_address(exchange.program_id)
         _combined_socialized_loss_address = pda.get_combined_socialized_loss_address(exchange.program_id)
-        _user_usdc_address = pda.get_associated_token_address(provider.wallet.public_key, constants.USDC_MINT[network])
 
         return cls(
             provider,
@@ -137,9 +137,9 @@ class Client:
             _margin_account_address,
             _open_orders_addresses,
             _margin_account_manager_address,
+            _user_usdc_address,
             _combined_vault_address,
             _combined_socialized_loss_address,
-            _user_usdc_address,
             logger,
         )
 
@@ -192,7 +192,6 @@ class Client:
         return position
 
     async def fetch_open_orders(self, asset: Asset):
-        # Fetches 1. bids 2. asks 3. open_orders
         oo = await self.exchange.markets[asset].load_orders_for_owner(self._open_orders_addresses[asset])
         # TODO: caching layer
         # self.open_orders[asset] = oo

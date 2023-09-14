@@ -1,8 +1,8 @@
 [tool.poetry]
 name = "zeta-py"
-version = "0.1.0"
+version = "0.0.1"
 description = "Python SDK for Zeta Markets"
-authors = ["Your Name <you@example.com>"]
+authors = ["Tristan0x <tristan@sierra.team>"]
 
 [tool.poetry.dependencies]
 python = "^3.9"
@@ -10,17 +10,14 @@ solana = "^0.30.2"
 solders = "^0.18.1"
 requests = "^2.31.0"
 anchorpy = "^0.18.0"
-psycopg = {extras = ["binary", "pool"], version = "^3.1.10"}
 
 [tool.poetry.group.dev.dependencies]
+poethepoet = "^0.22.1"
 ruff = "^0.0.284"
-# perspective-python = "^2.5.0"
 ipykernel = "^6.25.1"
 isort = "^5.12.0"
 black = {extras = ["jupyter"], version = "^23.7.0"}
 python-dotenv = "^1.0.0"
-ccxt = "^4.0.78"
-cryptofeed = "^2.3.2"
 nest-asyncio = "^1.5.7"
 binance-futures-connector = "^4.0.0"
 matplotlib = "^3.7.2"
@@ -30,24 +27,23 @@ ipympl = "^0.9.3"
 poetry_command = ""
 
 [tool.poe.tasks]
-black = "black zeta_py"
-isort = "isort zeta_py"
+black = "black zeta_py examples"
+isort = "isort zeta_py examples"
 format = ["black", "isort"]
-lint = "ruff check zeta_py"
+lint = "ruff check zeta_py examples"
 
 [tool.ruff]
 line-length=120
-exclude = ["zeta_py/zeta_client", "zeta_py/serum_client", ".venv"]
+exclude = ["zeta_py/zeta_client", "zeta_py/serum_client" , "zeta_py/solana_client", ".venv"]
 
 [tool.black]
 line-length=120
 
 [tool.isort]
 profile = "black"
-skip = ["zeta_py/zeta_client"]
+skip = []
 
 [tool.poetry.scripts]
-main = "zeta_py.main:main"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

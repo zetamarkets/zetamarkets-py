@@ -111,14 +111,6 @@ DEFAULT_MICRO_LAMPORTS_PER_CU_FEE = 1000
 BASE_MINT_DECIMALS = 0
 QUOTE_MINT_DECIMALS = 6
 
-
-# DEFAULT_COMMITMENT = commitment.Confirmed
-# DEFAULT_TX_OPTS = TxOpts(
-#     {
-#         "skip_preflight": False,
-#         # "preflight_commitment": DEFAULT_COMMITMENT,
-#     }
-# )
 BLOCKHASH_COMMITMENT = commitment.Finalized
 
 ZETA_LUT = {

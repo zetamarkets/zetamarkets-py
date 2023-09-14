@@ -5,7 +5,6 @@ from dataclasses import dataclass
 
 from anchorpy import Idl, Program, Provider, Wallet
 from solana.rpc.async_api import AsyncClient
-from solana.rpc.types import TxOpts
 from solders.pubkey import Pubkey
 
 from zeta_py import constants, pda
@@ -45,11 +44,7 @@ class Exchange:
         network: Network,
         connection: AsyncClient,
         assets: list[Asset] = Asset.all(),
-        tx_opts: TxOpts = None,
     ) -> "Exchange":
-        tx_opts = tx_opts or TxOpts(
-            {"skip_preflight": False, "preflight_commitment": connection.commitment, "skip_confirmation": False}
-        )
         program_id = constants.ZETA_PID[network]
         provider = Provider(connection, Wallet.dummy())
         program = Program(idl, program_id, provider)
