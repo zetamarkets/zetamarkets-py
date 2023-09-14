@@ -3,9 +3,9 @@ from enum import Enum
 
 from solders.pubkey import Pubkey
 
-from zeta_py.zeta_client.types.asset import AssetKind
-from zeta_py.zeta_client.types.order_complete_type import OrderCompleteTypeKind
-from zeta_py.zeta_client.types.side import SideKind
+from zetamarkets_py.zeta_client.types.asset import AssetKind
+from zetamarkets_py.zeta_client.types.order_complete_type import OrderCompleteTypeKind
+from zetamarkets_py.zeta_client.types.side import SideKind
 
 
 class TransactionEventType(Enum):

@@ -2,7 +2,7 @@ from solana.rpc import commitment
 from solders.address_lookup_table_account import AddressLookupTableAccount
 from solders.pubkey import Pubkey
 
-from zeta_py.types import Asset, Network
+from zetamarkets_py.types import Asset, Network
 
 ZETA_PID = {
     # Network.LOCALNET: Pubkey.from_string("BG3oRikW8d16YjUEmX3ZxHm9SiJzrGtMhsSR8aCw1Cd7"),

@@ -2,8 +2,8 @@ import re
 
 from solana.utils.cluster import cluster_api_url
 
-from zeta_py import constants
-from zeta_py.types import Network
+from zetamarkets_py import constants
+from zetamarkets_py.types import Network
 
 
 def convert_fixed_int_to_decimal(amount: int) -> float:

@@ -7,8 +7,8 @@ from solana.rpc.commitment import Confirmed
 from solana.rpc.websocket_api import connect
 from solders.rpc.config import RpcTransactionLogsFilterMentions
 
-from zeta_py.client import Client
-from zeta_py.events import TransactionEventType
+from zetamarkets_py.client import Client
+from zetamarkets_py.events import TransactionEventType
 
 
 async def main():

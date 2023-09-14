@@ -5,11 +5,11 @@ from solana.rpc.async_api import AsyncClient
 from solana.rpc.commitment import Commitment
 from solders.pubkey import Pubkey
 
-from zeta_py import utils
-from zeta_py.serum_client.accounts.market_state import MarketState
-from zeta_py.serum_client.accounts.orderbook import OrderbookAccount
-from zeta_py.serum_client.types.slab import SlabInnerNode, SlabLeafNode
-from zeta_py.types import Order, OrderInfo, Side
+from zetamarkets_py import utils
+from zetamarkets_py.serum_client.accounts.market_state import MarketState
+from zetamarkets_py.serum_client.accounts.orderbook import OrderbookAccount
+from zetamarkets_py.serum_client.types.slab import SlabInnerNode, SlabLeafNode
+from zetamarkets_py.types import Order, OrderInfo, Side
 
 
 class Orderbook:

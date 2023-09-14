@@ -8,7 +8,7 @@ from anchorpy.borsh_extension import BorshPubkey
 from construct import BitsSwapped, BitStruct, Container, Flag, Padding
 from solders.pubkey import Pubkey
 
-from zeta_py.serum_client import types
+from zetamarkets_py.serum_client import types
 
 
 @dataclass

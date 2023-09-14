@@ -5,7 +5,7 @@ from typing import Optional
 from solders.hash import Hash
 from solders.pubkey import Pubkey
 
-from zeta_py.zeta_client.types import asset, order_type, side
+from zetamarkets_py.zeta_client.types import asset, order_type, side
 
 
 class Asset(Enum):

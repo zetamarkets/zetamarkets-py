@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "zetamarkets_py"
-version = "0.1.1"
+version = "0.1.2"
 description = "Python SDK for Zeta Markets"
 license = "apache-2.0"
 authors = ["Tristan0x <tristan@sierra.team>"]
@@ -35,14 +35,14 @@ ipympl = "^0.9.3"
 poetry_command = ""
 
 [tool.poe.tasks]
-black = "black zeta_py examples"
-isort = "isort zeta_py examples"
+black = "black zetamarkets_py examples"
+isort = "isort zetamarkets_py examples"
 format = ["black", "isort"]
-lint = "ruff check zeta_py examples"
+lint = "ruff check zetamarkets_py examples"
 
 [tool.ruff]
 line-length=120
-exclude = ["zeta_py/zeta_client", "zeta_py/serum_client" , "zeta_py/solana_client", ".venv"]
+exclude = ["zetamarkets_py/zeta_client", "zetamarkets_py/serum_client" , "zetamarkets_py/solana_client", ".venv"]
 
 [tool.black]
 line-length=120

@@ -4,10 +4,10 @@ import os
 from solana.rpc.commitment import Confirmed
 from solana.rpc.websocket_api import connect
 
-from zeta_py.client import Client
-from zeta_py.orderbook import Orderbook
-from zeta_py.serum_client.accounts.orderbook import OrderbookAccount
-from zeta_py.types import Asset, Side
+from zetamarkets_py.client import Client
+from zetamarkets_py.orderbook import Orderbook
+from zetamarkets_py.serum_client.accounts.orderbook import OrderbookAccount
+from zetamarkets_py.types import Asset, Side
 
 
 async def main():

@@ -3,8 +3,8 @@ import os
 
 import anchorpy
 
-from zeta_py.client import Client
-from zeta_py.types import Asset, Side
+from zetamarkets_py.client import Client
+from zetamarkets_py.types import Asset, Side
 
 
 async def main():

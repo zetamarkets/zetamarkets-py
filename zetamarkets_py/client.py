@@ -20,20 +20,20 @@ from solders.sysvar import RENT
 from solders.transaction import VersionedTransaction
 from spl.token.constants import TOKEN_PROGRAM_ID
 
-from zeta_py import constants, pda, utils
-from zeta_py.events import (
+from zetamarkets_py import constants, pda, utils
+from zetamarkets_py.events import (
     LiquidationEvent,
     OrderCompleteEvent,
     TradeEventV3,
     TransactionEventType,
 )
-from zeta_py.exchange import Exchange
-from zeta_py.orderbook import Orderbook
-from zeta_py.serum_client.accounts.orderbook import OrderbookAccount
-from zeta_py.types import Asset, Network, OrderOptions, Position, Side
-from zeta_py.zeta_client.accounts.cross_margin_account import CrossMarginAccount
-from zeta_py.zeta_client.errors import from_tx_error
-from zeta_py.zeta_client.instructions import (
+from zetamarkets_py.exchange import Exchange
+from zetamarkets_py.orderbook import Orderbook
+from zetamarkets_py.serum_client.accounts.orderbook import OrderbookAccount
+from zetamarkets_py.types import Asset, Network, OrderOptions, Position, Side
+from zetamarkets_py.zeta_client.accounts.cross_margin_account import CrossMarginAccount
+from zetamarkets_py.zeta_client.errors import from_tx_error
+from zetamarkets_py.zeta_client.instructions import (
     cancel_all_market_orders,
     cancel_order,
     deposit_v2,
@@ -42,9 +42,6 @@ from zeta_py.zeta_client.instructions import (
     initialize_open_orders_v3,
     place_perp_order_v3,
 )
-
-# TODO: simplify client args e.g. preflight commitment etc
-# TODO: add trade and liq subscriptions
 
 
 @dataclass
