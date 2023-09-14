@@ -4,15 +4,16 @@
   <h1 style="margin-top: 0px">Zeta Python SDK 🐍</h1>
 
   <p>
-    <a href="https://discord.gg/dD7YREfBkR"
-      ><img
-        alt="Discord Chat"
-        src="https://img.shields.io/discord/841556000632078378?color=blueviolet"
-    /></a>
+    <a href="https://badge.fury.io/py/zetamarkets-py"><img src="https://badge.fury.io/py/zetamarkets-py.svg" alt="PyPI version" height="18"></a>
     <a href="https://opensource.org/licenses/Apache-2.0"
       ><img
         alt="License"
         src="https://img.shields.io/badge/License-Apache%202.0-blueviolet"
+    /></a>
+    <a href="https://discord.gg/dD7YREfBkR"
+      ><img
+        alt="Discord Chat"
+        src="https://img.shields.io/discord/841556000632078378?color=blueviolet"
     /></a>
   </p>
 </div>
