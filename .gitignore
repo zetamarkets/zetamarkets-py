@@ -161,4 +161,4 @@ cython_debug/
 
 **/.DS_Store
 
-local-validator
+.ruff_cache

@@ -22,7 +22,7 @@
 ### Install from Pypi
 
 ```sh
-pip install zeta_py
+pip install zetamarkets_py
 ```
 
 ### Install from source
