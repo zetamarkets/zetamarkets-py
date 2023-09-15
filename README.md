@@ -41,7 +41,7 @@ By default the SDK will look for the wallet at `~/.config/solana/id.json`
 
 ### Running the examples
 
-Run the various code examples provided in the [examples](./zetamarkets_py/examples) directory.
+Run the various code examples provided in the [examples](./examples) directory.
 
 ## Development
 
