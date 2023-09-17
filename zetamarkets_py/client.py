@@ -494,6 +494,11 @@ class Client:
         )
         return ixs
 
+    async def cancel_orders_for_market(self, asset: Asset):
+        ixs = self._cancel_orders_for_market_ixs(asset)
+        self._logger.info(f"Cancelling all orders for {asset}")
+        return await self._send_versioned_transaction(ixs)
+
     async def replace_quote(
         self,
         asset: Asset,
