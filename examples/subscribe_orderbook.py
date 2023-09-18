@@ -9,6 +9,9 @@ from zetamarkets_py.orderbook import Orderbook
 from zetamarkets_py.serum_client.accounts.orderbook import OrderbookAccount
 from zetamarkets_py.types import Asset, Side
 
+# This example shows how to subscribe to multiple accounts over the same websocket connection
+# This is useful for subscribing to the full orderbook (bids and asks) for a given market on Zeta
+
 
 async def main():
     asset = Asset.SOL
@@ -18,24 +21,42 @@ async def main():
 
     # load in client, we're simply using this to fetch the orderbook bids address
     client = await Client.load(endpoint=endpoint, assets=[asset])
-    address = client.exchange.markets[asset]._market_state.bids
+    bids_address = client.exchange.markets[asset]._market_state.bids
+    asks_address = client.exchange.markets[asset]._market_state.asks
 
-    # open up a websocket subscription to the bids account
+    # subscribe to both bids and asks over the same websocket connection
     async with connect(ws_endpoint) as ws:
+        # Subscribe to the first address
         await ws.account_subscribe(
-            address,
+            bids_address,
             commitment=commitment,
             encoding="base64+zstd",
         )
-        first_resp = await ws.recv()
-        first_resp[0].result
+        bids_subscription_id = (await ws.recv())[0].result
+        print(bids_subscription_id)
+
+        # Subscribe to the second address
+        await ws.account_subscribe(
+            asks_address,
+            commitment=commitment,
+            encoding="base64+zstd",
+        )
+        asks_subscription_id = (await ws.recv())[0].result
+        print(asks_subscription_id)
+
+        # Listen for messages related to both subscriptions
         async for msg in ws:
-            # decode the bytes received over the websocket based on the account data layout
+            # Decode the bytes received over the websocket based on the account data layout
+            # Bids and asks have the same layout, so we can use the same decoder
             account = OrderbookAccount.decode(msg[0].result.value.data)
-            # create an orderbook object from the account data that contains useful helper methods
-            orderbook = Orderbook(Side.Bid, account, client.exchange.markets[asset]._market_state)
-            print("=" * 20 + "Bids" + "=" * 20)
-            for level in orderbook._get_l2(5):
+            # Process the account data
+            side = Side.Bid if msg[0].subscription == bids_subscription_id else Side.Ask
+            orderbook = Orderbook(side, account, client.exchange.markets[asset]._market_state)
+            print("=" * 20 + side.name + "=" * 20)
+            levels = orderbook._get_l2(5)
+            if side == Side.Ask:
+                levels = reversed(levels)
+            for level in levels:
                 print(level)
 
 
