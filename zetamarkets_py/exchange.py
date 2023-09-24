@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
-from typing import Optional
 
 from anchorpy import Idl, Program, Provider, Wallet
 from solana.rpc.async_api import AsyncClient
@@ -10,7 +9,6 @@ from solders.pubkey import Pubkey
 
 from zetamarkets_py import constants, pda
 from zetamarkets_py.market import Market
-from zetamarkets_py.solana_client.accounts.clock import Clock
 from zetamarkets_py.types import Asset, Network
 from zetamarkets_py.zeta_client.accounts.pricing import Pricing
 from zetamarkets_py.zeta_client.accounts.state import State

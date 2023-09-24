@@ -4,7 +4,6 @@ from typing import Optional
 
 from solders.hash import Hash
 from solders.pubkey import Pubkey
-from solana.utils.cluster import Cluster
 
 from zetamarkets_py.zeta_client.types import asset, order_type, side
 

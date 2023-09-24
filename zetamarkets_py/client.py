@@ -2,7 +2,7 @@ import asyncio
 import logging
 import time
 from dataclasses import dataclass, field
-from typing import Any, Awaitable, Callable, Dict, Optional, TypeVar, cast
+from typing import Any, Awaitable, Callable, Dict, Optional, cast
 
 from anchorpy import Event, EventParser, Provider, Wallet
 from anchorpy.provider import DEFAULT_OPTIONS
@@ -10,16 +10,12 @@ from solana.rpc.async_api import AsyncClient
 from solana.rpc.commitment import Commitment, Confirmed
 from solana.rpc.core import RPCException
 from solana.rpc.types import TxOpts
-from solana.rpc.websocket_api import connect, SolanaWsClientProtocol
+from solana.rpc.websocket_api import SolanaWsClientProtocol, connect
 from solders.instruction import Instruction
 from solders.message import MessageV0
 from solders.pubkey import Pubkey
 from solders.rpc.config import RpcTransactionLogsFilterMentions
-from solders.system_program import ID as SYS_PROGRAM_ID
-from solders.sysvar import RENT
 from solders.transaction import VersionedTransaction
-from spl.token.constants import TOKEN_PROGRAM_ID
-from solders.rpc.responses import Notification, SubscriptionResult
 
 from zetamarkets_py import constants, pda, utils
 from zetamarkets_py.events import (
