@@ -25,10 +25,6 @@ MINTS = {
 
 # These are generated flexible PDAs and aren't reflective of an spl token mint.
 FLEXIBLE_MINTS = {
-    Network.LOCALNET: {
-        Asset.APT: Pubkey.from_string("FbfkphUHaAd7c27RqhzKBRAPX8T5AzFBH259sbGmNuvG"),
-        Asset.ARB: Pubkey.from_string("w8h6r5ogLihfuWeCA1gs7boxNjzbwWeQbXMB3UATaC6"),
-    },
     Network.DEVNET: {
         Asset.APT: Pubkey.from_string("FbfkphUHaAd7c27RqhzKBRAPX8T5AzFBH259sbGmNuvG"),
         Asset.ARB: Pubkey.from_string("w8h6r5ogLihfuWeCA1gs7boxNjzbwWeQbXMB3UATaC6"),

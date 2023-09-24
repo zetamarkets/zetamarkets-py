@@ -4,6 +4,7 @@ from typing import Optional
 
 from solders.hash import Hash
 from solders.pubkey import Pubkey
+from solana.utils.cluster import Cluster
 
 from zetamarkets_py.zeta_client.types import asset, order_type, side
 
@@ -34,10 +35,9 @@ class Asset(Enum):
 
 
 class Network(Enum):
-    LOCALNET = "localnet"
     DEVNET = "devnet"
     TESTNET = "testnet"
-    MAINNET = "mainnet_beta"
+    MAINNET = "mainnet-beta"
 
     def __str__(self) -> str:
         return self.name
@@ -88,10 +88,10 @@ class TIFOptions:
 class OrderOptions:
     # tif_options: TIFOptions = field(default_factory=TIFOptions)
     expiry_ts: Optional[int] = None
-    order_type: Optional[OrderType] = OrderType.Limit
     client_order_id: Optional[int] = None
-    tag: Optional[str] = "SDK"
     blockhash: Optional[Hash] = None
+    order_type: OrderType = OrderType.Limit
+    tag: str = "SDK"
 
 
 @dataclass

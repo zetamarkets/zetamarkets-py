@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from typing import Optional
 
 from anchorpy import Idl, Program, Provider, Wallet
 from solana.rpc.async_api import AsyncClient
@@ -30,13 +31,13 @@ class Exchange:
     program: Program
     state: State
     pricing: Pricing
-    markets: dict[Asset, Market] = None
-    clock: Clock = None
+    markets: dict[Asset, Market]
+    # clock: Optional[Clock] = None
 
-    _state_address: Pubkey = None
-    _pricing_address: Pubkey = None
-    _serum_authority_address: Pubkey = None
-    _mint_authority_address: Pubkey = None
+    _state_address: Pubkey
+    _pricing_address: Pubkey
+    _serum_authority_address: Pubkey
+    _mint_authority_address: Pubkey
 
     @classmethod
     async def load(
@@ -52,13 +53,21 @@ class Exchange:
         # Accounts
         state_address = pda.get_state_address(program_id)
         state = await State.fetch(connection, state_address, connection.commitment)
+        if state is None:
+            raise Exception(f"State not found at {state_address}")
 
         pricing_address = pda.get_pricing_address(program_id)
         pricing = await Pricing.fetch(connection, pricing_address, connection.commitment)
+        if pricing is None:
+            raise Exception(f"Pricing not found at {pricing_address}")
 
         # Addresses
         _serum_authority_address = pda.get_serum_authority_address(program_id)
         _mint_authority_address = pda.get_mint_authority_address(program_id)
+
+        markets = {
+            asset: await Market.load(network, connection, asset, pricing.markets[asset.to_index()]) for asset in assets
+        }
 
         instance = cls(
             connection=connection,
@@ -66,15 +75,12 @@ class Exchange:
             program=program,
             state=state,
             pricing=pricing,
+            markets=markets,
             _state_address=state_address,
             _pricing_address=pricing_address,
             _serum_authority_address=_serum_authority_address,
             _mint_authority_address=_mint_authority_address,
         )
-
-        instance.markets = {
-            asset: await Market.load(network, connection, asset, pricing.markets[asset.to_index()]) for asset in assets
-        }
 
         # Load Clock
         # instance.clock = await Clock.fetch(connection, connection.commitment)

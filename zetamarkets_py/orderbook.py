@@ -1,5 +1,5 @@
 import time
-from typing import Iterable, Union
+from typing import Iterable, Optional, Union
 
 from solana.rpc.async_api import AsyncClient
 from solana.rpc.commitment import Commitment
@@ -25,8 +25,10 @@ class Orderbook:
     @classmethod
     async def load(
         cls, conn: AsyncClient, address: Pubkey, commitment: Commitment, side: Side, market_state: MarketState
-    ) -> "Orderbook":
+    ) -> Optional["Orderbook"]:
         orderbook = await OrderbookAccount.fetch(conn, address, commitment)
+        if orderbook is None:
+            return None
         return cls(side, orderbook, market_state)
 
     @staticmethod
@@ -74,7 +76,7 @@ class Orderbook:
         for node in self._slab.items(descending):
             seq_num = self._get_seq_num_from_slab(node.key, self.side)
             # using local time as a hack as opposed to self.exchange.clock.account.unix_timestamp
-            clock_ts = time.time()
+            clock_ts = int(time.time())
             order_expired = self._is_order_expired(
                 clock_ts,
                 node.tif_offset,

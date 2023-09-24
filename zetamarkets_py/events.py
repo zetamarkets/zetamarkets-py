@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 from solders.pubkey import Pubkey
+from zetamarkets_py.types import Asset
 
 from zetamarkets_py.zeta_client.types.asset import AssetKind
 from zetamarkets_py.zeta_client.types.order_complete_type import OrderCompleteTypeKind
@@ -56,4 +57,16 @@ class TradeEventV3:
 
 @dataclass
 class LiquidationEvent:
-    pass
+    liquidator_reward: int
+    insurance_reward: int
+    cost_of_trades: int
+    size: int
+    remaining_liquidatee_balance: int
+    remaining_liquidator_balance: int
+    mark_price: int
+    underlying_price: int
+    liquidatee: Pubkey
+    liquidator: Pubkey
+    asset: Asset
+    liquidatee_margin_account: Pubkey
+    liquidator_margin_account: Pubkey

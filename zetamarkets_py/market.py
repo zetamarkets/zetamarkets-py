@@ -35,11 +35,11 @@ class Market:
     _market_state: MarketState
     _base_zeta_vault_address: Pubkey
     _quote_zeta_vault_address: Pubkey
-    _bids_subscription_task: asyncio.Task = None
-    _asks_subscription_task: asyncio.Task = None
-    _bids_last_update_slot: int = None
-    _asks_last_update_slot: int = None
-    _logger: logging.Logger = None
+    _logger: logging.Logger
+    _bids_subscription_task: Optional[asyncio.Task] = None
+    _asks_subscription_task: Optional[asyncio.Task] = None
+    _bids_last_update_slot: Optional[int] = None
+    _asks_last_update_slot: Optional[int] = None
 
     @classmethod
     async def load(cls, network: Network, connection: AsyncClient, asset: Asset, market_state_address: Pubkey):
@@ -48,6 +48,8 @@ class Market:
 
         # Load Market State
         _market_state = await MarketState.fetch(connection, market_state_address, connection.commitment)
+        if _market_state is None:
+            raise Exception(f"Market state not found at {market_state_address}")
 
         # Addresses
         _base_zeta_vault_address = pda.get_zeta_vault_address(program_id, _market_state.base_mint)
@@ -79,11 +81,15 @@ class Market:
     def _is_subscribed_asks(self) -> bool:
         return self._asks_subscription_task is not None
 
-    def print_orderbook(self, depth: int = 10, filter_tif: bool = True) -> None:
+    async def print_orderbook(self, depth: int = 10, filter_tif: bool = True) -> None:
         print("Ask Orders:")
-        print(*self.get_l2(Side.Ask, depth, filter_tif)[::-1], sep="\n")
+        ask_l2 = await self.get_l2(Side.Ask, depth, filter_tif)
+        if ask_l2 is not None:
+            print(*ask_l2[::-1], sep="\n")
         print("Bid Orders:")
-        print(*self.get_l2(Side.Bid, depth, filter_tif), sep="\n")
+        bid_l2 = await self.get_l2(Side.Bid, depth, filter_tif)
+        if bid_l2 is not None:
+            print(*bid_l2, sep="\n")
 
     async def load_bids(self) -> Optional[Orderbook]:
         """Load the bid order book"""
@@ -111,6 +117,8 @@ class Market:
     async def load_orders_for_owner(self, open_orders_account_address: Pubkey) -> Optional[list[Order]]:
         """Load orders for owner."""
         bids, asks = await self.load_bids_and_asks()
+        if bids is None or asks is None:
+            return None
         return self._parse_orders_for_owner(bids, asks, open_orders_account_address)
 
     async def load_event_queue(self) -> Optional[EventQueue]:
@@ -119,7 +127,7 @@ class Market:
         queue.
         """
         eq = await EventQueue.fetch(self.connection, self._market_state.event_queue, self.connection.commitment)
-        if not (eq.header.account_flags.initialized and eq.header.account_flags.event_queue):
+        if eq is None or not (eq.header.account_flags.initialized and eq.header.account_flags.event_queue):
             raise Exception("Invalid events queue, either not initialized or not a event queue.")
         return eq
 
@@ -130,17 +138,17 @@ class Market:
         # events = event_queue.nodes
         # return self._parse_fills(events, limit)
 
-    async def get_l2(self, side: Side, depth: int = None, filter_tif: bool = True) -> list[OrderInfo]:
+    async def get_l2(self, side: Side, depth: int = 1000, filter_tif: bool = True) -> Optional[list[OrderInfo]]:
         """Get the Level 2 market information."""
         orderbook = await (self.load_bids() if side == Side.Bid else self.load_asks())
+        if orderbook is None:
+            return None
         return orderbook._get_l2(depth, filter_tif)
 
     @staticmethod
     def _parse_orders_for_owner(
         bids: Orderbook, asks: Orderbook, open_orders_account_address: Pubkey
     ) -> Optional[list[Order]]:
-        if not open_orders_account_address:
-            return None
         all_orders = itertools.chain(bids.orders(), asks.orders())
         orders = [o for o in all_orders if str(o.open_order_address) == str(open_orders_account_address)]
         return orders
@@ -173,7 +181,7 @@ class Market:
         # )
         # size = event.native_quantity_paid / self.state.base_spl_token_multiplier()
         # TODO: check if this is correct
-        price = utils.convert_fixed_int_to_decimal(price_before_fees / event.native_quantity_paid)
+        price = utils.convert_fixed_int_to_decimal(int(price_before_fees / event.native_quantity_paid))
         size = utils.convert_fixed_lot_to_decimal(event.native_quantity_paid)
         return FilledOrder(
             order_id=event.order_id,

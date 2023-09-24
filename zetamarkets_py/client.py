@@ -1,8 +1,8 @@
 import asyncio
 import logging
 import time
-from dataclasses import dataclass
-from typing import Any, Awaitable, Callable, Optional, TypeVar
+from dataclasses import dataclass, field
+from typing import Any, Awaitable, Callable, Dict, Optional, TypeVar, cast
 
 from anchorpy import Event, EventParser, Provider, Wallet
 from anchorpy.provider import DEFAULT_OPTIONS
@@ -10,7 +10,7 @@ from solana.rpc.async_api import AsyncClient
 from solana.rpc.commitment import Commitment, Confirmed
 from solana.rpc.core import RPCException
 from solana.rpc.types import TxOpts
-from solana.rpc.websocket_api import connect
+from solana.rpc.websocket_api import connect, SolanaWsClientProtocol
 from solders.instruction import Instruction
 from solders.message import MessageV0
 from solders.pubkey import Pubkey
@@ -19,6 +19,7 @@ from solders.system_program import ID as SYS_PROGRAM_ID
 from solders.sysvar import RENT
 from solders.transaction import VersionedTransaction
 from spl.token.constants import TOKEN_PROGRAM_ID
+from solders.rpc.responses import Notification, SubscriptionResult
 
 from zetamarkets_py import constants, pda, utils
 from zetamarkets_py.events import (
@@ -56,7 +57,8 @@ class Client:
     endpoint: str
     ws_endpoint: str
     exchange: Exchange
-    margin_account: CrossMarginAccount
+
+    margin_account: Optional[CrossMarginAccount]
 
     _margin_account_address: Optional[Pubkey]
     _open_orders_addresses: Optional[dict[Asset, Pubkey]]
@@ -70,9 +72,9 @@ class Client:
     async def load(
         cls,
         endpoint: str,
-        ws_endpoint: str = None,
+        ws_endpoint: Optional[str] = None,
         commitment: Commitment = Confirmed,
-        wallet: Wallet = None,
+        wallet: Optional[Wallet] = None,
         assets: list[Asset] = Asset.all(),
         tx_opts: TxOpts = DEFAULT_OPTIONS,
         network: Network = Network.MAINNET,
@@ -142,6 +144,8 @@ class Client:
 
     async def _check_user_usdc_account_exists(self):
         if not hasattr(self, "_user_usdc_account_exists"):
+            if self._user_usdc_address is None:
+                return False
             # If they don't have USDC wallet this will be null
             resp = await self.connection.get_account_info(self._user_usdc_address)
             self._user_usdc_account_exists = resp.value is not None
@@ -149,6 +153,8 @@ class Client:
 
     async def _check_margin_account_manager_exists(self):
         if not hasattr(self, "_margin_account_manager_exists"):
+            if self._margin_account_manager_address is None:
+                return False
             # If they don't have margin account manager this will be null
             resp = await self.connection.get_account_info(self._margin_account_manager_address)
             self._margin_account_manager_exists = resp.value is not None
@@ -156,6 +162,8 @@ class Client:
 
     async def _check_margin_account_exists(self):
         if not hasattr(self, "_margin_account_exists"):
+            if self._margin_account_address is None:
+                return False
             # If they don't have margin account this will be null
             resp = await self.connection.get_account_info(self._margin_account_address)
             self._margin_account_exists = resp.value is not None
@@ -163,8 +171,10 @@ class Client:
 
     async def _check_open_orders_account_exists(self, asset: Asset):
         if not hasattr(self, "_open_orders_account_exists"):
-            self._open_orders_account_exists = {}
+            self._open_orders_account_exists: Dict[Asset, bool] = {}
         if asset not in self._open_orders_account_exists:
+            if self._open_orders_addresses is None:
+                return False
             resp = await self.connection.get_account_info(self._open_orders_addresses[asset])
             self._open_orders_account_exists[asset] = resp.value is not None
         return self._open_orders_account_exists[asset]
@@ -177,9 +187,13 @@ class Client:
         return balance
 
     async def fetch_position(self, asset: Asset):
+        if self.margin_account is None or self._margin_account_address is None:
+            raise Exception("Margin account not loaded, cannot fetch position")
         margin_account = await self.margin_account.fetch(
             self.connection, self._margin_account_address, self.connection.commitment
         )
+        if margin_account is None:
+            raise Exception("Margin account not found, cannot fetch position")
         position = Position(
             utils.convert_fixed_lot_to_decimal(margin_account.product_ledgers[asset.to_index()].position.size),
             utils.convert_fixed_int_to_decimal(
@@ -189,36 +203,40 @@ class Client:
         return position
 
     async def fetch_open_orders(self, asset: Asset):
+        if self._open_orders_addresses is None:
+            raise Exception("Open orders accounts not loaded, cannot fetch open orders")
         oo = await self.exchange.markets[asset].load_orders_for_owner(self._open_orders_addresses[asset])
         # TODO: caching layer
         # self.open_orders[asset] = oo
         return oo
 
-    AccountType = TypeVar("AccountType")
+    # AccountType = TypeVar("AccountType")
 
     async def _account_subscribe(
         self,
         address: Pubkey,
         ws_endpoint: str,
         commitment: Commitment,
-        callback: Callable[[AccountType], Any],
+        callback: Callable[[bytes], Any],
         max_retries: int = 3,
         encoding: str = "base64+zstd",
     ) -> None:
         retries = max_retries
         while True:
             async with connect(ws_endpoint) as ws:
+                solana_ws: SolanaWsClientProtocol = cast(SolanaWsClientProtocol, ws)
                 try:
-                    await ws.account_subscribe(
+                    await solana_ws.account_subscribe(
                         address,
                         commitment=commitment,
                         encoding=encoding,
                     )
-                    first_resp = await ws.recv()
-                    subscription_id = first_resp[0].result
+                    first_resp = await solana_ws.recv()
+                    subscription_id = cast(int, first_resp[0].result)
                     async for msg in ws:
-                        await callback(msg[0].result.value.data)
-                    await ws.account_unsubscribe(subscription_id)
+                        account_bytes = cast(bytes, msg[0].result.value.data)  # type: ignore
+                        await callback(account_bytes)
+                    await solana_ws.account_unsubscribe(subscription_id)
                 except asyncio.CancelledError:
                     self._logger.info("WebSocket subscription task cancelled.")
                     break
@@ -262,29 +280,34 @@ class Client:
         liquidation_callback: Callable[[LiquidationEvent], Awaitable[Any]],
     ):
         async with connect(self.ws_endpoint) as ws:
-            await ws.logs_subscribe(
+            solana_ws: SolanaWsClientProtocol = cast(SolanaWsClientProtocol, ws)
+            await solana_ws.logs_subscribe(
                 commitment=self.connection.commitment,
                 filter_=RpcTransactionLogsFilterMentions(self.exchange.program_id),
             )
-            first_resp = await ws.recv()
-            first_resp[0].result
+            first_resp = await solana_ws.recv()
+            subscription_id = cast(int, first_resp[0].result)
             async for msg in ws:
-                logs = msg[0].result.value.logs
+                logs = cast(list[str], msg[0].result.value.logs)  # type: ignore
                 parser = EventParser(self.exchange.program_id, self.exchange.program.coder)
                 parsed: list[Event] = []
                 parser.parse_logs(logs, lambda evt: parsed.append(evt))
                 for event in parsed:
                     if event.name == TransactionEventType.ORDERCOMPLETE.value:
-                        if event.data.margin_account == self._margin_account_address:
-                            await order_complete_callback(event)
+                        order_complete_event = cast(OrderCompleteEvent, event.data)
+                        if order_complete_event.margin_account == self._margin_account_address:
+                            await order_complete_callback(order_complete_event)
                     elif event.name == TransactionEventType.TRADE.value:
-                        if event.data.margin_account == self._margin_account_address:
-                            await trade_callback(event)
+                        trade_event = cast(TradeEventV3, event.data)
+                        if trade_event.margin_account == self._margin_account_address:
+                            await trade_callback(trade_event)
                     elif event.name == TransactionEventType.LIQUIDATION.value:
-                        if event.data.margin_account == self._margin_account_address:
-                            await liquidation_callback(event)
+                        liquidation_event = cast(LiquidationEvent, event.data)
+                        if liquidation_event.liquidatee_margin_account == self._margin_account_address:
+                            await liquidation_callback(liquidation_event)
                     else:
                         pass
+            await solana_ws.logs_unsubscribe(subscription_id)
 
     # Instructions
 
@@ -297,6 +320,8 @@ class Client:
         ixs = []
         if not await self._check_margin_account_manager_exists():
             self._logger.info("User has no cross-margin account manager, creating one...")
+            if self._margin_account_manager_address is None:
+                raise Exception("Margin account manager address not loaded, cannot deposit")
             ixs.append(
                 initialize_cross_margin_account_manager(
                     {
@@ -310,6 +335,8 @@ class Client:
         # Create margin account if user doesn't have one
         if not await self._check_margin_account_exists():
             self._logger.info("User has no cross-margin account manager, creating one...")
+            if self._margin_account_address is None or self._margin_account_manager_address is None:
+                raise Exception("Margin account address not loaded, cannot deposit")
             ixs.append(
                 initialize_cross_margin_account(
                     {"subaccount_index": subaccount_index},
@@ -324,6 +351,8 @@ class Client:
             )
         # Check they have an existing USDC account
         if await self._check_user_usdc_account_exists():
+            if self._user_usdc_address is None or self._margin_account_address is None:
+                raise Exception("User USDC address not loaded, cannot deposit")
             ixs.append(
                 deposit_v2(
                     {"amount": utils.convert_decimal_to_fixed_int(amount)},
@@ -348,27 +377,39 @@ class Client:
         raise NotImplementedError
 
     async def place_order(
-        self, asset: Asset, price: float, size: float, side: Side, order_opts: OrderOptions = OrderOptions
+        self,
+        asset: Asset,
+        price: float,
+        size: float,
+        side: Side,
+        order_opts: OrderOptions = field(default_factory=OrderOptions),
     ):
         ixs = await self._place_order_ixs(asset, price, size, side, order_opts)
         self._logger.info(f"Placed {size}x {asset}-PERP {side.name} @ ${price}")
         return await self._send_versioned_transaction(ixs)
 
     async def _place_order_ixs(
-        self, asset: Asset, price: float, size: float, side: Side, order_opts: OrderOptions = OrderOptions
+        self,
+        asset: Asset,
+        price: float,
+        size: float,
+        side: Side,
+        order_opts: OrderOptions = field(default_factory=OrderOptions),
     ) -> list[Instruction]:
         if asset not in self.exchange.assets:
             raise Exception(f"Asset {asset.name} not loaded into client, cannot place order")
         ixs = []
         if not await self._check_open_orders_account_exists(asset):
             self._logger.info("User has no open orders account, creating one...")
+            if self._open_orders_addresses is None or self._margin_account_address is None:
+                raise Exception("Open orders address not loaded, cannot place order")
             ixs.append(
                 initialize_open_orders_v3(
                     {"asset": asset.to_program_type()},
                     {
                         "state": self.exchange._state_address,
                         "dex_program": constants.DEX_PID[self.network],
-                        "system_program": SYS_PROGRAM_ID,
+                        # "system_program": SYS_PROGRAM_ID,
                         "open_orders": self._open_orders_addresses[asset],
                         "cross_margin_account": self._margin_account_address,
                         "authority": self.provider.wallet.public_key,
@@ -378,7 +419,7 @@ class Client:
                         "open_orders_map": pda.get_open_orders_map_address(
                             self.exchange.program_id, self._open_orders_addresses[asset]
                         ),
-                        "rent": RENT,
+                        # "rent": RENT,
                     },
                 )
             )
@@ -392,6 +433,10 @@ class Client:
             if order_opts.expiry_ts
             else None
         )
+        if self._margin_account_address is None:
+            raise Exception("Margin account address not loaded, cannot place order")
+        if self._open_orders_addresses is None:
+            raise Exception("Open orders addresses not loaded, cannot place order")
         ixs.append(
             place_perp_order_v3(
                 {
@@ -410,10 +455,10 @@ class Client:
                     "margin_account": self._margin_account_address,
                     "authority": self.provider.wallet.public_key,
                     "dex_program": constants.DEX_PID[self.network],
-                    "token_program": TOKEN_PROGRAM_ID,
+                    # "token_program": TOKEN_PROGRAM_ID,
                     "serum_authority": self.exchange._serum_authority_address,
                     "open_orders": self._open_orders_addresses[asset],
-                    "rent": RENT,
+                    # "rent": RENT,
                     "market_accounts": {
                         "market": self.exchange.markets[asset].address,
                         "request_queue": self.exchange.markets[asset]._market_state.request_queue,
@@ -447,6 +492,10 @@ class Client:
         return await self._send_versioned_transaction(ixs)
 
     def _cancel_order_ixs(self, asset: Asset, order_id: int, side: Side) -> list[Instruction]:
+        if self._margin_account_address is None:
+            raise Exception("Margin account address not loaded, cannot cancel order")
+        if self._open_orders_addresses is None:
+            raise Exception("Open orders addresses not loaded, cannot cancel order")
         ixs = []
         ixs.append(
             cancel_order(
@@ -472,6 +521,10 @@ class Client:
     # TODO: cancelorderbyclientorderid
 
     def _cancel_orders_for_market_ixs(self, asset: Asset):
+        if self._margin_account_address is None:
+            raise Exception("Margin account address not loaded, cannot cancel orders")
+        if self._open_orders_addresses is None:
+            raise Exception("Open orders addresses not loaded, cannot cancel orders")
         ixs = []
         ixs.append(
             cancel_all_market_orders(
@@ -506,7 +559,7 @@ class Client:
         bid_size: float,
         ask_price: float,
         ask_size: float,
-        order_opts: OrderOptions = OrderOptions,
+        order_opts: OrderOptions = field(default_factory=OrderOptions),
     ):
         cancel_ixs = self._cancel_orders_for_market_ixs(asset)
         bid_place_ixs = await self._place_order_ixs(asset, bid_price, bid_size, Side.Bid, order_opts)

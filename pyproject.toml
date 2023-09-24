@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "zetamarkets_py"
-version = "0.1.2"
+version = "0.1.3"
 description = "Python SDK for Zeta Markets"
 license = "apache-2.0"
 authors = ["Tristan0x <tristan@sierra.team>"]
@@ -28,6 +28,8 @@ nest-asyncio = "^1.5.7"
 binance-futures-connector = "^4.0.0"
 matplotlib = "^3.7.2"
 ipympl = "^0.9.3"
+sphinx = "^7.2.6"
+mypy = "^1.5.1"
 
 [tool.poetry.extras]
 
@@ -39,6 +41,7 @@ black = "black zetamarkets_py examples"
 isort = "isort zetamarkets_py examples"
 format = ["black", "isort"]
 lint = "ruff check zetamarkets_py examples"
+mypy = "mypy zetamarkets_py examples"
 
 [tool.ruff]
 line-length=120

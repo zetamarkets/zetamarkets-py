@@ -121,7 +121,7 @@ class SlabNode:
     next: int
 
     @classmethod
-    def from_decoded(cls, obj: Container) -> "SlabNode":
+    def from_decoded(cls, obj: Container) -> "SlabNode" | SlabInnerNode | SlabLeafNode:
         if obj.tag == 0:
             return cls(is_initialized=False, next=NONE_NEXT)
         elif obj.tag == 1:
@@ -142,7 +142,7 @@ class Slab:
         "header" / SlabHeader.layout, "nodes" / SlabNode.layout[lambda this: this.header.bump_index]
     )
     header: SlabHeader
-    nodes: list[SlabNode]
+    nodes: list[SlabNode | SlabInnerNode | SlabLeafNode]
 
     @classmethod
     def from_decoded(cls, obj: Container) -> "Slab":
@@ -168,7 +168,7 @@ class Slab:
         stack = [self.header.root]
         while stack:
             index = stack.pop()
-            node: SlabNode = self.nodes[index]
+            node: SlabNode | SlabInnerNode | SlabLeafNode = self.nodes[index]
             if isinstance(node, SlabLeafNode):
                 yield node
             elif isinstance(node, SlabInnerNode):
