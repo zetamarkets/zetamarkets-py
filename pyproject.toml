@@ -23,14 +23,17 @@ ruff = "^0.0.284"
 ipykernel = "^6.25.1"
 isort = "^5.12.0"
 black = {extras = ["jupyter"], version = "^23.7.0"}
+mypy = "^1.5.1"
+
+[tool.poetry.group.examples]
+optional = true
+
+[tool.poetry.group.examples.dependencies]
 python-dotenv = "^1.0.0"
 nest-asyncio = "^1.5.7"
 binance-futures-connector = "^4.0.0"
 matplotlib = "^3.7.2"
 ipympl = "^0.9.3"
-sphinx = "^7.2.6"
-mypy = "^1.5.1"
-furo = "^2023.9.10"
 
 [tool.poetry.group.docs]
 optional = true

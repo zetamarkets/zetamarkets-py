@@ -31,8 +31,10 @@ pip install zetamarkets_py
 
 ### Install from source
 
+You can add optional dependencies for running trading examples or docs using the `--with` flag.
+
 ```sh
-poetry install
+poetry install [--with examples, docs]
 ```
 
 ## Usage
