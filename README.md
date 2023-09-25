@@ -23,13 +23,13 @@
 
 ## Installation
 
-### Install from Pypi
+### Install from PyPI
 
 ```sh
 pip install zetamarkets_py
 ```
 
-### Install from source
+### Install from Source
 
 You can add optional dependencies for running trading examples or docs using the `--with` flag.
 
@@ -41,7 +41,7 @@ poetry install [--with examples, docs]
 
 ### Setting up a Solana wallet
 
-Please follow the instructions here to setup a Solana wallet: https://docs.solana.com/wallet-guide/file-system-wallet.
+Please follow the [Solana wallet creation docs](https://docs.solana.com/wallet-guide/file-system-wallet) to set up a wallet if you don't already have one locally.
 By default the SDK will look for the wallet at `~/.config/solana/id.json`
 
 ### Running the examples
@@ -50,18 +50,11 @@ Run the various code examples provided in the [examples](./examples) directory.
 
 ## Development
 
-### Formatting
+### Formatting and Linting
 
-We use [black](https://github.com/psf/black) with [isort](https://github.com/PyCQA/isort) for formatting.
+We use [black](https://github.com/psf/black) with [isort](https://github.com/PyCQA/isort) for formatting and [ruff](https://github.com/astral-sh/ruff) for linting
 
 ```sh
 poetry format
-```
-
-### Lint
-
-We use [ruff](https://github.com/astral-sh/ruff) for linting.
-
-```sh
 poetry lint
 ```
