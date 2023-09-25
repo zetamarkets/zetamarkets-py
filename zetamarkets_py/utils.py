@@ -22,7 +22,7 @@ def convert_decimal_to_fixed_lot(amount: float) -> int:
     return int(amount * 10**constants.POSITION_PRECISION)
 
 
-def cluster_endpoint(network: Network, tls: bool = True, ws: bool = False, whirligig=False) -> str:
+def cluster_endpoint(network: Network, tls: bool = True, ws: bool = False) -> str:
     """Retrieve the RPC API URL for the specified cluster.
 
     :param cluster: The name of the cluster to use.
@@ -31,8 +31,6 @@ def cluster_endpoint(network: Network, tls: bool = True, ws: bool = False, whirl
     endpoint = cluster_api_url(network.value, tls=tls)
     if ws:
         ws_endpoint = re.sub(r"^http", "ws", endpoint)
-        if whirligig:
-            return ws_endpoint + "/whirligig"
         return ws_endpoint
     else:
         return endpoint

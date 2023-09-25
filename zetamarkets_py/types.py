@@ -36,7 +36,7 @@ class Asset(Enum):
 class Network(Enum):
     DEVNET = "devnet"
     TESTNET = "testnet"
-    MAINNET = "mainnet-beta"
+    MAINNET = "mainnet_beta"
 
     def __str__(self) -> str:
         return self.name

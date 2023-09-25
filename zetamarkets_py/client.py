@@ -110,7 +110,7 @@ class Client:
                 )
                 _open_orders_addresses[asset] = open_orders_address
         if ws_endpoint is None:
-            ws_endpoint = utils.cluster_endpoint(network, ws=True, whirligig=False)
+            ws_endpoint = utils.cluster_endpoint(network, ws=True)
         provider = Provider(
             connection,
             wallet,
@@ -246,7 +246,7 @@ class Client:
                     pass
 
     async def subscribe_orderbook(self, asset: Asset, side: Side, callback: Callable[[Orderbook], Awaitable[Any]]):
-        ws_endpoint = utils.cluster_endpoint(self.network, ws=True, whirligig=False)
+        ws_endpoint = utils.cluster_endpoint(self.network, ws=True)
         address = (
             self.exchange.markets[asset]._market_state.bids
             if side == Side.Bid
