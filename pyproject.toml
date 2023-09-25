@@ -32,6 +32,13 @@ sphinx = "^7.2.6"
 mypy = "^1.5.1"
 furo = "^2023.9.10"
 
+[tool.poetry.group.docs]
+optional = true
+
+[tool.poetry.group.docs.dependencies]
+sphinx = "^7.2.6"
+furo = "^2023.9.10"
+
 [tool.poetry.extras]
 
 [tool.poe]
