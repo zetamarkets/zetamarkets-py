@@ -5,6 +5,9 @@
 
   <p>
     <a href="https://badge.fury.io/py/zetamarkets-py"><img src="https://badge.fury.io/py/zetamarkets-py.svg" alt="PyPI version" height="18"></a>
+    <a href='https://zetamarkets-py.readthedocs.io/en/latest/?badge=latest'>
+        <img src='https://readthedocs.org/projects/zetamarkets-py/badge/?version=latest' alt='Documentation Status' />
+    </a>
     <a href="https://opensource.org/licenses/Apache-2.0"
       ><img
         alt="License"
