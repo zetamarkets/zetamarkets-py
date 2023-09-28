@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Awaitable, Callable, Dict, Optional, cast
 
 from anchorpy import Event, EventParser, Provider, Wallet
@@ -378,8 +378,10 @@ class Client:
         price: float,
         size: float,
         side: Side,
-        order_opts: OrderOptions = field(default_factory=OrderOptions),
+        order_opts: OrderOptions = None,
     ):
+        if order_opts is None:
+            order_opts = OrderOptions()
         ixs = await self._place_order_ixs(asset, price, size, side, order_opts)
         self._logger.info(f"Placed {size}x {asset}-PERP {side.name} @ ${price}")
         return await self._send_versioned_transaction(ixs)
@@ -390,8 +392,10 @@ class Client:
         price: float,
         size: float,
         side: Side,
-        order_opts: OrderOptions = field(default_factory=OrderOptions),
+        order_opts: OrderOptions = None,
     ) -> list[Instruction]:
+        if order_opts is None:
+            order_opts = OrderOptions()
         if asset not in self.exchange.assets:
             raise Exception(f"Asset {asset.name} not loaded into client, cannot place order")
         ixs = []
@@ -555,8 +559,10 @@ class Client:
         bid_size: float,
         ask_price: float,
         ask_size: float,
-        order_opts: OrderOptions = field(default_factory=OrderOptions),
+        order_opts: OrderOptions = None,
     ):
+        if order_opts is None:
+            order_opts = OrderOptions()
         cancel_ixs = self._cancel_orders_for_market_ixs(asset)
         bid_place_ixs = await self._place_order_ixs(asset, bid_price, bid_size, Side.Bid, order_opts)
         ask_place_ixs = await self._place_order_ixs(asset, ask_price, ask_size, Side.Ask, order_opts)

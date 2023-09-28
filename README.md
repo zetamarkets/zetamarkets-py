@@ -1,5 +1,5 @@
 <div align="center">
-  <img height="120px" src="./logos/zeta.svg" />
+  <img height="120px" src="./logos/zeta-py.png" />
 
   <h1 style="margin-top: 0px">Zeta Python SDK 🐍</h1>
 
@@ -46,7 +46,7 @@ By default the SDK will look for the wallet at `~/.config/solana/id.json`
 
 ### Running the examples
 
-Run the various code examples provided in the [examples](./examples) directory.
+Run the various code examples provided in the [examples](https://zetamarkets-py.readthedocs.io/en/latest/examples.html#) directory.
 
 ## Development
 
