@@ -9,25 +9,25 @@ from zetamarkets_py.zeta_client.types import asset, order_type, side
 
 
 class Asset(Enum):
-    SOL = 0
-    BTC = 1
-    ETH = 2
-    APT = 3
-    ARB = 4
-    UNDEFINED = 5
+    SOL = "SOL"
+    BTC = "BTC"
+    ETH = "ETH"
+    APT = "APT"
+    ARB = "ARB"
 
     def to_index(self):
-        return self.value
+        members = list(self.__class__.__members__.values())
+        return members.index(self)
 
     def to_string(self):
         return self.name
 
     def to_program_type(self):
-        return asset.from_decoded({self.name: self.value})
+        return asset.from_decoded({self.name: self.to_index()})
 
     @staticmethod
     def all():
-        return [a for a in Asset if a != Asset.UNDEFINED]
+        return list(Asset)
 
     def __str__(self) -> str:
         return self.name

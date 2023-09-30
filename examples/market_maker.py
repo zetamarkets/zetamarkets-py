@@ -9,23 +9,29 @@ import anchorpy
 import websockets
 from solana.rpc.commitment import Confirmed
 from solana.rpc.types import TxOpts
+from zetamarkets_py import utils
+from solana.rpc.commitment import Commitment
 
 from zetamarkets_py.client import Client
+from zetamarkets_py.constants import MIN_LOT_SIZE
 from zetamarkets_py.orderbook import Orderbook
-from zetamarkets_py.types import Asset, Order, OrderOptions, OrderType, Side
+from zetamarkets_py.types import Asset, Network, Order, OrderOptions, OrderType, Side
+import argparse
 
 
 class MarketMaker:
-    def __init__(self, client: Client, asset: Asset, current_open_orders: List[Order]) -> None:
+    def __init__(
+        self, client: Client, asset: Asset, size: float, edge: float, offset: float, current_open_orders: List[Order]
+    ) -> None:
         self.client = client
         self.asset = asset
         self._is_quoting = False
         self.fair_price = None
 
         # feel free to play around with these params
-        self.offset_bps = 8
-        self.edge_bps = 20
-        self.quote_size = 0.001
+        self.edge_bps = edge
+        self.offset_bps = offset
+        self.quote_size = size
 
         self.EDGE_REQUOTE_THRESHOLD = 0.25  # only requote if the fair price moves more than 25% of the edge
         self.TIF_DURATION = 60  # 1 minute
@@ -35,13 +41,23 @@ class MarketMaker:
         self.ask_price = min([o.info.price for o in current_open_orders if o.side == Side.Ask], default=None)
 
     @classmethod
-    async def load(cls, endpoint, wallet, asset, commitment=Confirmed):
-        tx_opts = TxOpts(commitment=commitment, skip_preflight=True)
+    async def load(
+        cls,
+        endpoint: str,
+        wallet: anchorpy.Wallet,
+        asset: Asset,
+        size=0.001,
+        edge=20,
+        offset=0,
+        network=Network.MAINNET,
+        commitment=Confirmed,
+    ):
+        tx_opts = TxOpts(skip_preflight=False, skip_confirmation=False)  # setting to True should make things faster
         client = await Client.load(
-            endpoint=endpoint, commitment=commitment, wallet=wallet, assets=[asset], tx_opts=tx_opts
+            endpoint=endpoint, commitment=commitment, wallet=wallet, assets=[asset], tx_opts=tx_opts, network=network
         )
         open_orders = await client.fetch_open_orders(asset)
-        return cls(client, asset, open_orders)
+        return cls(client, asset, size, edge, offset, open_orders)
 
     async def subscribe_fair_price(self):
         # Connect to Binance USDC-margined futures websocket
@@ -58,16 +74,16 @@ class MarketMaker:
                         ticker = json.loads(msg)
                         if ticker.get("e") == "bookTicker":
                             # volume weighted average price based on BBO
-                            vwap = (float(ticker["b"]) * int(ticker["B"]) + float(ticker["a"]) * int(ticker["A"])) / (
-                                int(ticker["B"]) + int(ticker["A"])
-                            )
+                            vwap = (
+                                float(ticker["b"]) * float(ticker["B"]) + float(ticker["a"]) * float(ticker["A"])
+                            ) / (float(ticker["B"]) + float(ticker["A"]))
                             self.fair_price = vwap
                             await self.update_quotes()
                     except ValueError as e:
-                        print(e)
+                        print(f"ValueError: {e}")
                         raise e
                     except Exception as e:
-                        print(e)
+                        print(f"Exception: {e}")
                         raise e
 
     async def subscribe_zeta_price(self):
@@ -114,8 +130,13 @@ class MarketMaker:
         # Set order options
         # Orders are sent as post-only to ensure that we don't take liquidity
         # We use time-in-force to ensure that the order is cancelled after a certain time and not left hanging
-        expiry_ts = int((datetime.now() + timedelta(seconds=self.TIF_DURATION)).timestamp())
-        order_opts = OrderOptions(expiry_ts=expiry_ts, order_type=OrderType.Limit, client_order_id=1337)
+        if self.client.network == Network.MAINNET:
+            expiry_ts = int((datetime.now() + timedelta(seconds=self.TIF_DURATION)).timestamp())
+        else:
+            # TIF doesn't work in devnet for some assets afaik
+            expiry_ts = None
+        # Use PostOnly to avoid taker fills, use Limit if you want to take
+        order_opts = OrderOptions(expiry_ts=expiry_ts, order_type=OrderType.PostOnly, client_order_id=1337)
 
         # Execute quote!
         self._is_quoting = True
@@ -146,9 +167,82 @@ class MarketMaker:
 
 
 async def main():
-    endpoint = os.getenv("ENDPOINT", "https://api.mainnet-beta.solana.com")
+    parser = argparse.ArgumentParser(description="Process some blockchain parameters.")
+
+    parser.add_argument(
+        "-n",
+        "--network",
+        type=Network,
+        choices=list(Network),
+        default=Network.MAINNET,
+        help="The network to use. Defaults to %(default)s.",
+    )
+
+    parser.add_argument(
+        "-u",
+        "--url",
+        type=str,
+        help="The endpoint URL (optional).",
+    )
+
+    parser.add_argument(
+        "-c",
+        "--commitment",
+        type=Commitment,
+        default=Confirmed,
+        help="The commitment level. Defaults to %(default)s.",
+    )
+
+    parser.add_argument(
+        "-a",
+        "--asset",
+        type=Asset,
+        choices=list(Asset),
+        default=Asset.SOL,
+        help="The asset identifier. Defaults to %(default)s.",
+    )
+
+    parser.add_argument(
+        "-s",
+        "--size",
+        type=float,
+        default=MIN_LOT_SIZE,
+        help="The quote edge in bps. Defaults to %(default)s lots.",
+    )
+
+    parser.add_argument(
+        "-e",
+        "--edge",
+        type=float,
+        default=20,
+        help="The quote edge in bps. Defaults to %(default)s bps.",
+    )
+
+    parser.add_argument(
+        "-o",
+        "--offset",
+        type=float,
+        default=0,
+        help="The quote offset in bps. Defaults to %(default)s bps.",
+    )
+
+    args = parser.parse_args()
+
+    # If endpoint is not specified, get it from the network argument
+    endpoint = args.url if args.url else utils.cluster_endpoint(args.network)
+
+    print(f"Network: {args.network.value}")
+    print(f"Endpoint: {endpoint}")
+    print(f"Commitment: {args.commitment}")
+    print(f"Asset: {args.asset}")
+    print(f"Size: {args.size} lots")
+    print(f"Edge: {args.edge} bps")
+    print(f"Offset: {args.offset} bps")
+
     wallet = anchorpy.Wallet.local()  # get local filesystem keypair wallet
-    mm = await MarketMaker.load(endpoint, wallet, Asset.SOL)
+    mm = await MarketMaker.load(
+        endpoint, wallet, args.asset, args.size, args.edge, args.offset, args.network, args.commitment
+    )
 
     await mm.run()
 
