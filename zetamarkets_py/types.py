@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum, IntEnum
 from typing import Optional
 
@@ -85,7 +85,6 @@ class TIFOptions:
 
 @dataclass
 class OrderOptions:
-    # tif_options: TIFOptions = field(default_factory=TIFOptions)
     expiry_ts: Optional[int] = None
     client_order_id: Optional[int] = None
     blockhash: Optional[Hash] = None
@@ -118,3 +117,11 @@ class FilledOrder:
     price: float
     size: float
     fee_cost: int
+
+
+@dataclass
+class OrderArgs:
+    price: float
+    size: float
+    side: Side
+    order_opts: OrderOptions = field(default_factory=OrderOptions)

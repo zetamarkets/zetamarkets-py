@@ -1,9 +1,8 @@
 import asyncio
 import logging
-import re
 import time
 from dataclasses import dataclass, field
-from typing import Any, Awaitable, Callable, Dict, Optional, cast
+from typing import Any, Awaitable, Callable, Optional, cast
 
 from anchorpy import Event, EventParser, Provider, Wallet
 from anchorpy.provider import DEFAULT_OPTIONS
@@ -28,7 +27,7 @@ from zetamarkets_py.events import (
 from zetamarkets_py.exchange import Exchange
 from zetamarkets_py.orderbook import Orderbook
 from zetamarkets_py.serum_client.accounts.orderbook import OrderbookAccount
-from zetamarkets_py.types import Asset, Network, OrderOptions, Position, Side
+from zetamarkets_py.types import Asset, Network, OrderArgs, OrderOptions, Position, Side
 from zetamarkets_py.zeta_client.accounts.cross_margin_account import CrossMarginAccount
 from zetamarkets_py.zeta_client.errors import from_tx_error
 from zetamarkets_py.zeta_client.instructions import (
@@ -375,6 +374,7 @@ class Client:
     async def withdraw(self):
         raise NotImplementedError
 
+    # TODO: unify with place_orders_for_market
     async def place_order(
         self,
         asset: Asset,
@@ -550,33 +550,35 @@ class Client:
         self._logger.info(f"Cancelling all orders for {asset}")
         return await self._send_versioned_transaction(ixs)
 
-    async def replace_quote(
+    async def place_orders_for_market(
         self,
         asset: Asset,
-        bid_price: float,
-        bid_size: float,
-        ask_price: float,
-        ask_size: float,
-        order_opts: OrderOptions = None,
+        orders: list[OrderArgs],
+        pre_instructions: list[Instruction] = None,
+        post_instructions: list[Instruction] = None,
     ):
-        if order_opts is None:
-            order_opts = OrderOptions()
         ixs = []
-        # For new markets, initialize open orders account
         if not await self._check_open_orders_account_exists(asset):
             self._logger.info("User has no open orders account, creating one...")
             ixs.append(self._init_open_orders_ix(asset))
-        # If we've already been quoting on this market, cancel existing orders
-        else:
-            ixs.append(self._cancel_orders_for_market_ix(asset))
-        bid_place_ixs = self._place_order_ix(asset, bid_price, bid_size, Side.Bid, order_opts)
-        ask_place_ixs = self._place_order_ix(asset, ask_price, ask_size, Side.Ask, order_opts)
-        ixs.append(bid_place_ixs)
-        ixs.append(ask_place_ixs)
-        self._logger.info(
-            f"Replacing {asset} orders: {bid_size}x {Side.Bid.name} @ ${bid_price}, {ask_size}x {Side.Ask.name} @ ${ask_price}"
-        )
+
+        if pre_instructions is not None:
+            ixs.extend(pre_instructions)
+        for order in orders:
+            ixs.append(self._place_order_ix(asset, order.price, order.size, order.side, order.order_opts))
+        if post_instructions is not None:
+            ixs.extend(post_instructions)
+        self._logger.info(f"Placing {len(orders)} orders for {asset}")
         return await self._send_versioned_transaction(ixs)
+
+    async def replace_orders_for_market(
+        self,
+        asset: Asset,
+        orders: list[OrderArgs],
+    ):
+        return await self.place_orders_for_market(
+            asset, orders, pre_instructions=[self._cancel_orders_for_market_ix(asset)]
+        )
 
     # TODO: liquidate
     async def liquidate(self):

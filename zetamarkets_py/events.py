@@ -13,6 +13,7 @@ class TransactionEventType(Enum):
     """
     A place order event for the user margin account.
     """
+
     PLACE_ORDER = "PlaceOrderEvent"
     """
     An OrderComplete event for the user margin account.

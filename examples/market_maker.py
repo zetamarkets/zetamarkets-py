@@ -1,22 +1,28 @@
+import argparse
 import asyncio
 import json
-import os
 import time
 from datetime import datetime, timedelta
 from typing import List
 
 import anchorpy
 import websockets
-from solana.rpc.commitment import Confirmed
+from solana.rpc.commitment import Commitment, Confirmed
 from solana.rpc.types import TxOpts
-from zetamarkets_py import utils
-from solana.rpc.commitment import Commitment
 
+from zetamarkets_py import utils
 from zetamarkets_py.client import Client
 from zetamarkets_py.constants import MIN_LOT_SIZE
 from zetamarkets_py.orderbook import Orderbook
-from zetamarkets_py.types import Asset, Network, Order, OrderOptions, OrderType, Side
-import argparse
+from zetamarkets_py.types import (
+    Asset,
+    Network,
+    Order,
+    OrderArgs,
+    OrderOptions,
+    OrderType,
+    Side,
+)
 
 
 class MarketMaker:
@@ -137,13 +143,13 @@ class MarketMaker:
             expiry_ts = None
         # Use PostOnly to avoid taker fills, use Limit if you want to take
         order_opts = OrderOptions(expiry_ts=expiry_ts, order_type=OrderType.PostOnly, client_order_id=1337)
+        bid_order = OrderArgs(bid_price, self.quote_size, Side.Bid, order_opts)
+        ask_order = OrderArgs(ask_price, self.quote_size, Side.Ask, order_opts)
 
         # Execute quote!
         self._is_quoting = True
         try:
-            await self.client.replace_quote(
-                self.asset, bid_price, self.quote_size, ask_price, self.quote_size, order_opts
-            )
+            await self.client.replace_orders_for_market(self.asset, [bid_order, ask_order])
             self.bid_price = bid_price
             self.ask_price = ask_price
         except Exception as e:
