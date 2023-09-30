@@ -40,7 +40,7 @@ async def main():
                 if event.name == TransactionEventType.PLACE_ORDER.value:
                     if event.data.margin_account == client._margin_account_address:
                         print(event)
-                if event.name == TransactionEventType.ORDERCOMPLETE.value:
+                if event.name == TransactionEventType.ORDER_COMPLETE.value:
                     if event.data.margin_account == client._margin_account_address:
                         print(event)
                 elif event.name == TransactionEventType.TRADE.value:

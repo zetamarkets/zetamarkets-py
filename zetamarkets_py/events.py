@@ -20,7 +20,7 @@ class TransactionEventType(Enum):
     Happens when an order is either fully filled or cancelled
     """
 
-    ORDERCOMPLETE = "OrderCompleteEvent"
+    ORDER_COMPLETE = "OrderCompleteEvent"
     """
     A trade v3 event for the user margin account.
     """
@@ -29,6 +29,16 @@ class TransactionEventType(Enum):
     A liquidation event for the user margin account.
     """
     LIQUIDATION = "LiquidationEvent"
+
+
+@dataclass
+class PlaceOrderEvent:
+    fee: int
+    oracle_price: int
+    order_id: int
+    expiry_ts: int
+    asset: Asset
+    margin_account: Pubkey
 
 
 @dataclass

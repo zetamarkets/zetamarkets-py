@@ -21,6 +21,7 @@ from zetamarkets_py import constants, pda, utils
 from zetamarkets_py.events import (
     LiquidationEvent,
     OrderCompleteEvent,
+    PlaceOrderEvent,
     TradeEventV3,
     TransactionEventType,
 )
@@ -271,9 +272,10 @@ class Client:
     # TODO: add retry logic
     async def subscribe_transaction(
         self,
-        order_complete_callback: Callable[[OrderCompleteEvent], Awaitable[Any]],
-        trade_callback: Callable[[TradeEventV3], Awaitable[Any]],
-        liquidation_callback: Callable[[LiquidationEvent], Awaitable[Any]],
+        place_order_callback: Callable[[PlaceOrderEvent], Awaitable[Any]] = None,
+        order_complete_callback: Callable[[OrderCompleteEvent], Awaitable[Any]] = None,
+        trade_callback: Callable[[TradeEventV3], Awaitable[Any]] = None,
+        liquidation_callback: Callable[[LiquidationEvent], Awaitable[Any]] = None,
     ):
         async with connect(self.ws_endpoint) as ws:
             solana_ws: SolanaWsClientProtocol = cast(SolanaWsClientProtocol, ws)
@@ -289,18 +291,26 @@ class Client:
                 parsed: list[Event] = []
                 parser.parse_logs(logs, lambda evt: parsed.append(evt))
                 for event in parsed:
-                    if event.name == TransactionEventType.ORDERCOMPLETE.value:
+                    if event.name == TransactionEventType.PLACE_ORDER.value:
+                        order_complete_event = cast(PlaceOrderEvent, event.data)
+                        if order_complete_event.margin_account == self._margin_account_address:
+                            if place_order_callback is not None:
+                                await place_order_callback(order_complete_event)
+                    elif event.name == TransactionEventType.ORDER_COMPLETE.value:
                         order_complete_event = cast(OrderCompleteEvent, event.data)
                         if order_complete_event.margin_account == self._margin_account_address:
-                            await order_complete_callback(order_complete_event)
+                            if order_complete_callback is not None:
+                                await order_complete_callback(order_complete_event)
                     elif event.name == TransactionEventType.TRADE.value:
                         trade_event = cast(TradeEventV3, event.data)
                         if trade_event.margin_account == self._margin_account_address:
-                            await trade_callback(trade_event)
+                            if trade_callback is not None:
+                                await trade_callback(trade_event)
                     elif event.name == TransactionEventType.LIQUIDATION.value:
                         liquidation_event = cast(LiquidationEvent, event.data)
                         if liquidation_event.liquidatee_margin_account == self._margin_account_address:
-                            await liquidation_callback(liquidation_event)
+                            if liquidation_callback is not None:
+                                await liquidation_callback(liquidation_event)
                     else:
                         pass
             await solana_ws.logs_unsubscribe(subscription_id)

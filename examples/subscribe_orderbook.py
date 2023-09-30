@@ -33,7 +33,7 @@ async def main():
             encoding="base64+zstd",
         )
         bids_subscription_id = (await ws.recv())[0].result
-        print(bids_subscription_id)
+        print(f"Bids subscription id: {bids_subscription_id}")
 
         # Subscribe to the second address
         await ws.account_subscribe(
@@ -42,7 +42,7 @@ async def main():
             encoding="base64+zstd",
         )
         asks_subscription_id = (await ws.recv())[0].result
-        print(asks_subscription_id)
+        print(f"Asks subscription id: {asks_subscription_id}")
 
         # Listen for messages related to both subscriptions
         async for msg in ws:
