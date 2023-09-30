@@ -37,6 +37,9 @@ async def main():
             parser.parse_logs(logs, lambda evt: parsed.append(evt))
             for event in parsed:
                 # filter events to only those that are relevant to the user's margin account
+                if event.name == TransactionEventType.PLACE_ORDER.value:
+                    if event.data.margin_account == client._margin_account_address:
+                        print(event)
                 if event.name == TransactionEventType.ORDERCOMPLETE.value:
                     if event.data.margin_account == client._margin_account_address:
                         print(event)

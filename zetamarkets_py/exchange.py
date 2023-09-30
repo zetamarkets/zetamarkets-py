@@ -50,12 +50,12 @@ class Exchange:
 
         # Accounts
         state_address = pda.get_state_address(program_id)
-        state = await State.fetch(connection, state_address, connection.commitment)
+        state = await State.fetch(connection, state_address, connection.commitment, program_id=program_id)
         if state is None:
             raise Exception(f"State not found at {state_address}")
 
         pricing_address = pda.get_pricing_address(program_id)
-        pricing = await Pricing.fetch(connection, pricing_address, connection.commitment)
+        pricing = await Pricing.fetch(connection, pricing_address, connection.commitment, program_id=program_id)
         if pricing is None:
             raise Exception(f"Pricing not found at {pricing_address}")
 

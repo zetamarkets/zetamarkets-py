@@ -10,7 +10,7 @@ ZETA_PID = {
     Network.MAINNET: Pubkey.from_string("ZETAxsqBRek56DhiGXrn75yj2NHU3aYUnxvHXpkf3aD"),
 }
 
-DEX_PID = {
+MATCHING_ENGINE_PID = {
     # Network.LOCALNET: Pubkey.from_string("5CmWtUihvSrJpaUrpJ3H1jUa9DRjYz4v2xs6c3EgQWMf"),
     Network.DEVNET: Pubkey.from_string("5CmWtUihvSrJpaUrpJ3H1jUa9DRjYz4v2xs6c3EgQWMf"),
     Network.MAINNET: Pubkey.from_string("zDEXqXEG7gAyxb1Kg9mK5fPnUdENCGKzWrM21RMdWRq"),

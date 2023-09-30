@@ -5,11 +5,11 @@ from solana.rpc.async_api import AsyncClient
 from solana.rpc.commitment import Commitment
 from solders.pubkey import Pubkey
 
-from zetamarkets_py import utils
+from zetamarkets_py import constants, utils
 from zetamarkets_py.serum_client.accounts.market_state import MarketState
 from zetamarkets_py.serum_client.accounts.orderbook import OrderbookAccount
 from zetamarkets_py.serum_client.types.slab import SlabInnerNode, SlabLeafNode
-from zetamarkets_py.types import Order, OrderInfo, Side
+from zetamarkets_py.types import Network, Order, OrderInfo, Side
 
 
 class Orderbook:
@@ -24,9 +24,15 @@ class Orderbook:
 
     @classmethod
     async def load(
-        cls, conn: AsyncClient, address: Pubkey, commitment: Commitment, side: Side, market_state: MarketState
+        cls,
+        conn: AsyncClient,
+        address: Pubkey,
+        commitment: Commitment,
+        side: Side,
+        market_state: MarketState,
+        program_id: Pubkey = constants.MATCHING_ENGINE_PID[Network.MAINNET],
     ) -> Optional["Orderbook"]:
-        orderbook = await OrderbookAccount.fetch(conn, address, commitment)
+        orderbook = await OrderbookAccount.fetch(conn, address, commitment, program_id)
         if orderbook is None:
             return None
         return cls(side, orderbook, market_state)

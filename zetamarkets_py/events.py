@@ -11,6 +11,10 @@ from zetamarkets_py.zeta_client.types.side import SideKind
 
 class TransactionEventType(Enum):
     """
+    A place order event for the user margin account.
+    """
+    PLACE_ORDER = "PlaceOrderEvent"
+    """
     An OrderComplete event for the user margin account.
     Happens when an order is either fully filled or cancelled
     """

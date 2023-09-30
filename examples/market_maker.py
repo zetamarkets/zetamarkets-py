@@ -1,13 +1,14 @@
 import asyncio
-from datetime import datetime, timedelta
 import json
 import os
 import time
+from datetime import datetime, timedelta
 from typing import List
 
 import anchorpy
 import websockets
 from solana.rpc.commitment import Confirmed
+from solana.rpc.types import TxOpts
 
 from zetamarkets_py.client import Client
 from zetamarkets_py.orderbook import Orderbook
@@ -22,7 +23,7 @@ class MarketMaker:
         self.fair_price = None
 
         # feel free to play around with these params
-        self.offset_bps = 0
+        self.offset_bps = 8
         self.edge_bps = 20
         self.quote_size = 0.001
 
@@ -35,7 +36,10 @@ class MarketMaker:
 
     @classmethod
     async def load(cls, endpoint, wallet, asset, commitment=Confirmed):
-        client = await Client.load(endpoint=endpoint, commitment=commitment, wallet=wallet, assets=[asset])
+        tx_opts = TxOpts(commitment=commitment, skip_preflight=True)
+        client = await Client.load(
+            endpoint=endpoint, commitment=commitment, wallet=wallet, assets=[asset], tx_opts=tx_opts
+        )
         open_orders = await client.fetch_open_orders(asset)
         return cls(client, asset, open_orders)
 
@@ -43,25 +47,28 @@ class MarketMaker:
         # Connect to Binance USDC-margined futures websocket
         stream = self.asset.to_string().lower() + "usdt@bookTicker"
         print("Subscribing to Binance stream: " + stream)
-        async with websockets.connect("wss://fstream.binance.com/ws/" + stream) as ws:
-            id = int(time.time() * 1000)
-            await ws.send(json.dumps({"method": "SUBSCRIBE", "params": [stream], "id": id}))
-            # Establish connection
-            await ws.recv()
-            async for msg in ws:
-                try:
-                    ticker = json.loads(msg)
-                    if ticker.get("e") == "bookTicker":
-                        # volume weighted average price based on BBO
-                        vwap = (float(ticker["b"]) * int(ticker["B"]) + float(ticker["a"]) * int(ticker["A"])) / (
-                            int(ticker["B"]) + int(ticker["A"])
-                        )
-                        self.fair_price = vwap
-                        await self.update_quotes()
-                except ValueError as e:
-                    print(e)
-                except Exception as e:
-                    print(e)
+        while True:
+            async with websockets.connect("wss://fstream.binance.com/ws/" + stream) as ws:
+                id = int(time.time() * 1000)
+                await ws.send(json.dumps({"method": "SUBSCRIBE", "params": [stream], "id": id}))
+                # Establish connection
+                await ws.recv()
+                async for msg in ws:
+                    try:
+                        ticker = json.loads(msg)
+                        if ticker.get("e") == "bookTicker":
+                            # volume weighted average price based on BBO
+                            vwap = (float(ticker["b"]) * int(ticker["B"]) + float(ticker["a"]) * int(ticker["A"])) / (
+                                int(ticker["B"]) + int(ticker["A"])
+                            )
+                            self.fair_price = vwap
+                            await self.update_quotes()
+                    except ValueError as e:
+                        print(e)
+                        raise e
+                    except Exception as e:
+                        print(e)
+                        raise e
 
     async def subscribe_zeta_price(self):
         async def on_bid_update(orderbook: Orderbook):
@@ -79,8 +86,10 @@ class MarketMaker:
 
     async def update_quotes(self):
         if self._is_quoting:
+            print("Already quoting")
             return
         if self.fair_price is None:
+            print("No fair price yet")
             return
         # Skip requote if the fair price is within the edge
         fair_price = self.fair_price * (1 + self.offset_bps / 10000)
@@ -92,7 +101,7 @@ class MarketMaker:
             # If the fair price is within the edge, don't update the quotes
             divergence = abs(fair_price - current_mid_price)
             if divergence < edge * self.EDGE_REQUOTE_THRESHOLD:
-                # print(f"Skipping requote, divergence/edge = {divergence/edge:.2%}")
+                print(f"Skipping requote, divergence/edge = {divergence/edge:.2%}")
                 return
 
         print(f"External price: {self.fair_price}")
@@ -106,7 +115,7 @@ class MarketMaker:
         # Orders are sent as post-only to ensure that we don't take liquidity
         # We use time-in-force to ensure that the order is cancelled after a certain time and not left hanging
         expiry_ts = int((datetime.now() + timedelta(seconds=self.TIF_DURATION)).timestamp())
-        order_opts = OrderOptions(expiry_ts=expiry_ts, order_type=OrderType.PostOnly, client_order_id=1234)
+        order_opts = OrderOptions(expiry_ts=expiry_ts, order_type=OrderType.Limit, client_order_id=1337)
 
         # Execute quote!
         self._is_quoting = True

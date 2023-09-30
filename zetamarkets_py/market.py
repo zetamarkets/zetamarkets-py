@@ -29,7 +29,8 @@ class Market:
     """
 
     connection: AsyncClient
-    program_id: Pubkey
+    zeta_program_id: Pubkey
+    matching_engine_program_id: Pubkey
     asset: Asset
 
     _market_state: MarketState
@@ -44,22 +45,26 @@ class Market:
     @classmethod
     async def load(cls, network: Network, connection: AsyncClient, asset: Asset, market_state_address: Pubkey):
         # Initialize
-        program_id = constants.ZETA_PID[network]
+        zeta_program_id = constants.ZETA_PID[network]
+        matching_engine_program_id = constants.MATCHING_ENGINE_PID[network]
 
         # Load Market State
-        _market_state = await MarketState.fetch(connection, market_state_address, connection.commitment)
+        _market_state = await MarketState.fetch(
+            connection, market_state_address, connection.commitment, matching_engine_program_id
+        )
         if _market_state is None:
             raise Exception(f"Market state not found at {market_state_address}")
 
         # Addresses
-        _base_zeta_vault_address = pda.get_zeta_vault_address(program_id, _market_state.base_mint)
-        _quote_zeta_vault_address = pda.get_zeta_vault_address(program_id, _market_state.quote_mint)
+        _base_zeta_vault_address = pda.get_zeta_vault_address(zeta_program_id, _market_state.base_mint)
+        _quote_zeta_vault_address = pda.get_zeta_vault_address(zeta_program_id, _market_state.quote_mint)
 
         logger = logging.getLogger(f"{__name__}.{cls.__name__}.{asset.name}")
 
         instance = cls(
             connection=connection,
-            program_id=program_id,
+            zeta_program_id=zeta_program_id,
+            matching_engine_program_id=matching_engine_program_id,
             asset=asset,
             _market_state=_market_state,
             _base_zeta_vault_address=_base_zeta_vault_address,
@@ -108,7 +113,10 @@ class Market:
     async def load_bids_and_asks(self) -> Tuple[Optional[Orderbook], Optional[Orderbook]]:
         """Load the bid and ask orderbooks"""
         bids_account, asks_account = await OrderbookAccount.fetch_multiple(
-            self.connection, [self._market_state.bids, self._market_state.asks], self.connection.commitment
+            self.connection,
+            [self._market_state.bids, self._market_state.asks],
+            self.connection.commitment,
+            self.matching_engine_program_id,
         )
         bids = Orderbook(Side.Bid, bids_account, self._market_state) if bids_account else None
         asks = Orderbook(Side.Ask, asks_account, self._market_state) if asks_account else None
@@ -126,7 +134,9 @@ class Market:
         the event queue. And in case of a trade, cancel or IOC order that missed, out items are added to the event
         queue.
         """
-        eq = await EventQueue.fetch(self.connection, self._market_state.event_queue, self.connection.commitment)
+        eq = await EventQueue.fetch(
+            self.connection, self._market_state.event_queue, self.connection.commitment, self.matching_engine_program_id
+        )
         if eq is None or not (eq.header.account_flags.initialized and eq.header.account_flags.event_queue):
             raise Exception("Invalid events queue, either not initialized or not a event queue.")
         return eq

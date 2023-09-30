@@ -1,7 +1,8 @@
 import asyncio
 import logging
+import re
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable, Dict, Optional, cast
 
 from anchorpy import Event, EventParser, Provider, Wallet
@@ -63,11 +64,12 @@ class Client:
     _combined_vault_address: Pubkey
     _combined_socialized_loss_address: Pubkey
     _logger: logging.Logger
+    _account_exists_cache: dict[Pubkey, bool] = field(default_factory=dict)
 
     @classmethod
     async def load(
         cls,
-        endpoint: str,
+        endpoint: str = None,
         ws_endpoint: Optional[str] = None,
         commitment: Commitment = Confirmed,
         wallet: Optional[Wallet] = None,
@@ -79,6 +81,10 @@ class Client:
         Create a new client
         """
         logger = logging.getLogger(f"{__name__}.{cls.__name__}")
+        if endpoint is None:
+            endpoint = utils.cluster_endpoint(network)
+        if ws_endpoint is None:
+            ws_endpoint = utils.http_to_ws(endpoint)
         connection = AsyncClient(endpoint=endpoint, commitment=commitment, blockhash_cache=False)
         exchange = await Exchange.load(
             network=network,
@@ -99,18 +105,18 @@ class Client:
             )
             _user_usdc_address = pda.get_associated_token_address(wallet.public_key, constants.USDC_MINT[network])
             _margin_account_address = pda.get_margin_account_address(exchange.program_id, wallet.public_key, 0)
-            margin_account = await CrossMarginAccount.fetch(connection, _margin_account_address, connection.commitment)
+            margin_account = await CrossMarginAccount.fetch(
+                connection, _margin_account_address, connection.commitment, exchange.program_id
+            )
             _open_orders_addresses = {}
             for asset in assets:
                 open_orders_address = pda.get_open_orders_address(
                     exchange.program_id,
-                    constants.DEX_PID[network],
+                    constants.MATCHING_ENGINE_PID[network],
                     exchange.markets[asset].address,
                     _margin_account_address,
                 )
                 _open_orders_addresses[asset] = open_orders_address
-        if ws_endpoint is None:
-            ws_endpoint = utils.cluster_endpoint(network, ws=True)
         provider = Provider(
             connection,
             wallet,
@@ -139,31 +145,29 @@ class Client:
         )
 
     async def _check_user_usdc_account_exists(self):
-        if not hasattr(self, "_user_usdc_account_exists"):
-            if self._user_usdc_address is None:
-                return False
-            # If they don't have USDC wallet this will be null
-            resp = await self.connection.get_account_info(self._user_usdc_address)
-            self._user_usdc_account_exists = resp.value is not None
-        return self._user_usdc_account_exists
+        if self._margin_account_manager_address in self._account_exists_cache:
+            return self._account_exists_cache[self._margin_account_manager_address]
+        resp = await self.connection.get_account_info(self._user_usdc_address)
+        exists = resp.value is not None
+        self._account_exists_cache[self._margin_account_manager_address] = exists
+        return exists
 
     async def _check_margin_account_manager_exists(self):
-        if not hasattr(self, "_margin_account_manager_exists"):
-            if self._margin_account_manager_address is None:
-                return False
-            # If they don't have margin account manager this will be null
-            resp = await self.connection.get_account_info(self._margin_account_manager_address)
-            self._margin_account_manager_exists = resp.value is not None
-        return self._margin_account_manager_exists
+        if self._margin_account_manager_address in self._account_exists_cache:
+            return self._account_exists_cache[self._margin_account_manager_address]
+        resp = await self.connection.get_account_info(self._user_usdc_address)
+        exists = resp.value is not None
+        self._account_exists_cache[self._margin_account_manager_address] = exists
+        return exists
 
     async def _check_margin_account_exists(self):
-        if not hasattr(self, "_margin_account_exists"):
-            if self._margin_account_address is None:
-                return False
-            # If they don't have margin account this will be null
-            resp = await self.connection.get_account_info(self._margin_account_address)
-            self._margin_account_exists = resp.value is not None
-        return self._margin_account_exists
+        if self._margin_account_manager_address in self._account_exists_cache:
+            return self._account_exists_cache[self._margin_account_manager_address]
+        account = await CrossMarginAccount.fetch(self.connection, self._margin_account_address)
+        exists = account is not None
+        self._account_exists_cache[self._margin_account_manager_address] = exists
+        self.margin_account = account
+        return exists
 
     async def _check_open_orders_account_exists(self, asset: Asset):
         if not hasattr(self, "_open_orders_account_exists"):
@@ -177,7 +181,10 @@ class Client:
 
     async def fetch_balance(self):
         margin_account = await self.margin_account.fetch(
-            self.connection, self._margin_account_address, self.connection.commitment
+            self.connection,
+            self._margin_account_address,
+            self.connection.commitment,
+            self.exchange.program_id,
         )
         balance = utils.convert_fixed_int_to_decimal(margin_account.balance)
         return balance
@@ -186,7 +193,7 @@ class Client:
         if self.margin_account is None or self._margin_account_address is None:
             raise Exception("Margin account not loaded, cannot fetch position")
         margin_account = await self.margin_account.fetch(
-            self.connection, self._margin_account_address, self.connection.commitment
+            self.connection, self._margin_account_address, self.connection.commitment, self.exchange.program_id
         )
         if margin_account is None:
             raise Exception("Margin account not found, cannot fetch position")
@@ -205,8 +212,6 @@ class Client:
         # TODO: caching layer
         # self.open_orders[asset] = oo
         return oo
-
-    # AccountType = TypeVar("AccountType")
 
     async def _account_subscribe(
         self,
@@ -268,7 +273,6 @@ class Client:
         )
 
     # TODO: add retry logic
-    # TODO: decode and format event data
     async def subscribe_transaction(
         self,
         order_complete_callback: Callable[[OrderCompleteEvent], Awaitable[Any]],
@@ -325,12 +329,13 @@ class Client:
                         "authority": self.provider.wallet.public_key,
                         "payer": self.provider.wallet.public_key,
                         "zeta_program": self.exchange.program_id,
-                    }
+                    },
+                    self.exchange.program_id,
                 )
             )
         # Create margin account if user doesn't have one
         if not await self._check_margin_account_exists():
-            self._logger.info("User has no cross-margin account manager, creating one...")
+            self._logger.info("User has no cross-margin account, creating one...")
             if self._margin_account_address is None or self._margin_account_manager_address is None:
                 raise Exception("Margin account address not loaded, cannot deposit")
             ixs.append(
@@ -343,6 +348,7 @@ class Client:
                         "payer": self.provider.wallet.public_key,
                         "zeta_program": self.exchange.program_id,
                     },
+                    self.exchange.program_id,
                 )
             )
         # Check they have an existing USDC account
@@ -361,6 +367,7 @@ class Client:
                         "state": self.exchange._state_address,
                         "pricing": self.exchange._pricing_address,
                     },
+                    self.exchange.program_id,
                 )
             )
         else:
@@ -408,7 +415,7 @@ class Client:
                     {"asset": asset.to_program_type()},
                     {
                         "state": self.exchange._state_address,
-                        "dex_program": constants.DEX_PID[self.network],
+                        "dex_program": constants.MATCHING_ENGINE_PID[self.network],
                         # "system_program": SYS_PROGRAM_ID,
                         "open_orders": self._open_orders_addresses[asset],
                         "cross_margin_account": self._margin_account_address,
@@ -421,6 +428,7 @@ class Client:
                         ),
                         # "rent": RENT,
                     },
+                    self.exchange.program_id,
                 )
             )
         unix_timestamp = int(time.time())
@@ -454,7 +462,7 @@ class Client:
                     "pricing": self.exchange._pricing_address,
                     "margin_account": self._margin_account_address,
                     "authority": self.provider.wallet.public_key,
-                    "dex_program": constants.DEX_PID[self.network],
+                    "dex_program": constants.MATCHING_ENGINE_PID[self.network],
                     # "token_program": TOKEN_PROGRAM_ID,
                     "serum_authority": self.exchange._serum_authority_address,
                     "open_orders": self._open_orders_addresses[asset],
@@ -482,6 +490,7 @@ class Client:
                     "mint_authority": self.exchange._mint_authority_address,
                     "perp_sync_queue": self.exchange.pricing.perp_sync_queues[asset.to_index()],
                 },
+                self.exchange.program_id,
             )
         )
         return ixs
@@ -505,7 +514,7 @@ class Client:
                     "cancel_accounts": {
                         "state": self.exchange._state_address,
                         "margin_account": self._margin_account_address,
-                        "dex_program": constants.DEX_PID[self.network],
+                        "dex_program": constants.MATCHING_ENGINE_PID[self.network],
                         "serum_authority": self.exchange._serum_authority_address,
                         "open_orders": self._open_orders_addresses[asset],
                         "market": self.exchange.markets[asset].address,
@@ -514,6 +523,7 @@ class Client:
                         "event_queue": self.exchange.markets[asset]._market_state.event_queue,
                     },
                 },
+                self.exchange.program_id,
             )
         )
         return ixs
@@ -534,7 +544,7 @@ class Client:
                     "cancel_accounts": {
                         "state": self.exchange._state_address,
                         "margin_account": self._margin_account_address,
-                        "dex_program": constants.DEX_PID[self.network],
+                        "dex_program": constants.MATCHING_ENGINE_PID[self.network],
                         "serum_authority": self.exchange._serum_authority_address,
                         "open_orders": self._open_orders_addresses[asset],
                         "market": self.exchange.markets[asset].address,
@@ -543,6 +553,7 @@ class Client:
                         "event_queue": self.exchange.markets[asset]._market_state.event_queue,
                     },
                 },
+                self.exchange.program_id,
             )
         )
         return ixs
@@ -591,6 +602,7 @@ class Client:
             signature = await self.provider.send(tx)
         except RPCException as exc:
             # This won't work on zDEX errors
+            # TODO: add ZDEX error parsing
             parsed = from_tx_error(exc)
             self._logger.error(parsed)
             if parsed is not None:

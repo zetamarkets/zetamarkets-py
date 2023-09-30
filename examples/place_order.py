@@ -4,7 +4,8 @@ import os
 import anchorpy
 
 from zetamarkets_py.client import Client
-from zetamarkets_py.types import Asset, Side
+from zetamarkets_py.types import Asset, OrderOptions, Side
+from solana.rpc.types import TxOpts
 
 
 async def main():
@@ -14,7 +15,8 @@ async def main():
     endpoint = os.getenv("ENDPOINT", "https://api.mainnet-beta.solana.com")
 
     # load in client with just solana market, by default loads in all markets
-    client = await Client.load(endpoint=endpoint, wallet=wallet, assets=[asset])
+    tx_opts = TxOpts(skip_confirmation=False)  # (optional) use this to wait for tx confirmation
+    client = await Client.load(endpoint=endpoint, wallet=wallet, assets=[asset], tx_opts=tx_opts)
 
     # deposit 0.1 USDC into margin account
     await client.deposit(0.1)
@@ -23,11 +25,13 @@ async def main():
     balance = await client.fetch_balance()
     print(f"Balance: {balance}")
 
+    # (optional) order options
+    # here you can specify TIF order expiry, client order id, order type (limit, post-only, ...) etc.
+    order_opts = OrderOptions(client_order_id=1337)
+
     # place order
     side = Side.Bid
-    await client.place_order(asset=asset, price=0.1, size=0.001, side=side)
-    # TODO: debug why this is required
-    await asyncio.sleep(1)
+    await client.place_order(asset=asset, price=0.1, size=0.001, side=side, order_opts=order_opts)
 
     # check open orders
     open_orders = await client.fetch_open_orders(Asset.SOL)
