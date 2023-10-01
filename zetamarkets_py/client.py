@@ -283,6 +283,7 @@ class Client:
         self._logger.info(f"Subscribing to Orderbook:{side}.")
         await self._account_subscribe(address, ws_endpoint, self.connection.commitment, _callback, max_retries)
 
+    # TODO: maybe at some point support subscribing to all exchange events, not just margin account
     async def subscribe_events(
         self,
         place_order_callback: Callable[[PlaceOrderEvent], Awaitable[Any]] = None,
@@ -296,9 +297,10 @@ class Client:
             try:
                 async with connect(self.ws_endpoint) as ws:
                     solana_ws: SolanaWsClientProtocol = cast(SolanaWsClientProtocol, ws)
+                    # Subscribe to logs that mention the margin account
                     await solana_ws.logs_subscribe(
                         commitment=self.connection.commitment,
-                        filter_=RpcTransactionLogsFilterMentions(self.exchange.program_id),
+                        filter_=RpcTransactionLogsFilterMentions(self._margin_account_address),
                     )
                     first_resp = await solana_ws.recv()
                     subscription_id = cast(int, first_resp[0].result)
