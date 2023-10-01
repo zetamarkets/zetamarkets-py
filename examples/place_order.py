@@ -15,8 +15,7 @@ async def main():
     endpoint = os.getenv("ENDPOINT", "https://api.mainnet-beta.solana.com")
 
     # load in client with just solana market, by default loads in all markets
-    tx_opts = TxOpts(skip_confirmation=False)  # (optional) use this to wait for tx confirmation
-    client = await Client.load(endpoint=endpoint, wallet=wallet, assets=[asset], tx_opts=tx_opts)
+    client = await Client.load(endpoint=endpoint, wallet=wallet, assets=[asset])
 
     # deposit 0.1 USDC into margin account
     await client.deposit(0.1)

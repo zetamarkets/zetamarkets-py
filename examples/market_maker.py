@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+import time
 from datetime import datetime, timedelta
 from typing import List
 
@@ -43,7 +44,8 @@ class MarketMaker:
 
         self.EDGE_REQUOTE_THRESHOLD = 0.25  # only requote if the fair price moves more than 25% of the edge
         self.TIF_DURATION = 120  # 2 minutes, can do lower at the expense of quotes expiring when volatility is low
-        self.MAX_QUOTE_RETRIES = 3
+
+        self._ratelimit_until_ts = 0  # timestamp for when we can retry after being rate limited
 
         # get the best bid in the open orders
         self.bid_price = max([o.info.price for o in current_open_orders if o.side == Side.Bid], default=None)
@@ -61,7 +63,9 @@ class MarketMaker:
         network=Network.MAINNET,
         commitment=Confirmed,
     ):
-        tx_opts = TxOpts(skip_preflight=True, skip_confirmation=True)  # setting to True should make things faster
+        tx_opts = TxOpts(
+            skip_preflight=True, skip_confirmation=False, preflight_commitment=commitment
+        )  # skip preflight to save time
         client = await Client.load(
             endpoint=endpoint, commitment=commitment, wallet=wallet, assets=[asset], tx_opts=tx_opts, network=network
         )
@@ -124,6 +128,9 @@ class MarketMaker:
         if self._is_quoting:
             # print("Already quoting")
             return
+        if time.time() < self._ratelimit_until_ts:
+            print(f"Rate limited by RPC. Retrying in {self._ratelimit_until_ts - time.time():.1f} seconds")
+            return
         if self.fair_price is None:
             print("No fair price yet")
             return
@@ -162,30 +169,26 @@ class MarketMaker:
 
         # Execute quote!
         self._is_quoting = True
-        for i in range(self.MAX_QUOTE_RETRIES):
-            try:
-                await self.client.replace_orders_for_market(self.asset, [bid_order, ask_order])
-                self.bid_price = bid_price
-                self.ask_price = ask_price
-                break
-            except SolanaRpcException as e:
-                original_exception = e.__cause__
-                if (
-                    isinstance(original_exception, httpx.HTTPStatusError)
-                    and original_exception.response.status_code == 429  # HTTP status code for Too Many Requests
-                ):
-                    wait_time = (i + 1) ** 2  # Exponential backoff
-                    print(f"Rate limit exceeded. Waiting for {wait_time} seconds before retrying.")
-                    await asyncio.sleep(wait_time)
-                    i += 1
-                else:
-                    print(f"An RPC error occurred: {e}")
-                    break  # Break the loop if it's not a rate limit error
-            except Exception as e:
-                print(f"An unexpected error occurred: {e}")
-                break
-            finally:
-                self._is_quoting = False
+        try:
+            await self.client.replace_orders_for_market(self.asset, [bid_order, ask_order])
+            # (Re)set the state now that we know we've succesfully quoted
+            self.bid_price = bid_price
+            self.ask_price = ask_price
+        except SolanaRpcException as e:
+            original_exception = e.__cause__
+            if (
+                isinstance(original_exception, httpx.HTTPStatusError)
+                and original_exception.response.status_code == 429  # HTTP status code for Too Many Requests
+            ):
+                retry_after = int(original_exception.response.headers.get("Retry-After", 10))
+                print(f"Rate limited. Retrying after {retry_after} seconds...")
+                self._ratelimit_until_ts = time.time() + retry_after  # Retry after x seconds
+            else:
+                print(f"An RPC error occurred: {e}")
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
+        finally:
+            self._is_quoting = False
 
     async def run(self):
         try:
