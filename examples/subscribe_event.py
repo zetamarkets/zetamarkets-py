@@ -23,8 +23,9 @@ async def main():
 
     # open up a websocket subscription to the bids account
     async with connect(ws_endpoint) as ws:
+        # subscribe to only logs/events that mention our margin account
         await ws.logs_subscribe(
-            commitment=commitment, filter_=RpcTransactionLogsFilterMentions(client.exchange.program_id)
+            commitment=commitment, filter_=RpcTransactionLogsFilterMentions(client._margin_account_address)
         )
         first_resp = await ws.recv()
         first_resp[0].result

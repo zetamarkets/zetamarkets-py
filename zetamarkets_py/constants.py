@@ -35,30 +35,6 @@ FLEXIBLE_MINTS = {
     },
 }
 
-# ZETAGROUP_PUBKEY_ASSET_MAP = {
-#     # Network.LOCALNET: {
-#     #     "HRobFXQ2HQvSgCLq2CU9ZG3DR2BxRaAffw5SvdNnvk97": Asset.SOL,
-#     #     "CcLF7qQbgRQqUDmQeEkTSP2UbX82N9G91THjV5uRGCMW": Asset.BTC,
-#     #     "8Ccch7LW5hd5j2NW8HdhUbDqB1yUN4dULVMNNHtfbPbV": Asset.ETH,
-#     #     "5QyPHfnRttz4Tq7W7U5XEpKpvj7g3FTvMpE1BzL9w2Qi": Asset.APT,
-#     #     "4fecsFCi8Tx4aFxvc8rAYT74RBmknQ3kqidZTejoqiw7": Asset.ARB,
-#     # },
-#     Network.DEVNET: {
-#         "HRobFXQ2HQvSgCLq2CU9ZG3DR2BxRaAffw5SvdNnvk97": Asset.SOL,
-#         "CcLF7qQbgRQqUDmQeEkTSP2UbX82N9G91THjV5uRGCMW": Asset.BTC,
-#         "8Ccch7LW5hd5j2NW8HdhUbDqB1yUN4dULVMNNHtfbPbV": Asset.ETH,
-#         "5QyPHfnRttz4Tq7W7U5XEpKpvj7g3FTvMpE1BzL9w2Qi": Asset.APT,
-#         "4fecsFCi8Tx4aFxvc8rAYT74RBmknQ3kqidZTejoqiw7": Asset.ARB,
-#     },
-#     Network.MAINNET: {
-#         "CoGhjFdyqzMFr5xVgznuBjULvoFbFtNN4bCdQzRArNK2": Asset.SOL,
-#         "5XC7JWvLGGds4tjaawgY8FwMdotUb5rrEUmxcmyp5ZiW": Asset.BTC,
-#         "HPnqfiRSVvuBjfHN9ah4Kecb6J9et2UTnNgUwtAJdV26": Asset.ETH,
-#         "D19K6rrppbWAFa4jE1DJUStPnr7cSrqKk5TruGqfc5Ns": Asset.APT,
-#         "CU6pPA2E2yQFqMzZKrFCmfjrSBEc6GxfmFrSqpqazygu": Asset.ARB,
-#     },
-# }
-
 USDC_MINT = {
     #   Network.LOCALNET: Pubkey.from_string("6PEh8n3p7BbCTykufbq1nSJYAZvUp6gSwEANAs1ZhsCX"),
     Network.DEVNET: Pubkey.from_string("6PEh8n3p7BbCTykufbq1nSJYAZvUp6gSwEANAs1ZhsCX"),

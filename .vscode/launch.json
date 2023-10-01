@@ -11,7 +11,7 @@
       "program": "${workspaceFolder}/examples/market_maker.py",
       "console": "integratedTerminal",
       "justMyCode": true,
-      "args": ["-n", "devnet", "-a", "BTC", "-o", "0", "-e", "1000"]
+      "args": ["-n", "mainnet_beta", "-a", "SOL", "-o", "6", "-e", "2"]
     }
   ]
 }

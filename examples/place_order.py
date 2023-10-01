@@ -5,7 +5,7 @@ import anchorpy
 from solana.rpc.types import TxOpts
 
 from zetamarkets_py.client import Client
-from zetamarkets_py.types import Asset, OrderOptions, Side
+from zetamarkets_py.types import Asset, OrderArgs, OrderOptions, Side
 
 
 async def main():
@@ -31,7 +31,8 @@ async def main():
 
     # place order
     side = Side.Bid
-    await client.place_order(asset=asset, price=0.1, size=0.001, side=side, order_opts=order_opts)
+    order = OrderArgs(price=0.1, size=0.001, side=side, order_opts=order_opts)
+    await client.place_orders_for_market(asset=asset, orders=[order])
 
     # check open orders
     open_orders = await client.fetch_open_orders(Asset.SOL)

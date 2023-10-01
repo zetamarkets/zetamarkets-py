@@ -4,6 +4,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable, Optional, cast
 
+import websockets
 from anchorpy import Event, EventParser, Provider, Wallet
 from anchorpy.provider import DEFAULT_OPTIONS
 from solana.rpc.async_api import AsyncClient
@@ -40,6 +41,16 @@ from zetamarkets_py.zeta_client.instructions import (
     initialize_open_orders_v3,
     place_perp_order_v3,
 )
+
+# TODO: add transactionSubscribe (do we even need this right now?)
+# TODO: add Binance heartbeat to websocket
+# TODO: add better ws error handling and reconnection
+# TODO: add docstrings for most methods
+# TODO: add docs to examples in readthedocs
+# TODO: add client_order_id to PlaceOrderEvent
+# TODO: implement withdraw and liquidation
+# TODO: add logging to exchange
+# TODO: implement priority fees to exchange
 
 
 @dataclass
@@ -221,9 +232,9 @@ class Client:
     ) -> None:
         retries = max_retries
         while True:
-            async with connect(ws_endpoint) as ws:
-                solana_ws: SolanaWsClientProtocol = cast(SolanaWsClientProtocol, ws)
-                try:
+            try:
+                async with connect(ws_endpoint) as ws:
+                    solana_ws: SolanaWsClientProtocol = cast(SolanaWsClientProtocol, ws)
                     await solana_ws.account_subscribe(
                         address,
                         commitment=commitment,
@@ -232,22 +243,30 @@ class Client:
                     first_resp = await solana_ws.recv()
                     subscription_id = cast(int, first_resp[0].result)
                     async for msg in ws:
-                        account_bytes = cast(bytes, msg[0].result.value.data)  # type: ignore
-                        await callback(account_bytes)
+                        try:
+                            account_bytes = cast(bytes, msg[0].result.value.data)  # type: ignore
+                            await callback(account_bytes)
+                        except Exception as e:
+                            self._logger.error(f"Error processing account data: {e}")
+                            break
                     await solana_ws.account_unsubscribe(subscription_id)
-                except asyncio.CancelledError:
-                    self._logger.info("WebSocket subscription task cancelled.")
+            except asyncio.CancelledError:
+                self._logger.info("WebSocket subscription task cancelled.")
+                break
+            except websockets.exceptions.ConnectionClosed:
+                self._logger.error("WebSocket connection closed unexpectedly. Attempting to reconnect...")
+                continue
+            except Exception as e:
+                self._logger.error(f"Error subscribing to {self.__class__.__name__}: {e}")
+                retries -= 1
+                if retries <= 0:
+                    self._logger.error("Max retries reached. Unable to subscribe to account.")
                     break
-                # solana_py.SubscriptionError?
-                except Exception as e:
-                    self._logger.error(f"Error subscribing to {self.__class__.__name__}: {e}")
-                    retries -= 1
-                    await asyncio.sleep(2)  # Pause for a while before retrying
-                finally:
-                    # self._subscription_task = None
-                    pass
+                await asyncio.sleep(2)  # Pause for a while before retrying
 
-    async def subscribe_orderbook(self, asset: Asset, side: Side, callback: Callable[[Orderbook], Awaitable[Any]]):
+    async def subscribe_orderbook(
+        self, asset: Asset, side: Side, callback: Callable[[Orderbook], Awaitable[Any]], max_retries: int = 3
+    ):
         ws_endpoint = utils.cluster_endpoint(self.network, ws=True)
         address = (
             self.exchange.markets[asset]._market_state.bids
@@ -262,58 +281,73 @@ class Client:
             return await callback(orderbook)
 
         self._logger.info(f"Subscribing to Orderbook:{side}.")
-        await self._account_subscribe(
-            address,
-            ws_endpoint,
-            self.connection.commitment,
-            _callback,
-        )
+        await self._account_subscribe(address, ws_endpoint, self.connection.commitment, _callback, max_retries)
 
-    # TODO: add retry logic
-    async def subscribe_transaction(
+    async def subscribe_events(
         self,
         place_order_callback: Callable[[PlaceOrderEvent], Awaitable[Any]] = None,
         order_complete_callback: Callable[[OrderCompleteEvent], Awaitable[Any]] = None,
         trade_callback: Callable[[TradeEventV3], Awaitable[Any]] = None,
         liquidation_callback: Callable[[LiquidationEvent], Awaitable[Any]] = None,
+        max_retries: int = 3,
     ):
-        async with connect(self.ws_endpoint) as ws:
-            solana_ws: SolanaWsClientProtocol = cast(SolanaWsClientProtocol, ws)
-            await solana_ws.logs_subscribe(
-                commitment=self.connection.commitment,
-                filter_=RpcTransactionLogsFilterMentions(self.exchange.program_id),
-            )
-            first_resp = await solana_ws.recv()
-            subscription_id = cast(int, first_resp[0].result)
-            async for msg in ws:
-                logs = cast(list[str], msg[0].result.value.logs)  # type: ignore
-                parser = EventParser(self.exchange.program_id, self.exchange.program.coder)
-                parsed: list[Event] = []
-                parser.parse_logs(logs, lambda evt: parsed.append(evt))
-                for event in parsed:
-                    if event.name == TransactionEventType.PLACE_ORDER.value:
-                        order_complete_event = cast(PlaceOrderEvent, event.data)
-                        if order_complete_event.margin_account == self._margin_account_address:
-                            if place_order_callback is not None:
-                                await place_order_callback(order_complete_event)
-                    elif event.name == TransactionEventType.ORDER_COMPLETE.value:
-                        order_complete_event = cast(OrderCompleteEvent, event.data)
-                        if order_complete_event.margin_account == self._margin_account_address:
-                            if order_complete_callback is not None:
-                                await order_complete_callback(order_complete_event)
-                    elif event.name == TransactionEventType.TRADE.value:
-                        trade_event = cast(TradeEventV3, event.data)
-                        if trade_event.margin_account == self._margin_account_address:
-                            if trade_callback is not None:
-                                await trade_callback(trade_event)
-                    elif event.name == TransactionEventType.LIQUIDATION.value:
-                        liquidation_event = cast(LiquidationEvent, event.data)
-                        if liquidation_event.liquidatee_margin_account == self._margin_account_address:
-                            if liquidation_callback is not None:
-                                await liquidation_callback(liquidation_event)
-                    else:
-                        pass
-            await solana_ws.logs_unsubscribe(subscription_id)
+        retries = max_retries
+        while retries > 0:
+            try:
+                async with connect(self.ws_endpoint) as ws:
+                    solana_ws: SolanaWsClientProtocol = cast(SolanaWsClientProtocol, ws)
+                    await solana_ws.logs_subscribe(
+                        commitment=self.connection.commitment,
+                        filter_=RpcTransactionLogsFilterMentions(self.exchange.program_id),
+                    )
+                    first_resp = await solana_ws.recv()
+                    subscription_id = cast(int, first_resp[0].result)
+                    async for msg in ws:
+                        try:
+                            logs = cast(list[str], msg[0].result.value.logs)  # type: ignore
+                            parser = EventParser(self.exchange.program_id, self.exchange.program.coder)
+                            parsed: list[Event] = []
+                            parser.parse_logs(logs, lambda evt: parsed.append(evt))
+                            for event in parsed:
+                                if event.name == TransactionEventType.PLACE_ORDER.value:
+                                    order_complete_event = cast(PlaceOrderEvent, event.data)
+                                    if order_complete_event.margin_account == self._margin_account_address:
+                                        if place_order_callback is not None:
+                                            await place_order_callback(order_complete_event)
+                                elif event.name == TransactionEventType.ORDER_COMPLETE.value:
+                                    order_complete_event = cast(OrderCompleteEvent, event.data)
+                                    if order_complete_event.margin_account == self._margin_account_address:
+                                        if order_complete_callback is not None:
+                                            await order_complete_callback(order_complete_event)
+                                elif event.name == TransactionEventType.TRADE.value:
+                                    trade_event = cast(TradeEventV3, event.data)
+                                    if trade_event.margin_account == self._margin_account_address:
+                                        if trade_callback is not None:
+                                            await trade_callback(trade_event)
+                                elif event.name == TransactionEventType.LIQUIDATION.value:
+                                    liquidation_event = cast(LiquidationEvent, event.data)
+                                    if liquidation_event.liquidatee_margin_account == self._margin_account_address:
+                                        if liquidation_callback is not None:
+                                            await liquidation_callback(liquidation_event)
+                                else:
+                                    pass
+                        except Exception as e:
+                            self._logger.error(f"Error processing event data: {e}")
+                            break
+                    await solana_ws.logs_unsubscribe(subscription_id)
+            except asyncio.CancelledError:
+                self._logger.info("WebSocket subscription task cancelled.")
+                break
+            except websockets.exceptions.ConnectionClosed:
+                self._logger.error("WebSocket connection closed unexpectedly. Attempting to reconnect...")
+                continue
+            except Exception as e:
+                self._logger.error(f"Error subscribing to {self.__class__.__name__}: {e}")
+                retries -= 1
+                if retries <= 0:
+                    self._logger.error("Max retries reached. Unable to subscribe to events.")
+                    break
+                await asyncio.sleep(2)  # Pause for a while before retrying
 
     # Instructions
 
@@ -383,25 +417,6 @@ class Client:
     # TODO: withdraw (and optionally close)
     async def withdraw(self):
         raise NotImplementedError
-
-    # TODO: unify with place_orders_for_market
-    async def place_order(
-        self,
-        asset: Asset,
-        price: float,
-        size: float,
-        side: Side,
-        order_opts: OrderOptions = None,
-    ):
-        if order_opts is None:
-            order_opts = OrderOptions()
-        ixs = []
-        if not await self._check_open_orders_account_exists(asset):
-            self._logger.info("User has no open orders account, creating one...")
-            ixs.append(self._init_open_orders_ix(asset))
-        ixs.append(self._place_order_ix(asset, price, size, side, order_opts))
-        self._logger.info(f"Placing {size}x {asset}-PERP {side.name} @ ${price}")
-        return await self._send_versioned_transaction(ixs)
 
     def _init_open_orders_ix(self, asset: Asset) -> Instruction:
         if asset not in self.exchange.assets:

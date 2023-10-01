@@ -1,12 +1,12 @@
 import argparse
 import asyncio
-import json
-import time
 from datetime import datetime, timedelta
 from typing import List
 
 import anchorpy
-import websockets
+import httpx
+from binance import AsyncClient, BinanceSocketManager
+from solana.exceptions import SolanaRpcException
 from solana.rpc.commitment import Commitment, Confirmed
 from solana.rpc.types import TxOpts
 
@@ -24,6 +24,8 @@ from zetamarkets_py.types import (
     Side,
 )
 
+# TODO: convert from USDT to USDC
+
 
 class MarketMaker:
     def __init__(
@@ -40,7 +42,8 @@ class MarketMaker:
         self.quote_size = size
 
         self.EDGE_REQUOTE_THRESHOLD = 0.25  # only requote if the fair price moves more than 25% of the edge
-        self.TIF_DURATION = 60  # 1 minute
+        self.TIF_DURATION = 120  # 2 minutes, can do lower at the expense of quotes expiring when volatility is low
+        self.MAX_QUOTE_RETRIES = 3
 
         # get the best bid in the open orders
         self.bid_price = max([o.info.price for o in current_open_orders if o.side == Side.Bid], default=None)
@@ -58,39 +61,50 @@ class MarketMaker:
         network=Network.MAINNET,
         commitment=Confirmed,
     ):
-        tx_opts = TxOpts(skip_preflight=False, skip_confirmation=False)  # setting to True should make things faster
+        tx_opts = TxOpts(skip_preflight=True, skip_confirmation=True)  # setting to True should make things faster
         client = await Client.load(
             endpoint=endpoint, commitment=commitment, wallet=wallet, assets=[asset], tx_opts=tx_opts, network=network
         )
         open_orders = await client.fetch_open_orders(asset)
         return cls(client, asset, size, edge, offset, open_orders)
 
-    async def subscribe_fair_price(self):
-        # Connect to Binance USDC-margined futures websocket
-        stream = self.asset.to_string().lower() + "usdt@bookTicker"
-        print("Subscribing to Binance stream: " + stream)
-        while True:
-            async with websockets.connect("wss://fstream.binance.com/ws/" + stream) as ws:
-                id = int(time.time() * 1000)
-                await ws.send(json.dumps({"method": "SUBSCRIBE", "params": [stream], "id": id}))
-                # Establish connection
-                await ws.recv()
-                async for msg in ws:
-                    try:
-                        ticker = json.loads(msg)
-                        if ticker.get("e") == "bookTicker":
-                            # volume weighted average price based on BBO
-                            vwap = (
-                                float(ticker["b"]) * float(ticker["B"]) + float(ticker["a"]) * float(ticker["A"])
-                            ) / (float(ticker["B"]) + float(ticker["A"]))
-                            self.fair_price = vwap
-                            await self.update_quotes()
-                    except ValueError as e:
-                        print(f"ValueError: {e}")
-                        raise e
-                    except Exception as e:
-                        print(f"Exception: {e}")
-                        raise e
+    async def subscribe_fair_price(self, max_retries=3):
+        client = await AsyncClient.create()
+        bm = BinanceSocketManager(client)
+        retry_count = 0
+        while retry_count < max_retries:
+            try:
+                # get the latest bid/ask price from Binance USD-M futures
+                ts = bm.symbol_ticker_futures_socket(self.asset.to_string().upper() + "USDT")
+                async with ts as tscm:
+                    while True:
+                        response = await tscm.recv()
+                        if "e" in response and response["e"] == "error":
+                            # close and restart the socket
+                            print(f"Binance websocket error: {response['m']}")
+                            retry_count += 1
+                            break
+                        ticker = response["data"]
+                        # volume weighted average price based on BBO
+                        binance_vwap = (
+                            float(ticker["b"]) * float(ticker["B"]) + float(ticker["a"]) * float(ticker["A"])
+                        ) / (float(ticker["B"]) + float(ticker["A"]))
+                        self.fair_price = binance_vwap
+                        try:
+                            # Use asyncio.create_task to run update_quotes concurrently as to not block the websocket
+                            asyncio.create_task(self.update_quotes())
+                        except Exception as e:
+                            print(f"Exception in update_quotes: {e}")
+                            retry_count += 1
+                            break
+            except asyncio.CancelledError:
+                print("Gracefully exiting...")
+                break
+            except Exception as e:
+                print(f"Unexpected error: {e}")
+                retry_count += 1
+            finally:
+                await client.close_connection()
 
     async def subscribe_zeta_price(self):
         async def on_bid_update(orderbook: Orderbook):
@@ -108,7 +122,7 @@ class MarketMaker:
 
     async def update_quotes(self):
         if self._is_quoting:
-            print("Already quoting")
+            # print("Already quoting")
             return
         if self.fair_price is None:
             print("No fair price yet")
@@ -120,10 +134,10 @@ class MarketMaker:
             current_mid_price = (self.bid_price + self.ask_price) / 2
             edge = current_mid_price * (self.edge_bps / 10000)
 
-            # If the fair price is within the edge, don't update the quotes
             divergence = abs(fair_price - current_mid_price)
+            print(f"Divergence/edge = {divergence/edge:.2%}")
+            # If the fair price is within the edge, don't update the quotes
             if divergence < edge * self.EDGE_REQUOTE_THRESHOLD:
-                print(f"Skipping requote, divergence/edge = {divergence/edge:.2%}")
                 return
 
         print(f"External price: {self.fair_price}")
@@ -148,14 +162,30 @@ class MarketMaker:
 
         # Execute quote!
         self._is_quoting = True
-        try:
-            await self.client.replace_orders_for_market(self.asset, [bid_order, ask_order])
-            self.bid_price = bid_price
-            self.ask_price = ask_price
-        except Exception as e:
-            raise e
-        finally:
-            self._is_quoting = False
+        for i in range(self.MAX_QUOTE_RETRIES):
+            try:
+                await self.client.replace_orders_for_market(self.asset, [bid_order, ask_order])
+                self.bid_price = bid_price
+                self.ask_price = ask_price
+                break
+            except SolanaRpcException as e:
+                original_exception = e.__cause__
+                if (
+                    isinstance(original_exception, httpx.HTTPStatusError)
+                    and original_exception.response.status_code == 429  # HTTP status code for Too Many Requests
+                ):
+                    wait_time = (i + 1) ** 2  # Exponential backoff
+                    print(f"Rate limit exceeded. Waiting for {wait_time} seconds before retrying.")
+                    await asyncio.sleep(wait_time)
+                    i += 1
+                else:
+                    print(f"An RPC error occurred: {e}")
+                    break  # Break the loop if it's not a rate limit error
+            except Exception as e:
+                print(f"An unexpected error occurred: {e}")
+                break
+            finally:
+                self._is_quoting = False
 
     async def run(self):
         try:

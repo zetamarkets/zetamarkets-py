@@ -22,10 +22,25 @@ from zetamarkets_py.types import FilledOrder, Network, Order, OrderInfo, Side
 # Going to use ws for now, can add polling later
 @dataclass
 class Market:
-    """Represents a Perp Market
+    """
+    This class represents a Perpetual Market on the Zeta platform.
+
+    Attributes:
+        connection (AsyncClient): The connection to the Solana network.
+        zeta_program_id (Pubkey): The public key of the Zeta program.
+        matching_engine_program_id (Pubkey): The public key of the matching engine program.
+        asset (Asset): The asset being traded on this market.
+        _market_state (MarketState): The state of the market.
+        _base_zeta_vault_address (Pubkey): The address of the base Zeta vault.
+        _quote_zeta_vault_address (Pubkey): The address of the quote Zeta vault.
+        _logger (logging.Logger): The logger for this market.
+        _bids_subscription_task (Optional[asyncio.Task]): The task for subscribing to bid updates.
+        _asks_subscription_task (Optional[asyncio.Task]): The task for subscribing to ask updates.
+        _bids_last_update_slot (Optional[int]): The slot of the last bid update.
+        _asks_last_update_slot (Optional[int]): The slot of the last ask update.
 
     Raises:
-        Exception: _description_
+        Exception: If the market state is not found at the provided address.
     """
 
     connection: AsyncClient
