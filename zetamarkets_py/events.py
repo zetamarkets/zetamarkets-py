@@ -39,6 +39,7 @@ class PlaceOrderEvent:
     expiry_ts: int
     asset: Asset
     margin_account: Pubkey
+    client_order_id: int
 
 
 @dataclass
