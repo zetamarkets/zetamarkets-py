@@ -8,7 +8,12 @@ from solana.rpc.websocket_api import connect
 from solders.rpc.config import RpcTransactionLogsFilterMentions
 
 from zetamarkets_py.client import Client
-from zetamarkets_py.events import TransactionEventType
+from zetamarkets_py.events import (
+    LiquidationEvent,
+    OrderCompleteEvent,
+    PlaceOrderEvent,
+    TradeEventV3,
+)
 
 
 async def main():
@@ -38,18 +43,18 @@ async def main():
             parser.parse_logs(logs, lambda evt: parsed.append(evt))
             for event in parsed:
                 # filter events to only those that are relevant to the user's margin account
-                if event.name == TransactionEventType.PLACE_ORDER.value:
+                if event.name == PlaceOrderEvent.__name__:
                     if event.data.margin_account == client._margin_account_address:
-                        print(event)
-                if event.name == TransactionEventType.ORDER_COMPLETE.value:
+                        print(PlaceOrderEvent.from_event(event))
+                if event.name == OrderCompleteEvent.__name__:
                     if event.data.margin_account == client._margin_account_address:
-                        print(event)
-                elif event.name == TransactionEventType.TRADE.value:
+                        print(OrderCompleteEvent.from_event(event))
+                elif event.name == TradeEventV3.__name__:
                     if event.data.margin_account == client._margin_account_address:
-                        print(event)
-                elif event.name == TransactionEventType.LIQUIDATION.value:
+                        print(TradeEventV3.from_event(event))
+                elif event.name == LiquidationEvent.__name__:
                     if event.data.margin_account == client._margin_account_address:
-                        print(event)
+                        print(LiquidationEvent.from_event(event))
 
 
 asyncio.run(main())

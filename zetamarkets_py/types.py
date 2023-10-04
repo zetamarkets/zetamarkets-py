@@ -19,6 +19,11 @@ class Asset(Enum):
         members = list(self.__class__.__members__.values())
         return members.index(self)
 
+    @classmethod
+    def from_index(cls, index: int):
+        members = list(Asset)
+        return members[index]
+
     def to_string(self):
         return self.name
 
@@ -52,23 +57,46 @@ class OrderType(IntEnum):
     def to_program_type(self):
         return order_type.from_decoded({self.name: self.value})
 
+    @classmethod
+    def from_index(cls, index: int):
+        members = list(OrderType)
+        return members[index]
+
 
 class Side(Enum):
     """Side of the orderbook to trade."""
 
-    Bid = 0
+    Uninitialized = 0
     """"""
-    Ask = 1
+    Bid = 1
+    """"""
+    Ask = 2
     """"""
 
     def to_program_type(self) -> side.SideKind:
-        return side.from_decoded({self.name.title(): self.value})
+        return side.from_decoded({self.name: self.value})
+
+    @classmethod
+    def from_index(cls, index: int):
+        members = list(Side)
+        return members[index]
 
 
 class SelfTradeBehavior(Enum):
     DecrementTake = 0
     CancelProvide = 1
     AbortTransaction = 2
+
+
+class OrderCompleteType(Enum):
+    Cancel = 0
+    Fill = 1
+    Booted = 2
+
+    @classmethod
+    def from_index(cls, index: int):
+        members = list(OrderCompleteType)
+        return members[index]
 
 
 @dataclass

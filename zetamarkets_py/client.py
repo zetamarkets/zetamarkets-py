@@ -24,7 +24,6 @@ from zetamarkets_py.events import (
     OrderCompleteEvent,
     PlaceOrderEvent,
     TradeEventV3,
-    TransactionEventType,
 )
 from zetamarkets_py.exchange import Exchange
 from zetamarkets_py.orderbook import Orderbook
@@ -311,23 +310,23 @@ class Client:
                             parsed: list[Event] = []
                             parser.parse_logs(logs, lambda evt: parsed.append(evt))
                             for event in parsed:
-                                if event.name == TransactionEventType.PLACE_ORDER.value:
-                                    order_complete_event = cast(PlaceOrderEvent, event.data)
+                                if event.name == PlaceOrderEvent.__name__:
+                                    order_complete_event = PlaceOrderEvent.from_event(event)
                                     if order_complete_event.margin_account == self._margin_account_address:
                                         if place_order_callback is not None:
                                             await place_order_callback(order_complete_event)
-                                elif event.name == TransactionEventType.ORDER_COMPLETE.value:
-                                    order_complete_event = cast(OrderCompleteEvent, event.data)
+                                elif event.name == OrderCompleteEvent.__name__:
+                                    order_complete_event = OrderCompleteEvent.from_event(event)
                                     if order_complete_event.margin_account == self._margin_account_address:
                                         if order_complete_callback is not None:
                                             await order_complete_callback(order_complete_event)
-                                elif event.name == TransactionEventType.TRADE.value:
-                                    trade_event = cast(TradeEventV3, event.data)
+                                elif event.name == TradeEventV3.__name__:
+                                    trade_event = TradeEventV3.from_event(event)
                                     if trade_event.margin_account == self._margin_account_address:
                                         if trade_callback is not None:
                                             await trade_callback(trade_event)
-                                elif event.name == TransactionEventType.LIQUIDATION.value:
-                                    liquidation_event = cast(LiquidationEvent, event.data)
+                                elif event.name == LiquidationEvent.__name__:
+                                    liquidation_event = LiquidationEvent.from_event(event)
                                     if liquidation_event.liquidatee_margin_account == self._margin_account_address:
                                         if liquidation_callback is not None:
                                             await liquidation_callback(liquidation_event)

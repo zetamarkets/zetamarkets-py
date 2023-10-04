@@ -2,7 +2,6 @@ import asyncio
 import os
 
 import anchorpy
-from solana.rpc.types import TxOpts
 
 from zetamarkets_py.client import Client
 from zetamarkets_py.types import Asset, OrderArgs, OrderOptions, Side
