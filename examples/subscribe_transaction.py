@@ -3,21 +3,11 @@ import json
 import os
 
 import anchorpy
-import based58
 import websockets
-from anchorpy import Event, EventParser
 from jsonrpcclient import request
 from solana.rpc.commitment import Confirmed
 
-from zetamarkets_py import constants
 from zetamarkets_py.client import Client
-from zetamarkets_py.events import (
-    OrderCompleteEvent,
-    PlaceOrderEvent,
-    PlaceOrderEventWithArgs,
-    TradeEvent,
-    TradeEventWithPlacePerpOrderArgs,
-)
 
 
 async def main():
@@ -55,7 +45,7 @@ async def main():
 
         print(f"Listening for transactions for margin account: {client._margin_account_address}")
         async for msg in ws:
-            events = await client.parse_transaction_payload(msg)
+            await client.parse_transaction_payload(msg)
 
 
 asyncio.run(main())

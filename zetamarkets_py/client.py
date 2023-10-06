@@ -5,8 +5,7 @@ import time
 import traceback
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
-from typing import Any, Awaitable, Callable, Optional, cast, Iterator, List
-import based58
+from typing import Iterator, List, Optional, cast
 
 import based58
 import websockets
@@ -253,8 +252,8 @@ class Client:
                         try:
                             account_bytes = cast(bytes, msg[0].result.value.data)  # type: ignore
                             yield account_bytes
-                        except Exception as e:
-                            self._logger.error(f"Error processing account data: {e}")
+                        except Exception:
+                            self._logger.error(f"Error processing account data: {traceback.format_exc()}")
                             break
                     await solana_ws.account_unsubscribe(subscription_id)
             except asyncio.CancelledError:
@@ -289,8 +288,10 @@ class Client:
 
     async def subscribe_transactions(
         self,
+        commitment: Commitment = None,
         max_retries: int = 3,
     ):
+        commitment = commitment or self.connection.commitment
         retries = max_retries
         while retries > 0:
             try:
@@ -304,7 +305,7 @@ class Client:
                                 "vote": False,
                             },
                             {
-                                "commitment": str(self.connection.commitment),
+                                "commitment": str(commitment),
                             },
                         ],
                     )
@@ -319,8 +320,8 @@ class Client:
                             if len(events) > 0:
                                 yield events
 
-                        except Exception as e:
-                            self._logger.error(f"Error processing transaction data: {e}")
+                        except Exception:
+                            self._logger.error(f"Error processing transaction data: {traceback.format_exc()}")
                             break
 
                     request(
@@ -346,8 +347,10 @@ class Client:
     # TODO: maybe at some point support subscribing to all exchange events, not just margin account
     async def subscribe_events(
         self,
+        commitment: Commitment = None,
         max_retries: int = 3,
     ) -> Iterator[List[EventSubscribeResponse]]:
+        commitment = commitment or self.connection.commitment
         retries = max_retries
         while retries > 0:
             try:
@@ -355,7 +358,7 @@ class Client:
                     solana_ws: SolanaWsClientProtocol = cast(SolanaWsClientProtocol, ws)
                     # Subscribe to logs that mention the margin account
                     await solana_ws.logs_subscribe(
-                        commitment=self.connection.commitment,
+                        commitment=commitment,
                         filter_=RpcTransactionLogsFilterMentions(self._margin_account_address),
                     )
                     first_resp = await solana_ws.recv()
@@ -366,8 +369,8 @@ class Client:
                             if len(events) > 0:
                                 yield events
 
-                        except Exception as e:
-                            self._logger.error(f"Error processing event data: {e}")
+                        except Exception:
+                            self._logger.error(f"Error processing event data: {traceback.format_exc()}")
                             break
                     await solana_ws.logs_unsubscribe(subscription_id)
             except asyncio.CancelledError:
@@ -415,63 +418,63 @@ class Client:
     async def parse_transaction_payload(self, msg) -> List[TransactionSubscribeResponse]:
         parser = EventParser(self.exchange.program_id, self.exchange.program.coder)
 
-        jsonMsg = json.loads(msg)
-        txValue = jsonMsg["params"]["result"]["value"]
+        json_msg = json.loads(msg)
+        tx_value = json_msg["params"]["result"]["value"]
 
-        logMessages = txValue["meta"]["logMessages"]
+        log_messages = tx_value["meta"]["logMessages"]
 
-        message = txValue["transaction"]["message"]
+        message = tx_value["transaction"]["message"]
         if isinstance(message[0], int) or "instructions" not in message[0]:
-            messageIndexed = message[1]
+            message_indexed = message[1]
         else:
-            messageIndexed = message[0]
+            message_indexed = message[0]
 
-        ixs = messageIndexed["instructions"][1:]
-        ixArgs = []
-        ixNames = []
-        eventsToReturn = []
+        ixs = message_indexed["instructions"][1:]
+        ix_args = []
+        ix_names = []
+        events_to_return = []
 
         for ix in ixs:
-            accKeysRaw = messageIndexed["accountKeys"][1:]
-            accountKeys = [str(based58.b58encode(bytes(a)), encoding="utf-8") for a in accKeysRaw]
+            acc_keys_raw = message_indexed["accountKeys"][1:]
+            account_keys = [str(based58.b58encode(bytes(a)), encoding="utf-8") for a in acc_keys_raw]
 
-            loadedAddresses = txValue["meta"]["loadedAddresses"]
-            loadedAddressesList = accountKeys + loadedAddresses["writable"] + loadedAddresses["readonly"]
-            ownerAddress = loadedAddressesList[ix["programIdIndex"]]
-            if ownerAddress != str(constants.ZETA_PID[self.network]):
-                ixArgs.append(None)
-                ixNames.append(None)
+            loaded_addresses = tx_value["meta"]["loadedAddresses"]
+            loaded_addresses_list = account_keys + loaded_addresses["writable"] + loaded_addresses["readonly"]
+            owner_address = loaded_addresses_list[ix["programIdIndex"]]
+            if owner_address != str(constants.ZETA_PID[self.network]):
+                ix_args.append(None)
+                ix_names.append(None)
                 continue
             data = self.exchange.program.coder.instruction.parse(bytes(ix["data"][1:]))
-            ixArgs.append(data.data)
-            ixNames.append(data.name)
+            ix_args.append(data.data)
+            ix_names.append(data.name)
 
-        # Split logMessages every time we see "invoke [1]"
-        splitLogMessages = []
-        splitIndices = []
-        for i in range(len(logMessages)):
-            if logMessages[i] == "Log truncated":
+        # Split log_messages every time we see "invoke [1]"
+        split_log_messages = []
+        split_indices = []
+        for i in range(len(log_messages)):
+            if log_messages[i] == "Log truncated":
                 raise Exception("Logs truncated, missing event data")
-            if logMessages[i].endswith("invoke [1]"):
-                splitIndices.append(i)
+            if log_messages[i].endswith("invoke [1]"):
+                split_indices.append(i)
 
-        splitLogMessages = [logMessages[i:j] for i, j in zip([0] + splitIndices, splitIndices + [None])]
-        if len(splitLogMessages) > 0:
-            splitLogMessages = splitLogMessages[1:]
+        split_log_messages = [log_messages[i:j] for i, j in zip([0] + split_indices, split_indices + [None])]
+        if len(split_log_messages) > 0:
+            split_log_messages = split_log_messages[1:]
 
-        if len(ixArgs) != len(splitLogMessages) or len(ixNames) != len(splitLogMessages):
-            raise Exception("Mismatched transation info lengths")
+        if len(ix_args) != len(split_log_messages) or len(ix_names) != len(split_log_messages):
+            raise Exception("Mismatched transaction info lengths")
 
         # For each individual instruction, find the ix name and the events
-        for i in range(len(splitLogMessages)):
-            # # First log line will always be "...invoke [1]", second will be "Program log: Instruction: <ix_name>"
-            ixName = ixNames[i]
-            ixArg = ixArgs[i]
+        for i in range(len(split_log_messages)):
+            # First log line will always be "...invoke [1]", second will be "Program log: Instruction: <ix_name>"
+            ix_name = ix_names[i]
+            ix_arg = ix_args[i]
 
-            if ixName is None or ixArg is None:
+            if ix_name is None or ix_arg is None:
                 continue
 
-            chunk = splitLogMessages[i]
+            chunk = split_log_messages[i]
             events: list[Event] = []
             parser.parse_logs(chunk, lambda evt: events.append(evt))
 
@@ -482,25 +485,25 @@ class Client:
                 if str(event.data.margin_account) != str(self._margin_account_address):
                     continue
 
-                if ixName.startswith("place_perp_order"):
+                if ix_name.startswith("place_perp_order"):
                     if event.name.startswith(TradeEvent.__name__):
-                        eventsToReturn.append(TradeEventWithPlacePerpOrderArgs.from_event_and_args(event, ixArg))
+                        events_to_return.append(TradeEventWithPlacePerpOrderArgs.from_event_and_args(event, ix_arg))
                     elif event.name.startswith(PlaceOrderEvent.__name__):
-                        eventsToReturn.append(PlaceOrderEventWithArgs.from_event_and_args(event, ixArg))
+                        events_to_return.append(PlaceOrderEventWithArgs.from_event_and_args(event, ix_arg))
                     elif event.name.startswith(OrderCompleteEvent.__name__):
-                        eventsToReturn.append(OrderCompleteEvent.from_event(event))
+                        events_to_return.append(OrderCompleteEvent.from_event(event))
 
-                elif ixName.startswith("crank_event_queue"):
+                elif ix_name.startswith("crank_event_queue"):
                     if event.name.startswith(TradeEvent.__name__):
-                        eventsToReturn.append(TradeEvent.from_event(event))
+                        events_to_return.append(TradeEvent.from_event(event))
                     elif event.name.startswith(OrderCompleteEvent.__name__):
-                        eventsToReturn.append(OrderCompleteEvent.from_event(event))
+                        events_to_return.append(OrderCompleteEvent.from_event(event))
 
-                elif ixName.startswith("cancel_"):
+                elif ix_name.startswith("cancel_"):
                     if event.name.startswith(OrderCompleteEvent.__name__):
-                        eventsToReturn.append(OrderCompleteEvent.from_event(event))
+                        events_to_return.append(OrderCompleteEvent.from_event(event))
 
-        return eventsToReturn
+        return events_to_return
 
     # Instructions
 

@@ -2,18 +2,11 @@ import asyncio
 import os
 
 import anchorpy
-from anchorpy import EventParser
 from solana.rpc.commitment import Confirmed
 from solana.rpc.websocket_api import connect
 from solders.rpc.config import RpcTransactionLogsFilterMentions
 
 from zetamarkets_py.client import Client
-from zetamarkets_py.events import (
-    LiquidationEvent,
-    OrderCompleteEvent,
-    PlaceOrderEvent,
-    TradeEvent,
-)
 
 
 async def main():

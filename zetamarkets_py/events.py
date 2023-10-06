@@ -209,20 +209,13 @@ class LiquidationEvent:
             liquidator_margin_account=event.data.liquidator_margin_account,
         )
 
-EventSubscribeResponse = Union[
-    PlaceOrderEvent,
-    TradeEvent,
-    OrderCompleteEvent,
-    LiquidationEvent
-]
+
+EventSubscribeResponse = Union[PlaceOrderEvent, TradeEvent, OrderCompleteEvent, LiquidationEvent]
 
 TransactionSubscribeResponse = Union[
-    PlaceOrderEventWithArgs,
-    TradeEventWithPlacePerpOrderArgs,
-    OrderCompleteEvent,
-    TradeEvent,
-    LiquidationEvent
+    PlaceOrderEventWithArgs, TradeEventWithPlacePerpOrderArgs, OrderCompleteEvent, TradeEvent, LiquidationEvent
 ]
+
 
 class TransactionEvent(Enum):
     """
