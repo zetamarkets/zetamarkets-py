@@ -13,7 +13,7 @@ from solana.rpc.async_api import AsyncClient
 from solana.rpc.commitment import Commitment, Confirmed
 from solana.rpc.core import RPCException
 from solana.rpc.types import TxOpts
-from solana.rpc.websocket_api import SolanaWsClientProtocol, connect
+from solana.rpc.websocket_api import SolanaWsClientProtocol, connect, Data
 from solders.instruction import Instruction
 from solders.message import MessageV0
 from solders.pubkey import Pubkey
@@ -318,101 +318,9 @@ class Client:
                     first_resp = await ws.recv()
                     subscription_id = cast(int, first_resp)
 
-                    parser = EventParser(self.exchange.program_id, self.exchange.program.coder)
-
                     async for msg in ws:
                         try:
-                            jsonMsg = json.loads(msg)
-                            txValue = jsonMsg['params']['result']['value'] 
-
-                            logMessages = txValue['meta']['logMessages']
-
-                            message = txValue['transaction']['message']
-                            if isinstance(message[0], int) or 'instructions' not in message[0]:
-                                messageIndexed = message[1]
-                            else:
-                                messageIndexed = message[0]
-                            
-                            ixs = messageIndexed['instructions'][1:]
-                            ixArgs = []
-                            ixNames = []
-
-                            for ix in ixs:
-                                accKeysRaw = messageIndexed['accountKeys'][1:]                                
-                                accountKeys = [str(based58.b58encode(bytes(a)), encoding='utf-8') for a in accKeysRaw]
-
-                                loadedAddresses = txValue['meta']['loadedAddresses']
-                                loadedAddressesList = accountKeys + loadedAddresses['writable'] + loadedAddresses['readonly']
-                                ownerAddress = loadedAddressesList[ix['programIdIndex']]
-                                if ownerAddress != str(constants.ZETA_PID[self.network]):
-                                    ixArgs.append(None)
-                                    ixNames.append(None)
-                                    continue
-                                data = self.exchange.program.coder.instruction.parse(bytes(ix['data'][1:]))
-                                ixArgs.append(data.data)
-                                ixNames.append(data.name)
-
-                            # Split logMessages every time we see "invoke [1]"
-                            splitLogMessages = []
-                            splitIndices = []
-                            for i in range(len(logMessages)):
-                                if logMessages[i] == 'Log truncated':
-                                    raise Exception("Logs truncated, missing event data")
-                                if logMessages[i].endswith('invoke [1]'):
-                                    splitIndices.append(i)
-                            
-                            splitLogMessages = [logMessages[i:j] for i, j in zip([0]+splitIndices, splitIndices+[None])]
-                            if len(splitLogMessages) > 0:
-                                splitLogMessages = splitLogMessages[1:]
-
-                            if len(ixArgs) != len(splitLogMessages) or len(ixNames) != len(splitLogMessages):
-                                raise Exception("Mismatched transation info lengths")
-
-                            # For each individual instruction, find the ix name and the events
-                            for i in range(len(splitLogMessages)):
-
-                                # # First log line will always be "...invoke [1]", second will be "Program log: Instruction: <ix_name>"
-                                ixName = ixNames[i]
-                                ixArg = ixArgs[i]
-
-                                if ixName is None or ixArg is None:
-                                    continue
-
-                                chunk = splitLogMessages[i]
-                                events: list[Event] = []
-                                parser.parse_logs(chunk, lambda evt: events.append(evt))
-
-                                # Depending on the instruction and event we can get different data from the args
-                                for event in events:
-
-                                    # Skip event that aren't for our account but mention our account
-                                    # eg if we do a taker trade, we want to skip the maker crank events
-                                    if str(event.data.margin_account) != str(self._margin_account_address):
-                                        continue
-
-                                    if ixName.startswith('place_perp_order'):
-                                        if event.name.startswith(TradeEvent.__name__):
-                                            if trade_event_with_place_perp_order_args_callback is not None:
-                                                await trade_event_with_place_perp_order_args_callback(TradeEventWithPlacePerpOrderArgs.from_event_and_args(event, ixArg))
-                                        elif event.name.startswith(PlaceOrderEvent.__name__):
-                                            if place_order_with_args_callback is not None:
-                                                await place_order_with_args_callback(PlaceOrderEventWithArgs.from_event_and_args(event, ixArg))
-                                        elif event.name.startswith(OrderCompleteEvent.__name__):
-                                            if order_complete_event_callback is not None:
-                                             await order_complete_event_callback(OrderCompleteEvent.from_event(event))
-                                        
-                                    elif ixName.startswith('crank_event_queue'):
-                                        if event.name.startswith(TradeEvent.__name__):
-                                            if trade_event_callback is not None:
-                                                await trade_event_callback(TradeEvent.from_event(event))
-                                        elif event.name.startswith(OrderCompleteEvent.__name__):
-                                            if order_complete_event_callback is not None:
-                                                await order_complete_event_callback(OrderCompleteEvent.from_event(event))
-
-                                    elif ixName.startswith('cancel_'):
-                                        if event.name.startswith(OrderCompleteEvent.__name__):
-                                            if order_complete_event_callback is not None:
-                                                await order_complete_event_callback(OrderCompleteEvent.from_event(event))
+                            await self.parse_transaction_payload(msg, place_order_with_args_callback, trade_event_with_place_perp_order_args_callback, trade_event_callback, order_complete_event_callback)
 
                         except Exception as e:
                             self._logger.error(f"Error processing transaction data: {e}")
@@ -461,33 +369,8 @@ class Client:
                     subscription_id = cast(int, first_resp[0].result)
                     async for msg in ws:
                         try:
-                            logs = cast(list[str], msg[0].result.value.logs)  # type: ignore
-                            parser = EventParser(self.exchange.program_id, self.exchange.program.coder)
-                            parsed: list[Event] = []
-                            parser.parse_logs(logs, lambda evt: parsed.append(evt))
-                            for event in parsed:
-                                if event.name.startswith(PlaceOrderEvent.__name__):
-                                    place_order_event = PlaceOrderEvent.from_event(event)
-                                    if place_order_event.margin_account == self._margin_account_address:
-                                        if place_order_callback is not None:
-                                            await place_order_callback(place_order_event)
-                                elif event.name.startswith(OrderCompleteEvent.__name__):
-                                    order_complete_event = OrderCompleteEvent.from_event(event)
-                                    if order_complete_event.margin_account == self._margin_account_address:
-                                        if order_complete_callback is not None:
-                                            await order_complete_callback(order_complete_event)
-                                elif event.name.startswith(TradeEvent.__name__):
-                                    trade_event = TradeEvent.from_event(event)
-                                    if trade_event.margin_account == self._margin_account_address:
-                                        if trade_callback is not None:
-                                            await trade_callback(trade_event)
-                                elif event.name.startswith(LiquidationEvent.__name__):
-                                    liquidation_event = LiquidationEvent.from_event(event)
-                                    if liquidation_event.liquidatee_margin_account == self._margin_account_address:
-                                        if liquidation_callback is not None:
-                                            await liquidation_callback(liquidation_event)
-                                else:
-                                    pass
+                            await self.parse_event_payload(msg, place_order_callback, order_complete_callback, trade_callback, liquidation_callback)
+                            
                         except Exception as e:
                             self._logger.error(f"Error processing event data: {e}")
                             break
@@ -505,6 +388,138 @@ class Client:
                     self._logger.error("Max retries reached. Unable to subscribe to events.")
                     break
                 await asyncio.sleep(2)  # Pause for a while before retrying
+
+    async def parse_event_payload(self, msg: Data, place_order_callback: Callable[[PlaceOrderEvent], Awaitable[Any]] = None,
+        order_complete_callback: Callable[[OrderCompleteEvent], Awaitable[Any]] = None,
+        trade_callback: Callable[[TradeEvent], Awaitable[Any]] = None,
+        liquidation_callback: Callable[[LiquidationEvent], Awaitable[Any]] = None):
+
+        logs = cast(list[str], msg[0].result.value.logs)  # type: ignore
+        parser = EventParser(self.exchange.program_id, self.exchange.program.coder)
+        parsed: list[Event] = []
+        parser.parse_logs(logs, lambda evt: parsed.append(evt))
+        for event in parsed:
+            if event.name.startswith(PlaceOrderEvent.__name__):
+                place_order_event = PlaceOrderEvent.from_event(event)
+                if place_order_event.margin_account == self._margin_account_address:
+                    if place_order_callback is not None:
+                        await place_order_callback(place_order_event)
+            elif event.name.startswith(OrderCompleteEvent.__name__):
+                order_complete_event = OrderCompleteEvent.from_event(event)
+                if order_complete_event.margin_account == self._margin_account_address:
+                    if order_complete_callback is not None:
+                        await order_complete_callback(order_complete_event)
+            elif event.name.startswith(TradeEvent.__name__):
+                trade_event = TradeEvent.from_event(event)
+                if trade_event.margin_account == self._margin_account_address:
+                    if trade_callback is not None:
+                        await trade_callback(trade_event)
+            elif event.name.startswith(LiquidationEvent.__name__):
+                liquidation_event = LiquidationEvent.from_event(event)
+                if liquidation_event.liquidatee_margin_account == self._margin_account_address:
+                    if liquidation_callback is not None:
+                        await liquidation_callback(liquidation_event)
+            else:
+                pass
+
+    async def parse_transaction_payload(self, msg: Data, place_order_with_args_callback: Callable[[PlaceOrderEventWithArgs], Awaitable[Any]] = None,
+        trade_event_with_place_perp_order_args_callback: Callable[[TradeEventWithPlacePerpOrderArgs], Awaitable[Any]] = None,
+        trade_event_callback: Callable[[TradeEvent], Awaitable[Any]] = None,
+        order_complete_event_callback: Callable[[OrderCompleteEvent], Awaitable[Any]] = None):
+
+        parser = EventParser(self.exchange.program_id, self.exchange.program.coder)
+                                    
+        jsonMsg = json.loads(msg)
+        txValue = jsonMsg['params']['result']['value'] 
+
+        logMessages = txValue['meta']['logMessages']
+
+        message = txValue['transaction']['message']
+        if isinstance(message[0], int) or 'instructions' not in message[0]:
+            messageIndexed = message[1]
+        else:
+            messageIndexed = message[0]
+        
+        ixs = messageIndexed['instructions'][1:]
+        ixArgs = []
+        ixNames = []
+
+        for ix in ixs:
+            accKeysRaw = messageIndexed['accountKeys'][1:]                                
+            accountKeys = [str(based58.b58encode(bytes(a)), encoding='utf-8') for a in accKeysRaw]
+
+            loadedAddresses = txValue['meta']['loadedAddresses']
+            loadedAddressesList = accountKeys + loadedAddresses['writable'] + loadedAddresses['readonly']
+            ownerAddress = loadedAddressesList[ix['programIdIndex']]
+            if ownerAddress != str(constants.ZETA_PID[self.network]):
+                ixArgs.append(None)
+                ixNames.append(None)
+                continue
+            data = self.exchange.program.coder.instruction.parse(bytes(ix['data'][1:]))
+            ixArgs.append(data.data)
+            ixNames.append(data.name)
+
+        # Split logMessages every time we see "invoke [1]"
+        splitLogMessages = []
+        splitIndices = []
+        for i in range(len(logMessages)):
+            if logMessages[i] == 'Log truncated':
+                raise Exception("Logs truncated, missing event data")
+            if logMessages[i].endswith('invoke [1]'):
+                splitIndices.append(i)
+        
+        splitLogMessages = [logMessages[i:j] for i, j in zip([0]+splitIndices, splitIndices+[None])]
+        if len(splitLogMessages) > 0:
+            splitLogMessages = splitLogMessages[1:]
+
+        if len(ixArgs) != len(splitLogMessages) or len(ixNames) != len(splitLogMessages):
+            raise Exception("Mismatched transation info lengths")
+
+        # For each individual instruction, find the ix name and the events
+        for i in range(len(splitLogMessages)):
+
+            # # First log line will always be "...invoke [1]", second will be "Program log: Instruction: <ix_name>"
+            ixName = ixNames[i]
+            ixArg = ixArgs[i]
+
+            if ixName is None or ixArg is None:
+                continue
+
+            chunk = splitLogMessages[i]
+            events: list[Event] = []
+            parser.parse_logs(chunk, lambda evt: events.append(evt))
+
+            # Depending on the instruction and event we can get different data from the args
+            for event in events:
+
+                # Skip event that aren't for our account but mention our account
+                # eg if we do a taker trade, we want to skip the maker crank events
+                if str(event.data.margin_account) != str(self._margin_account_address):
+                    continue
+
+                if ixName.startswith('place_perp_order'):
+                    if event.name.startswith(TradeEvent.__name__):
+                        if trade_event_with_place_perp_order_args_callback is not None:
+                            await trade_event_with_place_perp_order_args_callback(TradeEventWithPlacePerpOrderArgs.from_event_and_args(event, ixArg))
+                    elif event.name.startswith(PlaceOrderEvent.__name__):
+                        if place_order_with_args_callback is not None:
+                            await place_order_with_args_callback(PlaceOrderEventWithArgs.from_event_and_args(event, ixArg))
+                    elif event.name.startswith(OrderCompleteEvent.__name__):
+                        if order_complete_event_callback is not None:
+                            await order_complete_event_callback(OrderCompleteEvent.from_event(event))
+                    
+                elif ixName.startswith('crank_event_queue'):
+                    if event.name.startswith(TradeEvent.__name__):
+                        if trade_event_callback is not None:
+                            await trade_event_callback(TradeEvent.from_event(event))
+                    elif event.name.startswith(OrderCompleteEvent.__name__):
+                        if order_complete_event_callback is not None:
+                            await order_complete_event_callback(OrderCompleteEvent.from_event(event))
+
+                elif ixName.startswith('cancel_'):
+                    if event.name.startswith(OrderCompleteEvent.__name__):
+                        if order_complete_event_callback is not None:
+                            await order_complete_event_callback(OrderCompleteEvent.from_event(event))
 
     # Instructions
 
