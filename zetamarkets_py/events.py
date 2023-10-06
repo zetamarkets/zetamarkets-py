@@ -26,7 +26,7 @@ class PlaceOrderEventWithArgs:
 
     @classmethod
     def from_event_and_args(cls, event: Event, args: Container):
-        assert event.name == "PlaceOrderEvent"
+        assert event.name.startswith("PlaceOrderEvent")
         return cls(
             price=args.price,
             size=args.size,
@@ -43,7 +43,7 @@ class PlaceOrderEventWithArgs:
 # Taker trade comes from place_perp_order
 # Maker trade comes from crank_event_queue and has no extra ix args
 @dataclass
-class TradeEventV3WithPlacePerpOrderArgs:
+class TradeEventWithPlacePerpOrderArgs:
     # ix args
     price: int
     side: Side
@@ -64,7 +64,7 @@ class TradeEventV3WithPlacePerpOrderArgs:
 
     @classmethod
     def from_event_and_args(cls, event: Event, args: Container):
-        assert event.name == "TradeEventV3"
+        assert event.name.startswith("TradeEvent")
         return cls(
             price=args.price,
             side=args.side,
@@ -137,7 +137,7 @@ class OrderCompleteEvent:
 
 
 @dataclass
-class TradeEventV3:
+class TradeEvent:
     margin_account: Pubkey
     index: int
     size: int
@@ -153,7 +153,7 @@ class TradeEventV3:
 
     @classmethod
     def from_event(cls, event: Event):
-        assert event.name == cls.__name__
+        assert event.name.startswith(cls.__name__)
         return cls(
             margin_account=event.data.margin_account,
             index=event.data.index,
@@ -219,9 +219,9 @@ class TransactionEvent(Enum):
 
     OrderCompleteEvent = OrderCompleteEvent
     """
-    A trade v3 event for the user margin account.
+    A trade event for the user margin account.
     """
-    TradeEventV3 = TradeEventV3
+    TradeEvent = TradeEvent
     """
     A liquidation event for the user margin account.
     """

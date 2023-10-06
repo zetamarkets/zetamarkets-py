@@ -12,7 +12,7 @@ from zetamarkets_py.events import (
     LiquidationEvent,
     OrderCompleteEvent,
     PlaceOrderEvent,
-    TradeEventV3,
+    TradeEvent,
 )
 
 
@@ -26,7 +26,7 @@ async def main():
     # load in client without any markets
     client = await Client.load(endpoint=endpoint, wallet=wallet, assets=[])
 
-    # open up a websocket subscription to the bids account
+    # open up a websocket subscription
     async with connect(ws_endpoint) as ws:
         # subscribe to only logs/events that mention our margin account
         await ws.logs_subscribe(
@@ -43,16 +43,16 @@ async def main():
             parser.parse_logs(logs, lambda evt: parsed.append(evt))
             for event in parsed:
                 # filter events to only those that are relevant to the user's margin account
-                if event.name == PlaceOrderEvent.__name__:
+                if event.name.startswith(PlaceOrderEvent.__name__):
                     if event.data.margin_account == client._margin_account_address:
                         print(PlaceOrderEvent.from_event(event))
-                if event.name == OrderCompleteEvent.__name__:
+                if event.name.startswith(OrderCompleteEvent.__name__):
                     if event.data.margin_account == client._margin_account_address:
                         print(OrderCompleteEvent.from_event(event))
-                elif event.name == TradeEventV3.__name__:
+                elif event.name.startswith(TradeEvent.__name__):
                     if event.data.margin_account == client._margin_account_address:
-                        print(TradeEventV3.from_event(event))
-                elif event.name == LiquidationEvent.__name__:
+                        print(TradeEvent.from_event(event))
+                elif event.name.startswith(LiquidationEvent.__name__):
                     if event.data.margin_account == client._margin_account_address:
                         print(LiquidationEvent.from_event(event))
 

@@ -26,8 +26,8 @@ from zetamarkets_py.events import (
     OrderCompleteEvent,
     PlaceOrderEvent,
     PlaceOrderEventWithArgs,
-    TradeEventV3,
-    TradeEventV3WithPlacePerpOrderArgs,
+    TradeEvent,
+    TradeEventWithPlacePerpOrderArgs,
 )
 from zetamarkets_py.exchange import Exchange
 from zetamarkets_py.orderbook import Orderbook
@@ -291,8 +291,8 @@ class Client:
     async def subscribe_transactions(
         self,
         place_order_with_args_callback: Callable[[PlaceOrderEventWithArgs], Awaitable[Any]] = None,
-        trade_event_v3_with_place_perp_order_args_callback: Callable[[TradeEventV3WithPlacePerpOrderArgs], Awaitable[Any]] = None,
-        trade_event_v3_callback: Callable[[TradeEventV3], Awaitable[Any]] = None,
+        trade_event_with_place_perp_order_args_callback: Callable[[TradeEventWithPlacePerpOrderArgs], Awaitable[Any]] = None,
+        trade_event_callback: Callable[[TradeEvent], Awaitable[Any]] = None,
         order_complete_event_callback: Callable[[OrderCompleteEvent], Awaitable[Any]] = None,
         max_retries: int = 3,
     ):
@@ -390,27 +390,27 @@ class Client:
                                     if str(event.data.margin_account) != str(self._margin_account_address):
                                         continue
 
-                                    if ixName.startswith('place_perp_order_v'):
-                                        if event.name.startswith('TradeEvent'):
-                                            if trade_event_v3_with_place_perp_order_args_callback is not None:
-                                                await trade_event_v3_with_place_perp_order_args_callback(TradeEventV3WithPlacePerpOrderArgs.from_event_and_args(event, ixArg))
-                                        elif event.name.startswith('PlaceOrderEvent'):
+                                    if ixName.startswith('place_perp_order'):
+                                        if event.name.startswith(TradeEvent.__name__):
+                                            if trade_event_with_place_perp_order_args_callback is not None:
+                                                await trade_event_with_place_perp_order_args_callback(TradeEventWithPlacePerpOrderArgs.from_event_and_args(event, ixArg))
+                                        elif event.name.startswith(PlaceOrderEvent.__name__):
                                             if place_order_with_args_callback is not None:
                                                 await place_order_with_args_callback(PlaceOrderEventWithArgs.from_event_and_args(event, ixArg))
-                                        elif event.name.startswith('OrderCompleteEvent'):
+                                        elif event.name.startswith(OrderCompleteEvent.__name__):
                                             if order_complete_event_callback is not None:
                                              await order_complete_event_callback(OrderCompleteEvent.from_event(event))
                                         
                                     elif ixName.startswith('crank_event_queue'):
-                                        if event.name.startswith('TradeEvent'):
-                                            if trade_event_v3_callback is not None:
-                                                await trade_event_v3_callback(TradeEventV3.from_event(event))
-                                        elif event.name.startswith('OrderCompleteEvent'):
+                                        if event.name.startswith(TradeEvent.__name__):
+                                            if trade_event_callback is not None:
+                                                await trade_event_callback(TradeEvent.from_event(event))
+                                        elif event.name.startswith(OrderCompleteEvent.__name__):
                                             if order_complete_event_callback is not None:
                                                 await order_complete_event_callback(OrderCompleteEvent.from_event(event))
 
                                     elif ixName.startswith('cancel_'):
-                                        if event.name.startswith('OrderCompleteEvent'):
+                                        if event.name.startswith(OrderCompleteEvent.__name__):
                                             if order_complete_event_callback is not None:
                                                 await order_complete_event_callback(OrderCompleteEvent.from_event(event))
 
@@ -443,7 +443,7 @@ class Client:
         self,
         place_order_callback: Callable[[PlaceOrderEvent], Awaitable[Any]] = None,
         order_complete_callback: Callable[[OrderCompleteEvent], Awaitable[Any]] = None,
-        trade_callback: Callable[[TradeEventV3], Awaitable[Any]] = None,
+        trade_callback: Callable[[TradeEvent], Awaitable[Any]] = None,
         liquidation_callback: Callable[[LiquidationEvent], Awaitable[Any]] = None,
         max_retries: int = 3,
     ):
@@ -466,22 +466,22 @@ class Client:
                             parsed: list[Event] = []
                             parser.parse_logs(logs, lambda evt: parsed.append(evt))
                             for event in parsed:
-                                if event.name == PlaceOrderEvent.__name__:
+                                if event.name.startswith(PlaceOrderEvent.__name__):
                                     place_order_event = PlaceOrderEvent.from_event(event)
                                     if place_order_event.margin_account == self._margin_account_address:
                                         if place_order_callback is not None:
                                             await place_order_callback(place_order_event)
-                                elif event.name == OrderCompleteEvent.__name__:
+                                elif event.name.startswith(OrderCompleteEvent.__name__):
                                     order_complete_event = OrderCompleteEvent.from_event(event)
                                     if order_complete_event.margin_account == self._margin_account_address:
                                         if order_complete_callback is not None:
                                             await order_complete_callback(order_complete_event)
-                                elif event.name == TradeEventV3.__name__:
-                                    trade_event = TradeEventV3.from_event(event)
+                                elif event.name.startswith(TradeEvent.__name__):
+                                    trade_event = TradeEvent.from_event(event)
                                     if trade_event.margin_account == self._margin_account_address:
                                         if trade_callback is not None:
                                             await trade_callback(trade_event)
-                                elif event.name == LiquidationEvent.__name__:
+                                elif event.name.startswith(LiquidationEvent.__name__):
                                     liquidation_event = LiquidationEvent.from_event(event)
                                     if liquidation_event.liquidatee_margin_account == self._margin_account_address:
                                         if liquidation_callback is not None:
