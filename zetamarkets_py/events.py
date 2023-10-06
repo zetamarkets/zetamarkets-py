@@ -1,4 +1,6 @@
 from dataclasses import dataclass
+from enum import Enum
+from typing import Union
 
 from anchorpy import Event
 from construct import Container
@@ -206,3 +208,39 @@ class LiquidationEvent:
             liquidatee_margin_account=event.data.liquidatee_margin_account,
             liquidator_margin_account=event.data.liquidator_margin_account,
         )
+
+EventSubscribeResponse = Union[
+    PlaceOrderEvent,
+    TradeEvent,
+    OrderCompleteEvent,
+    LiquidationEvent
+]
+
+TransactionSubscribeResponse = Union[
+    PlaceOrderEventWithArgs,
+    TradeEventWithPlacePerpOrderArgs,
+    OrderCompleteEvent,
+    TradeEvent,
+    LiquidationEvent
+]
+
+class TransactionEvent(Enum):
+    """
+    A place order event for the user margin account.
+    """
+
+    PlaceOrderEvent = PlaceOrderEvent
+    """
+    An OrderComplete event for the user margin account.
+    Happens when an order is either fully filled or cancelled
+    """
+
+    OrderCompleteEvent = OrderCompleteEvent
+    """
+    A trade event for the user margin account.
+    """
+    TradeEvent = TradeEvent
+    """
+    A liquidation event for the user margin account.
+    """
+    LiquidationEvent = LiquidationEvent
