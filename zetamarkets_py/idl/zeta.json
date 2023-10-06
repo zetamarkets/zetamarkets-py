@@ -6125,25 +6125,25 @@
           {
             "name": "markPrices",
             "type": {
-              "array": ["u64", 5]
+              "array": ["u64", 6]
             }
           },
           {
             "name": "markPricesPadding",
             "type": {
-              "array": ["u64", 20]
+              "array": ["u64", 19]
             }
           },
           {
             "name": "updateTimestamps",
             "type": {
-              "array": ["u64", 5]
+              "array": ["u64", 6]
             }
           },
           {
             "name": "updateTimestampsPadding",
             "type": {
-              "array": ["u64", 20]
+              "array": ["u64", 19]
             }
           },
           {
@@ -6153,7 +6153,7 @@
                 {
                   "defined": "AnchorDecimal"
                 },
-                5
+                6
               ]
             }
           },
@@ -6164,7 +6164,7 @@
                 {
                   "defined": "AnchorDecimal"
                 },
-                20
+                19
               ]
             }
           },
@@ -6175,7 +6175,7 @@
                 {
                   "defined": "AnchorDecimal"
                 },
-                5
+                6
               ]
             }
           },
@@ -6186,68 +6186,68 @@
                 {
                   "defined": "AnchorDecimal"
                 },
-                20
+                19
               ]
             }
           },
           {
             "name": "latestMidpoints",
             "type": {
-              "array": ["u64", 5]
+              "array": ["u64", 6]
             }
           },
           {
             "name": "latestMidpointsPadding",
             "type": {
-              "array": ["u64", 20]
+              "array": ["u64", 19]
             }
           },
           {
             "name": "oracles",
             "type": {
-              "array": ["publicKey", 5]
+              "array": ["publicKey", 6]
             }
           },
           {
             "name": "oraclesPadding",
             "type": {
-              "array": ["publicKey", 20]
+              "array": ["publicKey", 19]
             }
           },
           {
             "name": "oracleBackupFeeds",
             "type": {
-              "array": ["publicKey", 5]
+              "array": ["publicKey", 6]
             }
           },
           {
             "name": "oracleBackupFeedsPadding",
             "type": {
-              "array": ["publicKey", 20]
+              "array": ["publicKey", 19]
             }
           },
           {
             "name": "markets",
             "type": {
-              "array": ["publicKey", 5]
+              "array": ["publicKey", 6]
             }
           },
           {
             "name": "marketsPadding",
             "type": {
-              "array": ["publicKey", 20]
+              "array": ["publicKey", 19]
             }
           },
           {
             "name": "perpSyncQueues",
             "type": {
-              "array": ["publicKey", 5]
+              "array": ["publicKey", 6]
             }
           },
           {
             "name": "perpSyncQueuesPadding",
             "type": {
-              "array": ["publicKey", 20]
+              "array": ["publicKey", 19]
             }
           },
           {
@@ -6257,7 +6257,7 @@
                 {
                   "defined": "PerpParameters"
                 },
-                5
+                6
               ]
             }
           },
@@ -6268,7 +6268,7 @@
                 {
                   "defined": "PerpParameters"
                 },
-                20
+                19
               ]
             }
           },
@@ -6279,7 +6279,7 @@
                 {
                   "defined": "MarginParameters"
                 },
-                5
+                6
               ]
             }
           },
@@ -6290,7 +6290,7 @@
                 {
                   "defined": "MarginParameters"
                 },
-                20
+                19
               ]
             }
           },
@@ -6301,7 +6301,7 @@
                 {
                   "defined": "Product"
                 },
-                5
+                6
               ]
             }
           },
@@ -6312,20 +6312,20 @@
                 {
                   "defined": "Product"
                 },
-                20
+                19
               ]
             }
           },
           {
             "name": "zetaGroupKeys",
             "type": {
-              "array": ["publicKey", 5]
+              "array": ["publicKey", 6]
             }
           },
           {
             "name": "zetaGroupKeysPadding",
             "type": {
-              "array": ["publicKey", 20]
+              "array": ["publicKey", 19]
             }
           },
           {
@@ -6343,13 +6343,13 @@
           {
             "name": "haltForcePricing",
             "type": {
-              "array": ["bool", 5]
+              "array": ["bool", 6]
             }
           },
           {
             "name": "haltForcePricingPadding",
             "type": {
-              "array": ["bool", 20]
+              "array": ["bool", 19]
             }
           },
           {
@@ -6691,7 +6691,7 @@
                 {
                   "defined": "HaltStateV2"
                 },
-                5
+                6
               ]
             }
           },
@@ -6702,7 +6702,7 @@
                 {
                   "defined": "HaltStateV2"
                 },
-                20
+                19
               ]
             }
           },
@@ -7091,13 +7091,13 @@
           {
             "name": "openOrdersNonces",
             "type": {
-              "array": ["u8", 5]
+              "array": ["u8", 6]
             }
           },
           {
             "name": "openOrdersNoncesPadding",
             "type": {
-              "array": ["u8", 20]
+              "array": ["u8", 19]
             }
           },
           {
@@ -7111,7 +7111,7 @@
                 {
                   "defined": "AnchorDecimal"
                 },
-                5
+                6
               ]
             }
           },
@@ -7122,7 +7122,7 @@
                 {
                   "defined": "AnchorDecimal"
                 },
-                20
+                19
               ]
             }
           },
@@ -7133,7 +7133,7 @@
                 {
                   "defined": "ProductLedger"
                 },
-                5
+                6
               ]
             }
           },
@@ -7144,7 +7144,7 @@
                 {
                   "defined": "ProductLedger"
                 },
-                20
+                19
               ]
             }
           },
@@ -7903,7 +7903,7 @@
           {
             "name": "spotPrices",
             "type": {
-              "array": ["u64", 5]
+              "array": ["u64", 6]
             }
           },
           {
@@ -8691,6 +8691,9 @@
           },
           {
             "name": "ARB"
+          },
+          {
+            "name": "BNB"
           },
           {
             "name": "UNDEFINED"

@@ -1,8 +1,10 @@
 import asyncio
+import json
 import logging
 import time
 from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable, Optional, cast
+import based58
 
 import websockets
 from anchorpy import Event, EventParser, Provider, Wallet
@@ -23,7 +25,9 @@ from zetamarkets_py.events import (
     LiquidationEvent,
     OrderCompleteEvent,
     PlaceOrderEvent,
+    PlaceOrderEventWithArgs,
     TradeEventV3,
+    TradeEventV3WithPlacePerpOrderArgs,
 )
 from zetamarkets_py.exchange import Exchange
 from zetamarkets_py.orderbook import Orderbook
@@ -40,6 +44,8 @@ from zetamarkets_py.zeta_client.instructions import (
     initialize_open_orders_v3,
     place_perp_order_v3,
 )
+
+from jsonrpcclient import request
 
 # TODO: add transactionSubscribe (do we even need this right now?)
 # TODO: add Binance heartbeat to websocket
@@ -282,6 +288,156 @@ class Client:
         self._logger.info(f"Subscribing to Orderbook:{side}.")
         await self._account_subscribe(address, ws_endpoint, self.connection.commitment, _callback, max_retries)
 
+    async def subscribe_transactions(
+        self,
+        place_order_with_args_callback: Callable[[PlaceOrderEventWithArgs], Awaitable[Any]] = None,
+        trade_event_v3_with_place_perp_order_args_callback: Callable[[TradeEventV3WithPlacePerpOrderArgs], Awaitable[Any]] = None,
+        trade_event_v3_callback: Callable[[TradeEventV3], Awaitable[Any]] = None,
+        order_complete_event_callback: Callable[[OrderCompleteEvent], Awaitable[Any]] = None,
+        max_retries: int = 3,
+    ):
+        retries = max_retries
+        while retries > 0:
+            try:
+                async with websockets.connect(self.ws_endpoint + "/whirligig") as ws:
+                    transaction_subscribe = request(
+                        "transactionSubscribe",
+                        params=[
+                            {
+                                "mentions": [str(self._margin_account_address)],
+                                "failed": False,
+                                "vote": False,
+                            },
+                            {
+                                "commitment": str(self.connection.commitment),
+                            },
+                        ],
+                    )
+                     
+                    await ws.send(json.dumps(transaction_subscribe))
+                    first_resp = await ws.recv()
+                    subscription_id = cast(int, first_resp)
+
+                    parser = EventParser(self.exchange.program_id, self.exchange.program.coder)
+
+                    async for msg in ws:
+                        try:
+                            jsonMsg = json.loads(msg)
+                            txValue = jsonMsg['params']['result']['value'] 
+
+                            logMessages = txValue['meta']['logMessages']
+
+                            message = txValue['transaction']['message']
+                            if isinstance(message[0], int) or 'instructions' not in message[0]:
+                                messageIndexed = message[1]
+                            else:
+                                messageIndexed = message[0]
+                            
+                            ixs = messageIndexed['instructions'][1:]
+                            ixArgs = []
+                            ixNames = []
+
+                            for ix in ixs:
+                                accKeysRaw = messageIndexed['accountKeys'][1:]                                
+                                accountKeys = [str(based58.b58encode(bytes(a)), encoding='utf-8') for a in accKeysRaw]
+
+                                loadedAddresses = txValue['meta']['loadedAddresses']
+                                loadedAddressesList = accountKeys + loadedAddresses['writable'] + loadedAddresses['readonly']
+                                ownerAddress = loadedAddressesList[ix['programIdIndex']]
+                                if ownerAddress != str(constants.ZETA_PID[self.network]):
+                                    ixArgs.append(None)
+                                    ixNames.append(None)
+                                    continue
+                                data = self.exchange.program.coder.instruction.parse(bytes(ix['data'][1:]))
+                                ixArgs.append(data.data)
+                                ixNames.append(data.name)
+
+                            # Split logMessages every time we see "invoke [1]"
+                            splitLogMessages = []
+                            splitIndices = []
+                            for i in range(len(logMessages)):
+                                if logMessages[i] == 'Log truncated':
+                                    raise Exception("Logs truncated, missing event data")
+                                if logMessages[i].endswith('invoke [1]'):
+                                    splitIndices.append(i)
+                            
+                            splitLogMessages = [logMessages[i:j] for i, j in zip([0]+splitIndices, splitIndices+[None])]
+                            if len(splitLogMessages) > 0:
+                                splitLogMessages = splitLogMessages[1:]
+
+                            if len(ixArgs) != len(splitLogMessages) or len(ixNames) != len(splitLogMessages):
+                                raise Exception("Mismatched transation info lengths")
+
+                            # For each individual instruction, find the ix name and the events
+                            for i in range(len(splitLogMessages)):
+
+                                # # First log line will always be "...invoke [1]", second will be "Program log: Instruction: <ix_name>"
+                                ixName = ixNames[i]
+                                ixArg = ixArgs[i]
+
+                                if ixName is None or ixArg is None:
+                                    continue
+
+                                chunk = splitLogMessages[i]
+                                events: list[Event] = []
+                                parser.parse_logs(chunk, lambda evt: events.append(evt))
+
+                                # Depending on the instruction and event we can get different data from the args
+                                for event in events:
+
+                                    # Skip event that aren't for our account but mention our account
+                                    # eg if we do a taker trade, we want to skip the maker crank events
+                                    if str(event.data.margin_account) != str(self._margin_account_address):
+                                        continue
+
+                                    if ixName.startswith('place_perp_order_v'):
+                                        if event.name.startswith('TradeEvent'):
+                                            if trade_event_v3_with_place_perp_order_args_callback is not None:
+                                                await trade_event_v3_with_place_perp_order_args_callback(TradeEventV3WithPlacePerpOrderArgs.from_event_and_args(event, ixArg))
+                                        elif event.name.startswith('PlaceOrderEvent'):
+                                            if place_order_with_args_callback is not None:
+                                                await place_order_with_args_callback(PlaceOrderEventWithArgs.from_event_and_args(event, ixArg))
+                                        elif event.name.startswith('OrderCompleteEvent'):
+                                            if order_complete_event_callback is not None:
+                                             await order_complete_event_callback(OrderCompleteEvent.from_event(event))
+                                        
+                                    elif ixName.startswith('crank_event_queue'):
+                                        if event.name.startswith('TradeEvent'):
+                                            if trade_event_v3_callback is not None:
+                                                await trade_event_v3_callback(TradeEventV3.from_event(event))
+                                        elif event.name.startswith('OrderCompleteEvent'):
+                                            if order_complete_event_callback is not None:
+                                                await order_complete_event_callback(OrderCompleteEvent.from_event(event))
+
+                                    elif ixName.startswith('cancel_'):
+                                        if event.name.startswith('OrderCompleteEvent'):
+                                            if order_complete_event_callback is not None:
+                                                await order_complete_event_callback(OrderCompleteEvent.from_event(event))
+
+                        except Exception as e:
+                            self._logger.error(f"Error processing transaction data: {e}")
+                            break
+
+                    request(
+                        "transactionUnsubscribe",
+                        params=[subscription_id],
+                    )
+                    await ws.send(json.dumps(transaction_subscribe))
+
+            except asyncio.CancelledError:
+                self._logger.info("WebSocket subscription task cancelled.")
+                break
+            except websockets.exceptions.ConnectionClosed:
+                self._logger.error("WebSocket connection closed unexpectedly. Attempting to reconnect...")
+                continue
+            except Exception as e:
+                self._logger.error(f"Error subscribing to {self.__class__.__name__}: {e}")
+                retries -= 1
+                if retries <= 0:
+                    self._logger.error("Max retries reached. Unable to subscribe to transactions.")
+                    break
+                await asyncio.sleep(2)  # Pause for a while before retrying
+
     # TODO: maybe at some point support subscribing to all exchange events, not just margin account
     async def subscribe_events(
         self,
@@ -311,10 +467,10 @@ class Client:
                             parser.parse_logs(logs, lambda evt: parsed.append(evt))
                             for event in parsed:
                                 if event.name == PlaceOrderEvent.__name__:
-                                    order_complete_event = PlaceOrderEvent.from_event(event)
-                                    if order_complete_event.margin_account == self._margin_account_address:
+                                    place_order_event = PlaceOrderEvent.from_event(event)
+                                    if place_order_event.margin_account == self._margin_account_address:
                                         if place_order_callback is not None:
-                                            await place_order_callback(order_complete_event)
+                                            await place_order_callback(place_order_event)
                                 elif event.name == OrderCompleteEvent.__name__:
                                     order_complete_event = OrderCompleteEvent.from_event(event)
                                     if order_complete_event.margin_account == self._margin_account_address:

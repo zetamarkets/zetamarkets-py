@@ -2,9 +2,86 @@ from dataclasses import dataclass
 from enum import Enum
 
 from anchorpy import Event
+from construct import Container
 from solders.pubkey import Pubkey
 
 from zetamarkets_py.types import Asset, OrderCompleteType, Side
+
+# PlaceOrderEvent but we add the args from the PlaceOrder instruction itself, as well as the tx slot and signature
+@dataclass
+class PlaceOrderEventWithArgs:
+    # ix args
+    price: int
+    size: int
+    side: Side
+
+    # ix event
+    fee: int
+    oracle_price: int
+    order_id: int
+    expiry_ts: int
+    asset: Asset
+    margin_account: Pubkey
+    client_order_id: int
+
+    @classmethod
+    def from_event_and_args(cls, event: Event, args: Container):
+        assert event.name == "PlaceOrderEvent"
+        return cls(
+            price=args.price,
+            size=args.size,
+            side=args.side,
+            fee=event.data.fee,
+            oracle_price=event.data.oracle_price,
+            order_id=event.data.order_id,
+            expiry_ts=event.data.expiry_ts,
+            asset=Asset.from_index(event.data.asset.index),
+            margin_account=event.data.margin_account,
+            client_order_id=event.data.client_order_id,
+        )
+    
+# Taker trade comes from place_perp_order
+# Maker trade comes from crank_event_queue and has no extra ix args
+@dataclass
+class TradeEventV3WithPlacePerpOrderArgs:
+    # ix args
+    price: int
+    side: Side
+    
+    # ix event
+    margin_account: Pubkey
+    index: int
+    size: int
+    cost_of_trades: int
+    is_bid: bool
+    client_order_id: int
+    order_id: int
+    asset: Asset
+    user: Pubkey
+    is_taker: bool
+    sequence_number: int
+    fee: int
+
+    @classmethod
+    def from_event_and_args(cls, event: Event, args: Container):
+        assert event.name == "TradeEventV3"
+        return cls(
+            price=args.price,
+            side=args.side,
+            margin_account=event.data.margin_account,
+            index=event.data.index,
+            size=event.data.size,
+            cost_of_trades=event.data.cost_of_trades,
+            is_bid=event.data.is_bid,
+            client_order_id=event.data.client_order_id,
+            order_id=event.data.order_id,
+            asset=Asset.from_index(event.data.asset.index),
+            user=event.data.user,
+            is_taker=event.data.is_taker,
+            sequence_number=event.data.sequence_number,
+            fee=event.data.fee,
+        )
+
 
 
 @dataclass
