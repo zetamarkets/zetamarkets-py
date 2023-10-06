@@ -1,10 +1,13 @@
 from __future__ import annotations
+
 import typing
+
+import borsh_construct as borsh
+from solders.instruction import AccountMeta, Instruction
 from solders.pubkey import Pubkey
 from solders.sysvar import RENT
 from spl.token.constants import TOKEN_PROGRAM_ID
-from solders.instruction import Instruction, AccountMeta
-import borsh_construct as borsh
+
 from .. import types
 from ..program_id import PROGRAM_ID
 
@@ -134,9 +137,7 @@ def place_perp_order_v4(
             is_writable=True,
         ),
         AccountMeta(
-            pubkey=accounts["place_order_accounts"]["market_accounts"][
-                "order_payer_token_account"
-            ],
+            pubkey=accounts["place_order_accounts"]["market_accounts"]["order_payer_token_account"],
             is_signer=False,
             is_writable=True,
         ),

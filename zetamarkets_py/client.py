@@ -2,23 +2,27 @@ import asyncio
 import json
 import logging
 import time
+import traceback
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable, Optional, cast
-import based58
 
+import based58
 import websockets
 from anchorpy import Event, EventParser, Provider, Wallet
 from anchorpy.provider import DEFAULT_OPTIONS
+from jsonrpcclient import request
 from solana.rpc.async_api import AsyncClient
 from solana.rpc.commitment import Commitment, Confirmed
 from solana.rpc.core import RPCException
 from solana.rpc.types import TxOpts
-from solana.rpc.websocket_api import SolanaWsClientProtocol, connect, Data
+from solana.rpc.websocket_api import SolanaWsClientProtocol, connect
 from solders.instruction import Instruction
 from solders.message import MessageV0
 from solders.pubkey import Pubkey
 from solders.rpc.config import RpcTransactionLogsFilterMentions
 from solders.transaction import VersionedTransaction
+from websockets.typing import Data
 
 from zetamarkets_py import constants, pda, utils
 from zetamarkets_py.events import (
@@ -44,8 +48,6 @@ from zetamarkets_py.zeta_client.instructions import (
     initialize_open_orders_v3,
     place_perp_order_v3,
 )
-
-from jsonrpcclient import request
 
 # TODO: add transactionSubscribe (do we even need this right now?)
 # TODO: add Binance heartbeat to websocket
@@ -229,16 +231,14 @@ class Client:
     async def _account_subscribe(
         self,
         address: Pubkey,
-        ws_endpoint: str,
         commitment: Commitment,
-        callback: Callable[[bytes], Any],
         max_retries: int = 3,
         encoding: str = "base64+zstd",
-    ) -> None:
+    ) -> AsyncIterator[bytes]:
         retries = max_retries
         while True:
             try:
-                async with connect(ws_endpoint) as ws:
+                async with connect(self.ws_endpoint) as ws:
                     solana_ws: SolanaWsClientProtocol = cast(SolanaWsClientProtocol, ws)
                     await solana_ws.account_subscribe(
                         address,
@@ -250,7 +250,7 @@ class Client:
                     async for msg in ws:
                         try:
                             account_bytes = cast(bytes, msg[0].result.value.data)  # type: ignore
-                            await callback(account_bytes)
+                            yield account_bytes
                         except Exception as e:
                             self._logger.error(f"Error processing account data: {e}")
                             break
@@ -270,28 +270,27 @@ class Client:
                 await asyncio.sleep(2)  # Pause for a while before retrying
 
     async def subscribe_orderbook(
-        self, asset: Asset, side: Side, callback: Callable[[Orderbook], Awaitable[Any]], max_retries: int = 3
-    ):
-        ws_endpoint = utils.cluster_endpoint(self.network, ws=True)
+        self, asset: Asset, side: Side, commitment: Commitment = None, max_retries: int = 3
+    ) -> AsyncIterator[Orderbook]:
+        commitment = commitment or self.connection.commitment
         address = (
             self.exchange.markets[asset]._market_state.bids
             if side == Side.Bid
             else self.exchange.markets[asset]._market_state.asks
         )
 
-        # Wrap callback in order to parse account data correctly
-        async def _callback(data: bytes):
-            account = OrderbookAccount.decode(data)
-            orderbook = Orderbook(side, account, self.exchange.markets[asset]._market_state)
-            return await callback(orderbook)
-
         self._logger.info(f"Subscribing to Orderbook:{side}.")
-        await self._account_subscribe(address, ws_endpoint, self.connection.commitment, _callback, max_retries)
+        async for account_bytes in self._account_subscribe(address, commitment, max_retries):
+            account = OrderbookAccount.decode(account_bytes)
+            orderbook = Orderbook(side, account, self.exchange.markets[asset]._market_state)
+            yield orderbook
 
     async def subscribe_transactions(
         self,
         place_order_with_args_callback: Callable[[PlaceOrderEventWithArgs], Awaitable[Any]] = None,
-        trade_event_with_place_perp_order_args_callback: Callable[[TradeEventWithPlacePerpOrderArgs], Awaitable[Any]] = None,
+        trade_event_with_place_perp_order_args_callback: Callable[
+            [TradeEventWithPlacePerpOrderArgs], Awaitable[Any]
+        ] = None,
         trade_event_callback: Callable[[TradeEvent], Awaitable[Any]] = None,
         order_complete_event_callback: Callable[[OrderCompleteEvent], Awaitable[Any]] = None,
         max_retries: int = 3,
@@ -313,14 +312,20 @@ class Client:
                             },
                         ],
                     )
-                     
+
                     await ws.send(json.dumps(transaction_subscribe))
                     first_resp = await ws.recv()
                     subscription_id = cast(int, first_resp)
 
                     async for msg in ws:
                         try:
-                            await self.parse_transaction_payload(msg, place_order_with_args_callback, trade_event_with_place_perp_order_args_callback, trade_event_callback, order_complete_event_callback)
+                            await self.parse_transaction_payload(
+                                msg,
+                                place_order_with_args_callback,
+                                trade_event_with_place_perp_order_args_callback,
+                                trade_event_callback,
+                                order_complete_event_callback,
+                            )
 
                         except Exception as e:
                             self._logger.error(f"Error processing transaction data: {e}")
@@ -369,10 +374,11 @@ class Client:
                     subscription_id = cast(int, first_resp[0].result)
                     async for msg in ws:
                         try:
-                            await self.parse_event_payload(msg, place_order_callback, order_complete_callback, trade_callback, liquidation_callback)
-                            
-                        except Exception as e:
-                            self._logger.error(f"Error processing event data: {e}")
+                            await self.parse_event_payload(
+                                msg, place_order_callback, order_complete_callback, trade_callback, liquidation_callback
+                            )
+                        except Exception:
+                            self._logger.error(f"Error processing event data: {traceback.format_exc()}")
                             break
                     await solana_ws.logs_unsubscribe(subscription_id)
             except asyncio.CancelledError:
@@ -389,11 +395,14 @@ class Client:
                     break
                 await asyncio.sleep(2)  # Pause for a while before retrying
 
-    async def parse_event_payload(self, msg: Data, place_order_callback: Callable[[PlaceOrderEvent], Awaitable[Any]] = None,
+    async def parse_event_payload(
+        self,
+        msg: Data,
+        place_order_callback: Callable[[PlaceOrderEvent], Awaitable[Any]] = None,
         order_complete_callback: Callable[[OrderCompleteEvent], Awaitable[Any]] = None,
         trade_callback: Callable[[TradeEvent], Awaitable[Any]] = None,
-        liquidation_callback: Callable[[LiquidationEvent], Awaitable[Any]] = None):
-
+        liquidation_callback: Callable[[LiquidationEvent], Awaitable[Any]] = None,
+    ):
         logs = cast(list[str], msg[0].result.value.logs)  # type: ignore
         parser = EventParser(self.exchange.program_id, self.exchange.program.coder)
         parsed: list[Event] = []
@@ -422,40 +431,45 @@ class Client:
             else:
                 pass
 
-    async def parse_transaction_payload(self, msg: Data, place_order_with_args_callback: Callable[[PlaceOrderEventWithArgs], Awaitable[Any]] = None,
-        trade_event_with_place_perp_order_args_callback: Callable[[TradeEventWithPlacePerpOrderArgs], Awaitable[Any]] = None,
+    async def parse_transaction_payload(
+        self,
+        msg: Data,
+        place_order_with_args_callback: Callable[[PlaceOrderEventWithArgs], Awaitable[Any]] = None,
+        trade_event_with_place_perp_order_args_callback: Callable[
+            [TradeEventWithPlacePerpOrderArgs], Awaitable[Any]
+        ] = None,
         trade_event_callback: Callable[[TradeEvent], Awaitable[Any]] = None,
-        order_complete_event_callback: Callable[[OrderCompleteEvent], Awaitable[Any]] = None):
-
+        order_complete_event_callback: Callable[[OrderCompleteEvent], Awaitable[Any]] = None,
+    ):
         parser = EventParser(self.exchange.program_id, self.exchange.program.coder)
-                                    
+
         jsonMsg = json.loads(msg)
-        txValue = jsonMsg['params']['result']['value'] 
+        txValue = jsonMsg["params"]["result"]["value"]
 
-        logMessages = txValue['meta']['logMessages']
+        logMessages = txValue["meta"]["logMessages"]
 
-        message = txValue['transaction']['message']
-        if isinstance(message[0], int) or 'instructions' not in message[0]:
+        message = txValue["transaction"]["message"]
+        if isinstance(message[0], int) or "instructions" not in message[0]:
             messageIndexed = message[1]
         else:
             messageIndexed = message[0]
-        
-        ixs = messageIndexed['instructions'][1:]
+
+        ixs = messageIndexed["instructions"][1:]
         ixArgs = []
         ixNames = []
 
         for ix in ixs:
-            accKeysRaw = messageIndexed['accountKeys'][1:]                                
-            accountKeys = [str(based58.b58encode(bytes(a)), encoding='utf-8') for a in accKeysRaw]
+            accKeysRaw = messageIndexed["accountKeys"][1:]
+            accountKeys = [str(based58.b58encode(bytes(a)), encoding="utf-8") for a in accKeysRaw]
 
-            loadedAddresses = txValue['meta']['loadedAddresses']
-            loadedAddressesList = accountKeys + loadedAddresses['writable'] + loadedAddresses['readonly']
-            ownerAddress = loadedAddressesList[ix['programIdIndex']]
+            loadedAddresses = txValue["meta"]["loadedAddresses"]
+            loadedAddressesList = accountKeys + loadedAddresses["writable"] + loadedAddresses["readonly"]
+            ownerAddress = loadedAddressesList[ix["programIdIndex"]]
             if ownerAddress != str(constants.ZETA_PID[self.network]):
                 ixArgs.append(None)
                 ixNames.append(None)
                 continue
-            data = self.exchange.program.coder.instruction.parse(bytes(ix['data'][1:]))
+            data = self.exchange.program.coder.instruction.parse(bytes(ix["data"][1:]))
             ixArgs.append(data.data)
             ixNames.append(data.name)
 
@@ -463,12 +477,12 @@ class Client:
         splitLogMessages = []
         splitIndices = []
         for i in range(len(logMessages)):
-            if logMessages[i] == 'Log truncated':
+            if logMessages[i] == "Log truncated":
                 raise Exception("Logs truncated, missing event data")
-            if logMessages[i].endswith('invoke [1]'):
+            if logMessages[i].endswith("invoke [1]"):
                 splitIndices.append(i)
-        
-        splitLogMessages = [logMessages[i:j] for i, j in zip([0]+splitIndices, splitIndices+[None])]
+
+        splitLogMessages = [logMessages[i:j] for i, j in zip([0] + splitIndices, splitIndices + [None])]
         if len(splitLogMessages) > 0:
             splitLogMessages = splitLogMessages[1:]
 
@@ -477,7 +491,6 @@ class Client:
 
         # For each individual instruction, find the ix name and the events
         for i in range(len(splitLogMessages)):
-
             # # First log line will always be "...invoke [1]", second will be "Program log: Instruction: <ix_name>"
             ixName = ixNames[i]
             ixArg = ixArgs[i]
@@ -491,24 +504,27 @@ class Client:
 
             # Depending on the instruction and event we can get different data from the args
             for event in events:
-
                 # Skip event that aren't for our account but mention our account
                 # eg if we do a taker trade, we want to skip the maker crank events
                 if str(event.data.margin_account) != str(self._margin_account_address):
                     continue
 
-                if ixName.startswith('place_perp_order'):
+                if ixName.startswith("place_perp_order"):
                     if event.name.startswith(TradeEvent.__name__):
                         if trade_event_with_place_perp_order_args_callback is not None:
-                            await trade_event_with_place_perp_order_args_callback(TradeEventWithPlacePerpOrderArgs.from_event_and_args(event, ixArg))
+                            await trade_event_with_place_perp_order_args_callback(
+                                TradeEventWithPlacePerpOrderArgs.from_event_and_args(event, ixArg)
+                            )
                     elif event.name.startswith(PlaceOrderEvent.__name__):
                         if place_order_with_args_callback is not None:
-                            await place_order_with_args_callback(PlaceOrderEventWithArgs.from_event_and_args(event, ixArg))
+                            await place_order_with_args_callback(
+                                PlaceOrderEventWithArgs.from_event_and_args(event, ixArg)
+                            )
                     elif event.name.startswith(OrderCompleteEvent.__name__):
                         if order_complete_event_callback is not None:
                             await order_complete_event_callback(OrderCompleteEvent.from_event(event))
-                    
-                elif ixName.startswith('crank_event_queue'):
+
+                elif ixName.startswith("crank_event_queue"):
                     if event.name.startswith(TradeEvent.__name__):
                         if trade_event_callback is not None:
                             await trade_event_callback(TradeEvent.from_event(event))
@@ -516,7 +532,7 @@ class Client:
                         if order_complete_event_callback is not None:
                             await order_complete_event_callback(OrderCompleteEvent.from_event(event))
 
-                elif ixName.startswith('cancel_'):
+                elif ixName.startswith("cancel_"):
                     if event.name.startswith(OrderCompleteEvent.__name__):
                         if order_complete_event_callback is not None:
                             await order_complete_event_callback(OrderCompleteEvent.from_event(event))
@@ -754,6 +770,7 @@ class Client:
         pre_instructions: list[Instruction] = None,
         post_instructions: list[Instruction] = None,
     ):
+        # TODO: warn about log truncation above 10 orders
         ixs = []
         if not await self._check_open_orders_account_exists(asset):
             self._logger.info("User has no open orders account, creating one...")

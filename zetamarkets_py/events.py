@@ -1,11 +1,11 @@
 from dataclasses import dataclass
-from enum import Enum
 
 from anchorpy import Event
 from construct import Container
 from solders.pubkey import Pubkey
 
 from zetamarkets_py.types import Asset, OrderCompleteType, Side
+
 
 # PlaceOrderEvent but we add the args from the PlaceOrder instruction itself, as well as the tx slot and signature
 @dataclass
@@ -39,7 +39,8 @@ class PlaceOrderEventWithArgs:
             margin_account=event.data.margin_account,
             client_order_id=event.data.client_order_id,
         )
-    
+
+
 # Taker trade comes from place_perp_order
 # Maker trade comes from crank_event_queue and has no extra ix args
 @dataclass
@@ -47,7 +48,7 @@ class TradeEventWithPlacePerpOrderArgs:
     # ix args
     price: int
     side: Side
-    
+
     # ix event
     margin_account: Pubkey
     index: int
@@ -81,7 +82,6 @@ class TradeEventWithPlacePerpOrderArgs:
             sequence_number=event.data.sequence_number,
             fee=event.data.fee,
         )
-
 
 
 @dataclass
@@ -140,6 +140,7 @@ class OrderCompleteEvent:
 class TradeEvent:
     margin_account: Pubkey
     index: int
+    price: float
     size: int
     cost_of_trades: int
     is_bid: bool
@@ -157,6 +158,7 @@ class TradeEvent:
         return cls(
             margin_account=event.data.margin_account,
             index=event.data.index,
+            price=event.data.cost_of_trades / event.data.size,
             size=event.data.size,
             cost_of_trades=event.data.cost_of_trades,
             is_bid=event.data.is_bid,
@@ -204,25 +206,3 @@ class LiquidationEvent:
             liquidatee_margin_account=event.data.liquidatee_margin_account,
             liquidator_margin_account=event.data.liquidator_margin_account,
         )
-
-
-class TransactionEvent(Enum):
-    """
-    A place order event for the user margin account.
-    """
-
-    PlaceOrderEvent = PlaceOrderEvent
-    """
-    An OrderComplete event for the user margin account.
-    Happens when an order is either fully filled or cancelled
-    """
-
-    OrderCompleteEvent = OrderCompleteEvent
-    """
-    A trade event for the user margin account.
-    """
-    TradeEvent = TradeEvent
-    """
-    A liquidation event for the user margin account.
-    """
-    LiquidationEvent = LiquidationEvent

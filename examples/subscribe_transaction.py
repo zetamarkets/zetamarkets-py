@@ -3,11 +3,11 @@ import json
 import os
 
 import anchorpy
-from anchorpy import Event, EventParser
 import based58
-from solana.rpc.commitment import Confirmed
-from jsonrpcclient import request
 import websockets
+from anchorpy import Event, EventParser
+from jsonrpcclient import request
+from solana.rpc.commitment import Confirmed
 
 from zetamarkets_py import constants
 from zetamarkets_py.client import Client
@@ -48,7 +48,7 @@ async def main():
                 },
             ],
         )
-            
+
         await ws.send(json.dumps(transaction_subscribe))
         first_resp = await ws.recv()
         first_resp
@@ -58,32 +58,32 @@ async def main():
             parser = EventParser(client.exchange.program_id, client.exchange.program.coder)
 
             jsonMsg = json.loads(msg)
-            txValue = jsonMsg['params']['result']['value'] 
+            txValue = jsonMsg["params"]["result"]["value"]
 
-            logMessages = txValue['meta']['logMessages']
+            logMessages = txValue["meta"]["logMessages"]
 
-            message = txValue['transaction']['message']
-            if isinstance(message[0], int) or 'instructions' not in message[0]:
+            message = txValue["transaction"]["message"]
+            if isinstance(message[0], int) or "instructions" not in message[0]:
                 messageIndexed = message[1]
             else:
                 messageIndexed = message[0]
-            
-            ixs = messageIndexed['instructions'][1:]
+
+            ixs = messageIndexed["instructions"][1:]
             ixArgs = []
             ixNames = []
 
             for ix in ixs:
-                accKeysRaw = messageIndexed['accountKeys'][1:]                                
-                accountKeys = [str(based58.b58encode(bytes(a)), encoding='utf-8') for a in accKeysRaw]
+                accKeysRaw = messageIndexed["accountKeys"][1:]
+                accountKeys = [str(based58.b58encode(bytes(a)), encoding="utf-8") for a in accKeysRaw]
 
-                loadedAddresses = txValue['meta']['loadedAddresses']
-                loadedAddressesList = accountKeys + loadedAddresses['writable'] + loadedAddresses['readonly']
-                ownerAddress = loadedAddressesList[ix['programIdIndex']]
+                loadedAddresses = txValue["meta"]["loadedAddresses"]
+                loadedAddressesList = accountKeys + loadedAddresses["writable"] + loadedAddresses["readonly"]
+                ownerAddress = loadedAddressesList[ix["programIdIndex"]]
                 if ownerAddress != str(constants.ZETA_PID[client.network]):
                     ixArgs.append(None)
                     ixNames.append(None)
                     continue
-                data = client.exchange.program.coder.instruction.parse(bytes(ix['data'][1:]))
+                data = client.exchange.program.coder.instruction.parse(bytes(ix["data"][1:]))
                 ixArgs.append(data.data)
                 ixNames.append(data.name)
 
@@ -91,12 +91,12 @@ async def main():
             splitLogMessages = []
             splitIndices = []
             for i in range(len(logMessages)):
-                if logMessages[i] == 'Log truncated':
+                if logMessages[i] == "Log truncated":
                     raise Exception("Logs truncated, missing event data")
-                if logMessages[i].endswith('invoke [1]'):
+                if logMessages[i].endswith("invoke [1]"):
                     splitIndices.append(i)
-            
-            splitLogMessages = [logMessages[i:j] for i, j in zip([0]+splitIndices, splitIndices+[None])]
+
+            splitLogMessages = [logMessages[i:j] for i, j in zip([0] + splitIndices, splitIndices + [None])]
             if len(splitLogMessages) > 0:
                 splitLogMessages = splitLogMessages[1:]
 
@@ -105,7 +105,6 @@ async def main():
 
             # For each individual instruction, find the ix name and the events
             for i in range(len(splitLogMessages)):
-
                 # # First log line will always be "...invoke [1]", second will be "Program log: Instruction: <ix_name>"
                 ixName = ixNames[i]
                 ixArg = ixArgs[i]
@@ -119,27 +118,26 @@ async def main():
 
                 # Depending on the instruction and event we can get different data from the args
                 for event in events:
-
                     # Skip event that aren't for our account but mention our account
                     # eg if we do a taker trade, we want to skip the maker crank events
                     if str(event.data.margin_account) != str(client._margin_account_address):
                         continue
 
-                    if ixName.startswith('place_perp_order'):
+                    if ixName.startswith("place_perp_order"):
                         if event.name.startswith(TradeEvent.__name__):
                             print(TradeEventWithPlacePerpOrderArgs.from_event_and_args(event, ixArg))
                         elif event.name.startswith(PlaceOrderEvent.__name__):
                             print(PlaceOrderEventWithArgs.from_event_and_args(event, ixArg))
                         elif event.name.startswith(OrderCompleteEvent.__name__):
                             print(OrderCompleteEvent.from_event(event))
-                        
-                    elif ixName.startswith('crank_event_queue'):
+
+                    elif ixName.startswith("crank_event_queue"):
                         if event.name.startswith(TradeEvent.__name__):
                             print(TradeEvent.from_event(event))
                         elif event.name.startswith(OrderCompleteEvent.__name__):
                             print(OrderCompleteEvent.from_event(event))
 
-                    elif ixName.startswith('cancel_'):
+                    elif ixName.startswith("cancel_"):
                         if event.name.startswith(OrderCompleteEvent.__name__):
                             print(OrderCompleteEvent.from_event(event))
 
