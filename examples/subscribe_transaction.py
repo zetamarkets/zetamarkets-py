@@ -26,8 +26,8 @@ async def main():
     commitment = Confirmed
 
     # NOTE: NEEDS TO BE A TRITON URL TO SUPPORT transactionSubscribe RPC METHOD
-    endpoint = os.getenv("ENDPOINT", "https://zeta.rpcpool.com/1f9a7927-518a-48fd-8c46-4d9109dbf27e")
-    ws_endpoint = os.getenv("WS_ENDPOINT", "wss://zeta.rpcpool.com/1f9a7927-518a-48fd-8c46-4d9109dbf27e")
+    endpoint = os.getenv("ENDPOINT", "https://api.mainnet-beta.solana.com")
+    ws_endpoint = os.getenv("WS_ENDPOINT", "wss://api.mainnet-beta.solana.com")
 
     # load in client without any markets
     client = await Client.load(endpoint=endpoint, wallet=wallet, assets=[])
