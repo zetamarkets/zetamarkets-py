@@ -48,7 +48,7 @@ async def main():
                 },
             ],
         )
-            
+
         await ws.send(json.dumps(transaction_subscribe))
         first_resp = await ws.recv()
         first_resp

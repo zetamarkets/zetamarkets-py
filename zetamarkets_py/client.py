@@ -311,7 +311,7 @@ class Client:
                             },
                         ],
                     )
-                     
+
                     await ws.send(json.dumps(transaction_subscribe))
                     first_resp = await ws.recv()
                     subscription_id = cast(int, first_resp)
@@ -368,7 +368,7 @@ class Client:
                             events = self.parse_event_payload(msg)
                             if len(events) > 0:
                                 yield events
-                            
+
                         except Exception as e:
                             self._logger.error(f"Error processing event data: {e}")
                             break
@@ -388,7 +388,6 @@ class Client:
                 await asyncio.sleep(2)  # Pause for a while before retrying
 
     async def parse_event_payload(self, msg) -> List[EventSubscribeResponse]:
-
         logs = cast(list[str], msg[0].result.value.logs)  # type: ignore
         parser = EventParser(self.exchange.program_id, self.exchange.program.coder)
         parsed: list[Event] = []
@@ -417,37 +416,36 @@ class Client:
         return events
 
     async def parse_transaction_payload(self, msg) -> List[TransactionSubscribeResponse]:
-
         parser = EventParser(self.exchange.program_id, self.exchange.program.coder)
-                                    
+
         jsonMsg = json.loads(msg)
-        txValue = jsonMsg['params']['result']['value'] 
+        txValue = jsonMsg["params"]["result"]["value"]
 
-        logMessages = txValue['meta']['logMessages']
+        logMessages = txValue["meta"]["logMessages"]
 
-        message = txValue['transaction']['message']
-        if isinstance(message[0], int) or 'instructions' not in message[0]:
+        message = txValue["transaction"]["message"]
+        if isinstance(message[0], int) or "instructions" not in message[0]:
             messageIndexed = message[1]
         else:
             messageIndexed = message[0]
-        
-        ixs = messageIndexed['instructions'][1:]
+
+        ixs = messageIndexed["instructions"][1:]
         ixArgs = []
         ixNames = []
         eventsToReturn = []
 
         for ix in ixs:
-            accKeysRaw = messageIndexed['accountKeys'][1:]                                
-            accountKeys = [str(based58.b58encode(bytes(a)), encoding='utf-8') for a in accKeysRaw]
+            accKeysRaw = messageIndexed["accountKeys"][1:]
+            accountKeys = [str(based58.b58encode(bytes(a)), encoding="utf-8") for a in accKeysRaw]
 
-            loadedAddresses = txValue['meta']['loadedAddresses']
-            loadedAddressesList = accountKeys + loadedAddresses['writable'] + loadedAddresses['readonly']
-            ownerAddress = loadedAddressesList[ix['programIdIndex']]
+            loadedAddresses = txValue["meta"]["loadedAddresses"]
+            loadedAddressesList = accountKeys + loadedAddresses["writable"] + loadedAddresses["readonly"]
+            ownerAddress = loadedAddressesList[ix["programIdIndex"]]
             if ownerAddress != str(constants.ZETA_PID[self.network]):
                 ixArgs.append(None)
                 ixNames.append(None)
                 continue
-            data = self.exchange.program.coder.instruction.parse(bytes(ix['data'][1:]))
+            data = self.exchange.program.coder.instruction.parse(bytes(ix["data"][1:]))
             ixArgs.append(data.data)
             ixNames.append(data.name)
 
@@ -455,12 +453,12 @@ class Client:
         splitLogMessages = []
         splitIndices = []
         for i in range(len(logMessages)):
-            if logMessages[i] == 'Log truncated':
+            if logMessages[i] == "Log truncated":
                 raise Exception("Logs truncated, missing event data")
-            if logMessages[i].endswith('invoke [1]'):
+            if logMessages[i].endswith("invoke [1]"):
                 splitIndices.append(i)
-        
-        splitLogMessages = [logMessages[i:j] for i, j in zip([0]+splitIndices, splitIndices+[None])]
+
+        splitLogMessages = [logMessages[i:j] for i, j in zip([0] + splitIndices, splitIndices + [None])]
         if len(splitLogMessages) > 0:
             splitLogMessages = splitLogMessages[1:]
 
@@ -469,7 +467,6 @@ class Client:
 
         # For each individual instruction, find the ix name and the events
         for i in range(len(splitLogMessages)):
-
             # # First log line will always be "...invoke [1]", second will be "Program log: Instruction: <ix_name>"
             ixName = ixNames[i]
             ixArg = ixArgs[i]
@@ -483,30 +480,29 @@ class Client:
 
             # Depending on the instruction and event we can get different data from the args
             for event in events:
-
                 # Skip event that aren't for our account but mention our account
                 # eg if we do a taker trade, we want to skip the maker crank events
                 if str(event.data.margin_account) != str(self._margin_account_address):
                     continue
 
-                if ixName.startswith('place_perp_order'):
+                if ixName.startswith("place_perp_order"):
                     if event.name.startswith(TradeEvent.__name__):
                         eventsToReturn.append(TradeEventWithPlacePerpOrderArgs.from_event_and_args(event, ixArg))
                     elif event.name.startswith(PlaceOrderEvent.__name__):
                         eventsToReturn.append(PlaceOrderEventWithArgs.from_event_and_args(event, ixArg))
                     elif event.name.startswith(OrderCompleteEvent.__name__):
                         eventsToReturn.append(OrderCompleteEvent.from_event(event))
-                    
-                elif ixName.startswith('crank_event_queue'):
+
+                elif ixName.startswith("crank_event_queue"):
                     if event.name.startswith(TradeEvent.__name__):
                         eventsToReturn.append(TradeEvent.from_event(event))
                     elif event.name.startswith(OrderCompleteEvent.__name__):
                         eventsToReturn.append(OrderCompleteEvent.from_event(event))
 
-                elif ixName.startswith('cancel_'):
+                elif ixName.startswith("cancel_"):
                     if event.name.startswith(OrderCompleteEvent.__name__):
                         eventsToReturn.append(OrderCompleteEvent.from_event(event))
-        
+
         return eventsToReturn
 
     # Instructions
