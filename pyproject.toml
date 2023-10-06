@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "zetamarkets_py"
-version = "0.1.9"
+version = "0.1.10"
 description = "Python SDK for Zeta Markets"
 license = "apache-2.0"
 authors = ["Tristan0x <tristan@sierra.team>"]
@@ -20,9 +20,8 @@ anchorpy = "^0.18.0"
 [tool.poetry.group.dev.dependencies]
 poethepoet = "^0.22.1"
 ruff = "^0.0.284"
-ipykernel = "^6.25.1"
 isort = "^5.12.0"
-black = {extras = ["jupyter"], version = "^23.7.0"}
+black = "^23.7.0"
 mypy = "^1.5.1"
 
 [tool.poetry.group.examples]

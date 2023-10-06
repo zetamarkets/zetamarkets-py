@@ -19,12 +19,12 @@ async def main():
     endpoint = os.getenv("ENDPOINT", "https://api.mainnet-beta.solana.com")
     ws_endpoint = os.getenv("WS_ENDPOINT", "wss://api.mainnet-beta.solana.com")
 
-    # load in client, we're simply using this to fetch the orderbook bids address
+    # Load in client, we're simply using this to fetch the orderbook bids address
     client = await Client.load(endpoint=endpoint, assets=[asset])
     bids_address = client.exchange.markets[asset]._market_state.bids
     asks_address = client.exchange.markets[asset]._market_state.asks
 
-    # subscribe to both bids and asks over the same websocket connection
+    # Subscribe to both bids and asks over the same websocket connection
     async with connect(ws_endpoint) as ws:
         # Subscribe to the first address
         await ws.account_subscribe(

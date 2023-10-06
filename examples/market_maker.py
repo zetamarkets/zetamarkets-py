@@ -6,7 +6,7 @@ from typing import List
 
 import anchorpy
 import httpx
-from binance import AsyncClient, BinanceSocketManager
+from binance import AsyncClient, BinanceSocketManager  # type: ignore
 from solana.exceptions import SolanaRpcException
 from solana.rpc.commitment import Commitment, Confirmed
 from solana.rpc.types import TxOpts

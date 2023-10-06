@@ -12,6 +12,8 @@ async def main():
     wallet = anchorpy.Wallet.local()
     commitment = Confirmed
     endpoint = os.getenv("ENDPOINT", "https://api.mainnet-beta.solana.com")
+    # Note: Needs to be a Triton websocket endpoint to support transactionSubscribe
+    # https://docs.triton.one/project-yellowstone/whirligig-websockets#transactionsubscribe
     ws_endpoint = os.getenv("WS_ENDPOINT", "wss://api.mainnet-beta.solana.com")
 
     # Load in client without any markets
@@ -19,9 +21,9 @@ async def main():
         endpoint=endpoint, ws_endpoint=ws_endpoint, commitment=commitment, wallet=wallet, assets=[]
     )
 
-    # Subscribe to margin account events
-    print(f"Listening for events on margin account: {client._margin_account_address}")
-    async for tx_events in client.subscribe_events():
+    # Subscribe to margin account transactions
+    print(f"Listening for transactions on margin account: {client._margin_account_address}")
+    async for tx_events in client.subscribe_transactions():
         # Loop over the events in each tx
         for event in tx_events:
             # Event can be PlaceOrder, Trade, OrderComplete or Liquidate

@@ -1,7 +1,8 @@
-Example 3: Subscribing to Events
+Example 4: Subscribing to Events
 --------------------------------
 
-Brief description of the example...
+In this example we subscribe to all on-chain events related to our margin account (PlaceOrder, Trade, OrderComplete, Liquidate).
+This is helpful to keep track of when your orders go through, when you get filled on trades etc.
 
 .. literalinclude:: ../../../examples/subscribe_event.py
    :language: python
