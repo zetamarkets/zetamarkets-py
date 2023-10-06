@@ -11,7 +11,6 @@ async def main():
     asset = Asset.SOL
     commitment = Confirmed
     endpoint = os.getenv("ENDPOINT", "https://api.mainnet-beta.solana.com")
-    # optional: pass in your own websocket endpoint
     ws_endpoint = os.getenv("WS_ENDPOINT", "wss://api.mainnet-beta.solana.com")
 
     client = await Client.load(endpoint=endpoint, ws_endpoint=ws_endpoint, commitment=commitment, assets=[asset])

@@ -4,7 +4,7 @@ import os
 import anchorpy
 
 from zetamarkets_py.client import Client
-from zetamarkets_py.types import Asset, OrderArgs, OrderOptions, Side
+from zetamarkets_py.types import Asset, OrderArgs, OrderOptions, OrderType, Side
 
 
 async def main():

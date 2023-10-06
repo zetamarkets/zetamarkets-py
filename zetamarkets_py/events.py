@@ -6,6 +6,7 @@ from anchorpy import Event
 from construct import Container
 from solders.pubkey import Pubkey
 
+from zetamarkets_py import utils
 from zetamarkets_py.types import Asset, OrderCompleteType, Side
 
 
@@ -13,15 +14,14 @@ from zetamarkets_py.types import Asset, OrderCompleteType, Side
 @dataclass
 class PlaceOrderEventWithArgs:
     # ix args
-    price: int
-    size: int
+    price: float
+    size: float
     side: Side
 
     # ix event
-    fee: int
-    oracle_price: int
+    fee: float
+    oracle_price: float
     order_id: int
-    expiry_ts: int
     asset: Asset
     margin_account: Pubkey
     client_order_id: int
@@ -30,13 +30,12 @@ class PlaceOrderEventWithArgs:
     def from_event_and_args(cls, event: Event, args: Container):
         assert event.name.startswith("PlaceOrderEvent")
         return cls(
-            price=args.price,
-            size=args.size,
+            price=utils.convert_fixed_int_to_decimal(args.price),
+            size=utils.convert_fixed_lot_to_decimal(args.size),
             side=Side.from_index(args.side.index),
-            fee=event.data.fee,
-            oracle_price=event.data.oracle_price,
+            fee=utils.convert_fixed_int_to_decimal(event.data.fee),
+            oracle_price=utils.convert_fixed_int_to_decimal(event.data.oracle_price),
             order_id=event.data.order_id,
-            expiry_ts=event.data.expiry_ts,
             asset=Asset.from_index(event.data.asset.index),
             margin_account=event.data.margin_account,
             client_order_id=event.data.client_order_id,
@@ -48,50 +47,43 @@ class PlaceOrderEventWithArgs:
 @dataclass
 class TradeEventWithPlacePerpOrderArgs:
     # ix args
-    price: int
+    price: float
     side: Side
 
     # ix event
     margin_account: Pubkey
-    index: int
-    size: int
-    cost_of_trades: int
-    is_bid: bool
+    size: float
     client_order_id: int
     order_id: int
     asset: Asset
-    user: Pubkey
+    authority: Pubkey
     is_taker: bool
     sequence_number: int
-    fee: int
+    fee: float
 
     @classmethod
     def from_event_and_args(cls, event: Event, args: Container):
         assert event.name.startswith("TradeEvent")
         return cls(
-            price=args.price,
+            price=utils.convert_fixed_int_to_decimal(args.price),
             side=Side.from_index(args.side.index),
             margin_account=event.data.margin_account,
-            index=event.data.index,
-            size=event.data.size,
-            cost_of_trades=event.data.cost_of_trades,
-            is_bid=event.data.is_bid,
+            size=utils.convert_fixed_lot_to_decimal(event.data.size),
             client_order_id=event.data.client_order_id,
             order_id=event.data.order_id,
             asset=Asset.from_index(event.data.asset.index),
-            user=event.data.user,
+            authority=event.data.user,
             is_taker=event.data.is_taker,
             sequence_number=event.data.sequence_number,
-            fee=event.data.fee,
+            fee=utils.convert_fixed_int_to_decimal(event.data.fee),
         )
 
 
 @dataclass
 class PlaceOrderEvent:
-    fee: int
-    oracle_price: int
+    fee: float
+    oracle_price: float
     order_id: int
-    expiry_ts: int
     asset: Asset
     margin_account: Pubkey
     client_order_id: int
@@ -100,10 +92,9 @@ class PlaceOrderEvent:
     def from_event(cls, event: Event):
         assert event.name == cls.__name__
         return cls(
-            fee=event.data.fee,
-            oracle_price=event.data.oracle_price,
+            fee=utils.convert_fixed_int_to_decimal(event.data.fee),
+            oracle_price=utils.convert_fixed_int_to_decimal(event.data.oracle_price),
             order_id=event.data.order_id,
-            expiry_ts=event.data.expiry_ts,
             asset=Asset.from_index(event.data.asset.index),
             margin_account=event.data.margin_account,
             client_order_id=event.data.client_order_id,
@@ -113,11 +104,10 @@ class PlaceOrderEvent:
 @dataclass
 class OrderCompleteEvent:
     margin_account: Pubkey
-    user: Pubkey
+    authority: Pubkey
     asset: Asset
-    market_index: int
     side: Side
-    unfilled_size: int
+    unfilled_size: float
     order_id: int
     client_order_id: int
     order_complete_type: OrderCompleteType
@@ -127,11 +117,10 @@ class OrderCompleteEvent:
         assert event.name == cls.__name__
         return cls(
             margin_account=event.data.margin_account,
-            user=event.data.user,
+            authority=event.data.user,
             asset=Asset.from_index(event.data.asset.index),
-            market_index=event.data.market_index,
             side=Side.from_index(event.data.side.index),
-            unfilled_size=event.data.unfilled_size,
+            unfilled_size=utils.convert_fixed_lot_to_decimal(event.data.unfilled_size),
             order_id=event.data.order_id,
             client_order_id=event.data.client_order_id,
             order_complete_type=OrderCompleteType.from_index(event.data.order_complete_type.index),
@@ -141,49 +130,47 @@ class OrderCompleteEvent:
 @dataclass
 class TradeEvent:
     margin_account: Pubkey
-    index: int
     price: float
-    size: int
-    cost_of_trades: int
-    is_bid: bool
+    size: float
+    side: Side
     client_order_id: int
     order_id: int
     asset: Asset
-    user: Pubkey
+    authority: Pubkey
     is_taker: bool
     sequence_number: int
-    fee: int
+    fee: float
 
     @classmethod
     def from_event(cls, event: Event):
         assert event.name.startswith(cls.__name__)
         return cls(
             margin_account=event.data.margin_account,
-            index=event.data.index,
-            price=event.data.cost_of_trades / event.data.size,
-            size=event.data.size,
-            cost_of_trades=event.data.cost_of_trades,
-            is_bid=event.data.is_bid,
+            price=utils.convert_fixed_int_to_decimal(event.data.cost_of_trades)
+            / utils.convert_fixed_lot_to_decimal(event.data.size),
+            size=utils.convert_fixed_lot_to_decimal(event.data.size),
+            side=Side.Bid if event.data.is_bid else Side.Ask,
             client_order_id=event.data.client_order_id,
             order_id=event.data.order_id,
             asset=Asset.from_index(event.data.asset.index),
-            user=event.data.user,
+            authority=event.data.user,
             is_taker=event.data.is_taker,
             sequence_number=event.data.sequence_number,
-            fee=event.data.fee,
+            fee=utils.convert_fixed_int_to_decimal(event.data.fee),
         )
 
 
 @dataclass
 class LiquidationEvent:
-    liquidator_reward: int
-    insurance_reward: int
-    cost_of_trades: int
-    size: int
-    remaining_liquidatee_balance: int
-    remaining_liquidator_balance: int
-    mark_price: int
-    underlying_price: int
+    liquidator_reward: float
+    insurance_reward: float
+    # cost_of_trades: int
+    side: Side
+    liquidation_size: float
+    remaining_liquidatee_balance: float
+    remaining_liquidator_balance: float
+    mark_price: float
+    oracle_price: float
     liquidatee: Pubkey
     liquidator: Pubkey
     asset: Asset
@@ -194,14 +181,16 @@ class LiquidationEvent:
     def from_event(cls, event: Event):
         assert event.name == cls.__name__
         return cls(
-            liquidator_reward=event.data.liquidator_reward,
-            insurance_reward=event.data.insurance_reward,
-            cost_of_trades=event.data.cost_of_trades,
-            size=event.data.size,
-            remaining_liquidatee_balance=event.data.remaining_liquidatee_balance,
-            remaining_liquidator_balance=event.data.remaining_liquidator_balance,
-            mark_price=event.data.mark_price,
-            underlying_price=event.data.underlying_price,
+            liquidator_reward=utils.convert_fixed_int_to_decimal(event.data.liquidator_reward),
+            insurance_reward=utils.convert_fixed_int_to_decimal(event.data.insurance_reward),
+            side=Side.Bid if event.data.size > 0 else Side.Ask,
+            liquidation_price=utils.convert_fixed_int_to_decimal(event.data.cost_of_trades)
+            / utils.convert_fixed_lot_to_decimal(abs(event.data.size)),  # TODO: check this
+            liquidation_size=utils.convert_fixed_lot_to_decimal(abs(event.data.size)),
+            remaining_liquidatee_balance=utils.convert_fixed_int_to_decimal(event.data.remaining_liquidatee_balance),
+            remaining_liquidator_balance=utils.convert_fixed_int_to_decimal(event.data.remaining_liquidator_balance),
+            mark_price=utils.convert_fixed_int_to_decimal(event.data.mark_price),
+            oracle_price=utils.convert_fixed_int_to_decimal(event.data.underlying_price),
             liquidatee=event.data.liquidatee,
             liquidator=event.data.liquidator,
             asset=Asset.from_index(event.data.asset.index),
@@ -213,7 +202,7 @@ class LiquidationEvent:
 EventSubscribeResponse = Union[PlaceOrderEvent, TradeEvent, OrderCompleteEvent, LiquidationEvent]
 
 TransactionSubscribeResponse = Union[
-    PlaceOrderEventWithArgs, TradeEventWithPlacePerpOrderArgs, OrderCompleteEvent, TradeEvent, LiquidationEvent
+    PlaceOrderEventWithArgs, TradeEventWithPlacePerpOrderArgs, OrderCompleteEvent, LiquidationEvent
 ]
 
 

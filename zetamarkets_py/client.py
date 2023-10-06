@@ -9,7 +9,7 @@ from typing import Iterator, List, Optional, cast
 
 import based58
 import websockets
-from anchorpy import Event, EventParser, Provider, Wallet
+from anchorpy import Event, Provider, Wallet
 from anchorpy.provider import DEFAULT_OPTIONS
 from jsonrpcclient import request
 from solana.rpc.async_api import AsyncClient
@@ -261,9 +261,8 @@ class Client:
                 break
             except websockets.exceptions.ConnectionClosed:
                 self._logger.error("WebSocket connection closed unexpectedly. Attempting to reconnect...")
-                continue
             except Exception as e:
-                self._logger.error(f"Error subscribing to {self.__class__.__name__}: {e}")
+                self._logger.error(f"Error subscribing to {self.__class__.__name__}: {e}. Retrying...")
                 retries -= 1
                 if retries <= 0:
                     self._logger.error("Max retries reached. Unable to subscribe to account.")
@@ -285,64 +284,6 @@ class Client:
             account = OrderbookAccount.decode(account_bytes)
             orderbook = Orderbook(side, account, self.exchange.markets[asset]._market_state)
             yield orderbook
-
-    async def subscribe_transactions(
-        self,
-        commitment: Commitment = None,
-        max_retries: int = 3,
-    ):
-        commitment = commitment or self.connection.commitment
-        retries = max_retries
-        while retries > 0:
-            try:
-                async with websockets.connect(self.ws_endpoint + "/whirligig") as ws:
-                    transaction_subscribe = request(
-                        "transactionSubscribe",
-                        params=[
-                            {
-                                "mentions": [str(self._margin_account_address)],
-                                "failed": False,
-                                "vote": False,
-                            },
-                            {
-                                "commitment": str(commitment),
-                            },
-                        ],
-                    )
-
-                    await ws.send(json.dumps(transaction_subscribe))
-                    first_resp = await ws.recv()
-                    subscription_id = cast(int, first_resp)
-
-                    async for msg in ws:
-                        try:
-                            events = await self.parse_transaction_payload(msg)
-                            if len(events) > 0:
-                                yield events
-
-                        except Exception:
-                            self._logger.error(f"Error processing transaction data: {traceback.format_exc()}")
-                            break
-
-                    request(
-                        "transactionUnsubscribe",
-                        params=[subscription_id],
-                    )
-                    await ws.send(json.dumps(transaction_subscribe))
-
-            except asyncio.CancelledError:
-                self._logger.info("WebSocket subscription task cancelled.")
-                break
-            except websockets.exceptions.ConnectionClosed:
-                self._logger.error("WebSocket connection closed unexpectedly. Attempting to reconnect...")
-                continue
-            except Exception as e:
-                self._logger.error(f"Error subscribing to {self.__class__.__name__}: {e}")
-                retries -= 1
-                if retries <= 0:
-                    self._logger.error("Max retries reached. Unable to subscribe to transactions.")
-                    break
-                await asyncio.sleep(2)  # Pause for a while before retrying
 
     # TODO: maybe at some point support subscribing to all exchange events, not just margin account
     async def subscribe_events(
@@ -378,20 +319,18 @@ class Client:
                 break
             except websockets.exceptions.ConnectionClosed:
                 self._logger.error("WebSocket connection closed unexpectedly. Attempting to reconnect...")
-                continue
             except Exception as e:
-                self._logger.error(f"Error subscribing to {self.__class__.__name__}: {e}")
+                self._logger.error(f"Error subscribing to {self.__class__.__name__}: {e}. Retrying...")
                 retries -= 1
                 if retries <= 0:
                     self._logger.error("Max retries reached. Unable to subscribe to events.")
                     break
                 await asyncio.sleep(2)  # Pause for a while before retrying
 
-    async def parse_event_payload(self, msg) -> List[EventSubscribeResponse]:
+    def parse_event_payload(self, msg) -> List[EventSubscribeResponse]:
         logs = cast(list[str], msg[0].result.value.logs)  # type: ignore
-        parser = EventParser(self.exchange.program_id, self.exchange.program.coder)
         parsed: list[Event] = []
-        parser.parse_logs(logs, lambda evt: parsed.append(evt))
+        self.exchange._event_parser.parse_logs(logs, lambda evt: parsed.append(evt))
         events = []
         for event in parsed:
             if event.name.startswith(PlaceOrderEvent.__name__):
@@ -415,15 +354,69 @@ class Client:
 
         return events
 
-    async def parse_transaction_payload(self, msg) -> List[TransactionSubscribeResponse]:
-        parser = EventParser(self.exchange.program_id, self.exchange.program.coder)
+    async def subscribe_transactions(
+        self,
+        commitment: Commitment = None,
+        max_retries: int = 3,
+    ):
+        commitment = commitment or self.connection.commitment
+        retries = max_retries
+        while retries > 0:
+            try:
+                async with websockets.connect(self.ws_endpoint + "/whirligig") as ws:
+                    transaction_subscribe = request(
+                        "transactionSubscribe",
+                        params=[
+                            {
+                                "mentions": [str(self._margin_account_address)],
+                                "failed": False,
+                                "vote": False,
+                            },
+                            {
+                                "commitment": str(commitment),
+                            },
+                        ],
+                    )
 
+                    await ws.send(json.dumps(transaction_subscribe))
+                    first_resp = await ws.recv()
+                    subscription_id = cast(int, first_resp)
+
+                    async for msg in ws:
+                        try:
+                            events = self.parse_transaction_payload(msg)
+                            if len(events) > 0:
+                                yield events
+
+                        except Exception:
+                            self._logger.error(f"Error processing transaction data: {traceback.format_exc()}")
+                            break
+
+                    request(
+                        "transactionUnsubscribe",
+                        params=[subscription_id],
+                    )
+                    await ws.send(json.dumps(transaction_subscribe))
+
+            except asyncio.CancelledError:
+                self._logger.info("WebSocket subscription task cancelled.")
+                break
+            except websockets.exceptions.ConnectionClosed:
+                self._logger.error("WebSocket connection closed unexpectedly. Attempting to reconnect...")
+            except Exception as e:
+                self._logger.error(f"Error subscribing to {self.__class__.__name__}: {e}. Retrying...")
+                retries -= 1
+                if retries <= 0:
+                    self._logger.error("Max retries reached. Unable to subscribe to transactions.")
+                    break
+                await asyncio.sleep(2)  # Pause for a while before retrying
+
+    def parse_transaction_payload(self, msg) -> List[TransactionSubscribeResponse]:
         json_msg = json.loads(msg)
         tx_value = json_msg["params"]["result"]["value"]
-
         log_messages = tx_value["meta"]["logMessages"]
-
         message = tx_value["transaction"]["message"]
+
         if isinstance(message[0], int) or "instructions" not in message[0]:
             message_indexed = message[1]
         else:
@@ -437,10 +430,10 @@ class Client:
         for ix in ixs:
             acc_keys_raw = message_indexed["accountKeys"][1:]
             account_keys = [str(based58.b58encode(bytes(a)), encoding="utf-8") for a in acc_keys_raw]
-
             loaded_addresses = tx_value["meta"]["loadedAddresses"]
             loaded_addresses_list = account_keys + loaded_addresses["writable"] + loaded_addresses["readonly"]
             owner_address = loaded_addresses_list[ix["programIdIndex"]]
+
             if owner_address != str(constants.ZETA_PID[self.network]):
                 ix_args.append(None)
                 ix_names.append(None)
@@ -476,7 +469,7 @@ class Client:
 
             chunk = split_log_messages[i]
             events: list[Event] = []
-            parser.parse_logs(chunk, lambda evt: events.append(evt))
+            self.exchange._event_parser.parse_logs(chunk, lambda evt: events.append(evt))
 
             # Depending on the instruction and event we can get different data from the args
             for event in events:

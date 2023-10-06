@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
-from anchorpy import Idl, Program, Provider, Wallet
+from anchorpy import EventParser, Idl, Program, Provider, Wallet
 from solana.rpc.async_api import AsyncClient
 from solders.pubkey import Pubkey
 
@@ -32,6 +32,8 @@ class Exchange:
     markets: dict[Asset, Market]
     # clock: Optional[Clock] = None
 
+    _event_parser: EventParser
+
     _state_address: Pubkey
     _pricing_address: Pubkey
     _serum_authority_address: Pubkey
@@ -47,6 +49,7 @@ class Exchange:
         program_id = constants.ZETA_PID[network]
         provider = Provider(connection, Wallet.dummy())
         program = Program(idl, program_id, provider)
+        _event_parser = EventParser(program_id, program.coder)
 
         # Accounts
         state_address = pda.get_state_address(program_id)
@@ -74,6 +77,7 @@ class Exchange:
             state=state,
             pricing=pricing,
             markets=markets,
+            _event_parser=_event_parser,
             _state_address=state_address,
             _pricing_address=pricing_address,
             _serum_authority_address=_serum_authority_address,
