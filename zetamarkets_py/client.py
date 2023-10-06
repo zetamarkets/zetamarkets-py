@@ -5,9 +5,10 @@ import time
 import traceback
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
-from typing import Iterator, List, Optional, cast
+from typing import List, Optional, cast
 
 import based58
+from construct import Container
 import websockets
 from anchorpy import Event, Provider, Wallet
 from anchorpy.provider import DEFAULT_OPTIONS
@@ -50,12 +51,8 @@ from zetamarkets_py.zeta_client.instructions import (
     place_perp_order_v3,
 )
 
-# TODO: add transactionSubscribe (do we even need this right now?)
-# TODO: add Binance heartbeat to websocket
-# TODO: add better ws error handling and reconnection
 # TODO: add docstrings for most methods
-# TODO: add docs to examples in readthedocs
-# TODO: add client_order_id to PlaceOrderEvent
+# TODO: implement better error handling and tracebacks
 # TODO: implement withdraw and liquidation
 # TODO: add logging to exchange
 # TODO: implement priority fees to exchange
@@ -88,7 +85,7 @@ class Client:
     @classmethod
     async def load(
         cls,
-        endpoint: str = None,
+        endpoint: Optional[str] = None,
         ws_endpoint: Optional[str] = None,
         commitment: Commitment = Confirmed,
         wallet: Optional[Wallet] = None,
@@ -189,6 +186,8 @@ class Client:
         return exists
 
     async def _check_open_orders_account_exists(self, asset: Asset):
+        if self._open_orders_addresses is None:
+            raise Exception("Open orders accounts not loaded, cannot check if account exists")
         open_orders_address = self._open_orders_addresses[asset]
         if open_orders_address in self._account_exists_cache:
             return self._account_exists_cache[open_orders_address]
@@ -270,7 +269,7 @@ class Client:
                 await asyncio.sleep(2)  # Pause for a while before retrying
 
     async def subscribe_orderbook(
-        self, asset: Asset, side: Side, commitment: Commitment = None, max_retries: int = 3
+        self, asset: Asset, side: Side, commitment: Optional[Commitment] = None, max_retries: int = 3
     ) -> AsyncIterator[Orderbook]:
         commitment = commitment or self.connection.commitment
         address = (
@@ -288,9 +287,11 @@ class Client:
     # TODO: maybe at some point support subscribing to all exchange events, not just margin account
     async def subscribe_events(
         self,
-        commitment: Commitment = None,
+        commitment: Optional[Commitment] = None,
         max_retries: int = 3,
-    ) -> Iterator[List[EventSubscribeResponse]]:
+    ) -> AsyncIterator[List[EventSubscribeResponse]]:
+        if self._margin_account_address is None:
+            raise Exception("Margin account not loaded, cannot subscribe to events")
         commitment = commitment or self.connection.commitment
         retries = max_retries
         while retries > 0:
@@ -356,14 +357,14 @@ class Client:
 
     async def subscribe_transactions(
         self,
-        commitment: Commitment = None,
+        commitment: Optional[Commitment] = None,
         max_retries: int = 3,
     ):
         commitment = commitment or self.connection.commitment
         retries = max_retries
         while retries > 0:
             try:
-                async with websockets.connect(self.ws_endpoint + "/whirligig") as ws:
+                async with websockets.connect(self.ws_endpoint) as ws:  # type: ignore
                     transaction_subscribe = request(
                         "transactionSubscribe",
                         params=[
@@ -423,8 +424,8 @@ class Client:
             message_indexed = message[0]
 
         ixs = message_indexed["instructions"][1:]
-        ix_args = []
-        ix_names = []
+        ix_args: list[Optional[Container]] = []
+        ix_names: list[Optional[str]] = []
         events_to_return = []
 
         for ix in ixs:
@@ -596,7 +597,7 @@ class Client:
         price: float,
         size: float,
         side: Side,
-        order_opts: OrderOptions = None,
+        order_opts: Optional[OrderOptions] = None,
     ) -> Instruction:
         if order_opts is None:
             order_opts = OrderOptions()
@@ -728,8 +729,8 @@ class Client:
         self,
         asset: Asset,
         orders: list[OrderArgs],
-        pre_instructions: list[Instruction] = None,
-        post_instructions: list[Instruction] = None,
+        pre_instructions: Optional[list[Instruction]] = None,
+        post_instructions: Optional[list[Instruction]] = None,
     ):
         # TODO: warn about log truncation above 10 orders
         ixs = []

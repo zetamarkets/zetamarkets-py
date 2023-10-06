@@ -32,7 +32,7 @@ def cluster_endpoint(network: Network, tls: bool = True, ws: bool = False) -> st
     :param cluster: The name of the cluster to use.
     :param tls: If True, use https. Defaults to True.
     """
-    endpoint = cluster_api_url(network.value, tls=tls)
+    endpoint = cluster_api_url(network.value, tls=tls)  # type: ignore
     if ws:
         ws_endpoint = http_to_ws(endpoint)
         return ws_endpoint
