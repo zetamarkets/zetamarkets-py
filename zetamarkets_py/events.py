@@ -32,7 +32,7 @@ class PlaceOrderEventWithArgs:
         return cls(
             price=args.price,
             size=args.size,
-            side=args.side,
+            side=Side.from_index(args.side.index),
             fee=event.data.fee,
             oracle_price=event.data.oracle_price,
             order_id=event.data.order_id,
@@ -70,7 +70,7 @@ class TradeEventWithPlacePerpOrderArgs:
         assert event.name.startswith("TradeEvent")
         return cls(
             price=args.price,
-            side=args.side,
+            side=Side.from_index(args.side.index),
             margin_account=event.data.margin_account,
             index=event.data.index,
             size=event.data.size,
