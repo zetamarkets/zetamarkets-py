@@ -3,7 +3,7 @@ import json
 import logging
 import time
 from dataclasses import dataclass, field
-from typing import Any, Awaitable, Callable, Optional, cast
+from typing import Any, Awaitable, Callable, Optional, cast, Iterator, List
 import based58
 
 import websockets
@@ -13,7 +13,7 @@ from solana.rpc.async_api import AsyncClient
 from solana.rpc.commitment import Commitment, Confirmed
 from solana.rpc.core import RPCException
 from solana.rpc.types import TxOpts
-from solana.rpc.websocket_api import SolanaWsClientProtocol, connect, Data
+from solana.rpc.websocket_api import SolanaWsClientProtocol, connect
 from solders.instruction import Instruction
 from solders.message import MessageV0
 from solders.pubkey import Pubkey
@@ -22,12 +22,14 @@ from solders.transaction import VersionedTransaction
 
 from zetamarkets_py import constants, pda, utils
 from zetamarkets_py.events import (
+    EventSubscribeResponse,
     LiquidationEvent,
     OrderCompleteEvent,
     PlaceOrderEvent,
     PlaceOrderEventWithArgs,
     TradeEvent,
     TradeEventWithPlacePerpOrderArgs,
+    TransactionSubscribeResponse,
 )
 from zetamarkets_py.exchange import Exchange
 from zetamarkets_py.orderbook import Orderbook
@@ -290,10 +292,6 @@ class Client:
 
     async def subscribe_transactions(
         self,
-        place_order_with_args_callback: Callable[[PlaceOrderEventWithArgs], Awaitable[Any]] = None,
-        trade_event_with_place_perp_order_args_callback: Callable[[TradeEventWithPlacePerpOrderArgs], Awaitable[Any]] = None,
-        trade_event_callback: Callable[[TradeEvent], Awaitable[Any]] = None,
-        order_complete_event_callback: Callable[[OrderCompleteEvent], Awaitable[Any]] = None,
         max_retries: int = 3,
     ):
         retries = max_retries
@@ -320,7 +318,9 @@ class Client:
 
                     async for msg in ws:
                         try:
-                            await self.parse_transaction_payload(msg, place_order_with_args_callback, trade_event_with_place_perp_order_args_callback, trade_event_callback, order_complete_event_callback)
+                            events = await self.parse_transaction_payload(msg)
+                            if len(events) > 0:
+                                yield events
 
                         except Exception as e:
                             self._logger.error(f"Error processing transaction data: {e}")
@@ -349,12 +349,8 @@ class Client:
     # TODO: maybe at some point support subscribing to all exchange events, not just margin account
     async def subscribe_events(
         self,
-        place_order_callback: Callable[[PlaceOrderEvent], Awaitable[Any]] = None,
-        order_complete_callback: Callable[[OrderCompleteEvent], Awaitable[Any]] = None,
-        trade_callback: Callable[[TradeEvent], Awaitable[Any]] = None,
-        liquidation_callback: Callable[[LiquidationEvent], Awaitable[Any]] = None,
         max_retries: int = 3,
-    ):
+    ) -> Iterator[List[EventSubscribeResponse]]:
         retries = max_retries
         while retries > 0:
             try:
@@ -369,7 +365,9 @@ class Client:
                     subscription_id = cast(int, first_resp[0].result)
                     async for msg in ws:
                         try:
-                            await self.parse_event_payload(msg, place_order_callback, order_complete_callback, trade_callback, liquidation_callback)
+                            events = self.parse_event_payload(msg)
+                            if len(events) > 0:
+                                yield events
                             
                         except Exception as e:
                             self._logger.error(f"Error processing event data: {e}")
@@ -389,43 +387,36 @@ class Client:
                     break
                 await asyncio.sleep(2)  # Pause for a while before retrying
 
-    async def parse_event_payload(self, msg: Data, place_order_callback: Callable[[PlaceOrderEvent], Awaitable[Any]] = None,
-        order_complete_callback: Callable[[OrderCompleteEvent], Awaitable[Any]] = None,
-        trade_callback: Callable[[TradeEvent], Awaitable[Any]] = None,
-        liquidation_callback: Callable[[LiquidationEvent], Awaitable[Any]] = None):
+    async def parse_event_payload(self, msg) -> List[EventSubscribeResponse]:
 
         logs = cast(list[str], msg[0].result.value.logs)  # type: ignore
         parser = EventParser(self.exchange.program_id, self.exchange.program.coder)
         parsed: list[Event] = []
         parser.parse_logs(logs, lambda evt: parsed.append(evt))
+        events = []
         for event in parsed:
             if event.name.startswith(PlaceOrderEvent.__name__):
                 place_order_event = PlaceOrderEvent.from_event(event)
                 if place_order_event.margin_account == self._margin_account_address:
-                    if place_order_callback is not None:
-                        await place_order_callback(place_order_event)
+                    events.append(place_order_event)
             elif event.name.startswith(OrderCompleteEvent.__name__):
                 order_complete_event = OrderCompleteEvent.from_event(event)
                 if order_complete_event.margin_account == self._margin_account_address:
-                    if order_complete_callback is not None:
-                        await order_complete_callback(order_complete_event)
+                    events.append(order_complete_event)
             elif event.name.startswith(TradeEvent.__name__):
                 trade_event = TradeEvent.from_event(event)
                 if trade_event.margin_account == self._margin_account_address:
-                    if trade_callback is not None:
-                        await trade_callback(trade_event)
+                    events.append(trade_event)
             elif event.name.startswith(LiquidationEvent.__name__):
                 liquidation_event = LiquidationEvent.from_event(event)
                 if liquidation_event.liquidatee_margin_account == self._margin_account_address:
-                    if liquidation_callback is not None:
-                        await liquidation_callback(liquidation_event)
+                    events.append(liquidation_event)
             else:
                 pass
 
-    async def parse_transaction_payload(self, msg: Data, place_order_with_args_callback: Callable[[PlaceOrderEventWithArgs], Awaitable[Any]] = None,
-        trade_event_with_place_perp_order_args_callback: Callable[[TradeEventWithPlacePerpOrderArgs], Awaitable[Any]] = None,
-        trade_event_callback: Callable[[TradeEvent], Awaitable[Any]] = None,
-        order_complete_event_callback: Callable[[OrderCompleteEvent], Awaitable[Any]] = None):
+        return events
+
+    async def parse_transaction_payload(self, msg) -> List[TransactionSubscribeResponse]:
 
         parser = EventParser(self.exchange.program_id, self.exchange.program.coder)
                                     
@@ -443,6 +434,7 @@ class Client:
         ixs = messageIndexed['instructions'][1:]
         ixArgs = []
         ixNames = []
+        eventsToReturn = []
 
         for ix in ixs:
             accKeysRaw = messageIndexed['accountKeys'][1:]                                
@@ -499,27 +491,23 @@ class Client:
 
                 if ixName.startswith('place_perp_order'):
                     if event.name.startswith(TradeEvent.__name__):
-                        if trade_event_with_place_perp_order_args_callback is not None:
-                            await trade_event_with_place_perp_order_args_callback(TradeEventWithPlacePerpOrderArgs.from_event_and_args(event, ixArg))
+                        eventsToReturn.append(TradeEventWithPlacePerpOrderArgs.from_event_and_args(event, ixArg))
                     elif event.name.startswith(PlaceOrderEvent.__name__):
-                        if place_order_with_args_callback is not None:
-                            await place_order_with_args_callback(PlaceOrderEventWithArgs.from_event_and_args(event, ixArg))
+                        eventsToReturn.append(PlaceOrderEventWithArgs.from_event_and_args(event, ixArg))
                     elif event.name.startswith(OrderCompleteEvent.__name__):
-                        if order_complete_event_callback is not None:
-                            await order_complete_event_callback(OrderCompleteEvent.from_event(event))
+                        eventsToReturn.append(OrderCompleteEvent.from_event(event))
                     
                 elif ixName.startswith('crank_event_queue'):
                     if event.name.startswith(TradeEvent.__name__):
-                        if trade_event_callback is not None:
-                            await trade_event_callback(TradeEvent.from_event(event))
+                        eventsToReturn.append(TradeEvent.from_event(event))
                     elif event.name.startswith(OrderCompleteEvent.__name__):
-                        if order_complete_event_callback is not None:
-                            await order_complete_event_callback(OrderCompleteEvent.from_event(event))
+                        eventsToReturn.append(OrderCompleteEvent.from_event(event))
 
                 elif ixName.startswith('cancel_'):
                     if event.name.startswith(OrderCompleteEvent.__name__):
-                        if order_complete_event_callback is not None:
-                            await order_complete_event_callback(OrderCompleteEvent.from_event(event))
+                        eventsToReturn.append(OrderCompleteEvent.from_event(event))
+        
+        return eventsToReturn
 
     # Instructions
 

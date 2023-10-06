@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
+from typing import Union
 
 from anchorpy import Event
 from construct import Container
@@ -205,6 +206,20 @@ class LiquidationEvent:
             liquidator_margin_account=event.data.liquidator_margin_account,
         )
 
+EventSubscribeResponse = Union[
+    PlaceOrderEvent,
+    TradeEvent,
+    OrderCompleteEvent,
+    LiquidationEvent
+]
+
+TransactionSubscribeResponse = Union[
+    PlaceOrderEventWithArgs,
+    TradeEventWithPlacePerpOrderArgs,
+    OrderCompleteEvent,
+    TradeEvent,
+    LiquidationEvent
+]
 
 class TransactionEvent(Enum):
     """
