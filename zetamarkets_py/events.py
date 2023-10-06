@@ -164,7 +164,6 @@ class TradeEvent:
 class LiquidationEvent:
     liquidator_reward: float
     insurance_reward: float
-    # cost_of_trades: int
     side: Side
     liquidation_price: float
     liquidation_size: float
