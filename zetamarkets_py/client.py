@@ -26,19 +26,28 @@ from solders.transaction import VersionedTransaction
 
 from zetamarkets_py import constants, pda, utils
 from zetamarkets_py.events import (
-    EventSubscribeResponse,
+    CancelOrderEvent,
     LiquidationEvent,
     OrderCompleteEvent,
     PlaceOrderEvent,
     PlaceOrderEventWithArgs,
     TradeEvent,
     TradeEventWithPlacePerpOrderArgs,
-    TransactionSubscribeResponse,
+    ZetaEnrichedEvent,
+    ZetaEvent,
 )
 from zetamarkets_py.exchange import Exchange
 from zetamarkets_py.orderbook import Orderbook
 from zetamarkets_py.serum_client.accounts.orderbook import OrderbookAccount
-from zetamarkets_py.types import Asset, Network, OrderArgs, OrderOptions, Position, Side
+from zetamarkets_py.types import (
+    Asset,
+    Network,
+    OrderArgs,
+    OrderCompleteType,
+    OrderOptions,
+    Position,
+    Side,
+)
 from zetamarkets_py.zeta_client.accounts.cross_margin_account import CrossMarginAccount
 from zetamarkets_py.zeta_client.errors import from_tx_error
 from zetamarkets_py.zeta_client.instructions import (
@@ -289,7 +298,7 @@ class Client:
         self,
         commitment: Optional[Commitment] = None,
         max_retries: int = 3,
-    ) -> AsyncIterator[List[EventSubscribeResponse]]:
+    ) -> AsyncIterator[List[ZetaEvent]]:
         if self._margin_account_address is None:
             raise Exception("Margin account not loaded, cannot subscribe to events")
         commitment = commitment or self.connection.commitment
@@ -328,7 +337,7 @@ class Client:
                     break
                 await asyncio.sleep(2)  # Pause for a while before retrying
 
-    def parse_event_payload(self, msg) -> List[EventSubscribeResponse]:
+    def parse_event_payload(self, msg) -> List[ZetaEvent]:
         logs = cast(list[str], msg[0].result.value.logs)  # type: ignore
         parsed: list[Event] = []
         self.exchange._event_parser.parse_logs(logs, lambda evt: parsed.append(evt))
@@ -340,8 +349,10 @@ class Client:
                     events.append(place_order_event)
             elif event.name.startswith(OrderCompleteEvent.__name__):
                 order_complete_event = OrderCompleteEvent.from_event(event)
-                if order_complete_event.margin_account == self._margin_account_address:
-                    events.append(order_complete_event)
+                if order_complete_event.order_complete_type == OrderCompleteType.Cancel:
+                    cancel_event = CancelOrderEvent.from_order_complete_event(order_complete_event)
+                    if cancel_event.margin_account == self._margin_account_address:
+                        events.append(cancel_event)
             elif event.name.startswith(TradeEvent.__name__):
                 trade_event = TradeEvent.from_event(event)
                 if trade_event.margin_account == self._margin_account_address:
@@ -359,12 +370,26 @@ class Client:
         self,
         commitment: Optional[Commitment] = None,
         max_retries: int = 3,
-    ):
+    ) -> AsyncIterator[List[ZetaEnrichedEvent]]:
+        """
+        This method is used to subscribe to transactions.
+
+        Args:
+            commitment (Optional[Commitment], optional): The commitment level to use for the subscription. Defaults to None.
+            max_retries (int, optional): The maximum number of retries for the subscription in case of failure. Defaults to 3.
+
+        Yields:
+            List[ZetaEvent]: A list of ZetaEvents that are yielded as they are received.
+
+        Warning:
+            This method is experimental and requires a Triton RPC node.
+        """
+        # self._logger.warning("This method is experimental and requires a Triton RPC node.")
         commitment = commitment or self.connection.commitment
         retries = max_retries
         while retries > 0:
             try:
-                async with websockets.connect(self.ws_endpoint) as ws:  # type: ignore
+                async with websockets.connect(self.ws_endpoint + "/whirligig") as ws:  # type: ignore
                     transaction_subscribe = request(
                         "transactionSubscribe",
                         params=[
@@ -412,7 +437,7 @@ class Client:
                     break
                 await asyncio.sleep(2)  # Pause for a while before retrying
 
-    def parse_transaction_payload(self, msg) -> List[TransactionSubscribeResponse]:
+    def parse_transaction_payload(self, msg) -> List[ZetaEnrichedEvent]:
         json_msg = json.loads(msg)
         tx_value = json_msg["params"]["result"]["value"]
         log_messages = tx_value["meta"]["logMessages"]
@@ -495,7 +520,9 @@ class Client:
 
                 elif ix_name.startswith("cancel_"):
                     if event.name.startswith(OrderCompleteEvent.__name__):
-                        events_to_return.append(OrderCompleteEvent.from_event(event))
+                        order_complete_event = OrderCompleteEvent.from_event(event)
+                        if order_complete_event.order_complete_type == OrderCompleteType.Cancel:
+                            events_to_return.append(CancelOrderEvent.from_order_complete_event(order_complete_event))
 
         return events_to_return
 

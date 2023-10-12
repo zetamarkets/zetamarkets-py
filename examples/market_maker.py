@@ -25,8 +25,6 @@ from zetamarkets_py.types import (
     Side,
 )
 
-# TODO: convert from USDT to USDC
-
 
 class MarketMaker:
     def __init__(

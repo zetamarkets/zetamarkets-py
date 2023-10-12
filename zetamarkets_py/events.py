@@ -128,6 +128,29 @@ class OrderCompleteEvent:
 
 
 @dataclass
+class CancelOrderEvent:
+    margin_account: Pubkey
+    authority: Pubkey
+    asset: Asset
+    side: Side
+    unfilled_size: float
+    order_id: int
+    client_order_id: int
+
+    @classmethod
+    def from_order_complete_event(cls, event: OrderCompleteEvent):
+        return cls(
+            margin_account=event.margin_account,
+            authority=event.authority,
+            asset=event.asset,
+            side=event.side,
+            unfilled_size=event.unfilled_size,
+            order_id=event.order_id,
+            client_order_id=event.client_order_id,
+        )
+
+
+@dataclass
 class TradeEvent:
     margin_account: Pubkey
     price: float
@@ -199,11 +222,9 @@ class LiquidationEvent:
         )
 
 
-EventSubscribeResponse = Union[PlaceOrderEvent, TradeEvent, OrderCompleteEvent, LiquidationEvent]
+ZetaEvent = Union[PlaceOrderEvent, TradeEvent, CancelOrderEvent, LiquidationEvent]
 
-TransactionSubscribeResponse = Union[
-    PlaceOrderEventWithArgs, TradeEventWithPlacePerpOrderArgs, OrderCompleteEvent, LiquidationEvent
-]
+ZetaEnrichedEvent = Union[PlaceOrderEventWithArgs, TradeEventWithPlacePerpOrderArgs, CancelOrderEvent, LiquidationEvent]
 
 
 class TransactionEvent(Enum):
