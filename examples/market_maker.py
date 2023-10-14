@@ -65,7 +65,12 @@ class MarketMaker:
             skip_preflight=True, skip_confirmation=False, preflight_commitment=commitment
         )  # skip preflight to save time
         client = await Client.load(
-            endpoint=endpoint, commitment=commitment, wallet=wallet, assets=[asset], tx_opts=tx_opts, network=network
+            endpoint=endpoint,
+            commitment=commitment,
+            wallet=wallet,
+            assets=[asset],
+            tx_opts=tx_opts,
+            network=network,
         )
         open_orders = await client.fetch_open_orders(asset)
         return cls(client, asset, size, edge, offset, open_orders)
@@ -168,6 +173,7 @@ class MarketMaker:
         # Execute quote!
         self._is_quoting = True
         try:
+            print(f"Quoting {self.asset}: ${bid_order.price:.4f}@${ask_order.price:.4f} x {self.quote_size}")
             await self.client.replace_orders_for_market(self.asset, [bid_order, ask_order])
             # (Re)set the state now that we know we've succesfully quoted
             self.bid_price = bid_price

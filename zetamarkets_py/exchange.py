@@ -1,4 +1,5 @@
 from __future__ import annotations
+import logging
 
 import os
 from dataclasses import dataclass
@@ -39,12 +40,15 @@ class Exchange:
     _serum_authority_address: Pubkey
     _mint_authority_address: Pubkey
 
+    _logger: logging.Logger
+
     @classmethod
     async def load(
         cls,
         network: Network,
         connection: AsyncClient,
         assets: list[Asset] = Asset.all(),
+        log_level: int = logging.CRITICAL,
     ) -> "Exchange":
         program_id = constants.ZETA_PID[network]
         provider = Provider(connection, Wallet.dummy())
@@ -70,6 +74,9 @@ class Exchange:
             asset: await Market.load(network, connection, asset, pricing.markets[asset.to_index()]) for asset in assets
         }
 
+        logger = logging.getLogger(f"{__name__}.{cls.__name__}")
+        logger.setLevel(log_level)
+
         instance = cls(
             connection=connection,
             program_id=program_id,
@@ -82,6 +89,7 @@ class Exchange:
             _pricing_address=pricing_address,
             _serum_authority_address=_serum_authority_address,
             _mint_authority_address=_mint_authority_address,
+            _logger=logger,
         )
 
         # Load Clock

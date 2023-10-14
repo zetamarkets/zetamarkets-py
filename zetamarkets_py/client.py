@@ -63,7 +63,6 @@ from zetamarkets_py.zeta_client.instructions import (
 # TODO: add docstrings for most methods
 # TODO: implement better error handling and tracebacks
 # TODO: implement withdraw and liquidation
-# TODO: add logging to exchange
 # TODO: implement priority fees to exchange
 
 
@@ -101,11 +100,13 @@ class Client:
         assets: list[Asset] = Asset.all(),
         tx_opts: TxOpts = DEFAULT_OPTIONS,
         network: Network = Network.MAINNET,
+        log_level: int = logging.CRITICAL,
     ):
         """
         Create a new client
         """
         logger = logging.getLogger(f"{__name__}.{cls.__name__}")
+        logger.setLevel(log_level)
         if endpoint is None:
             endpoint = utils.cluster_endpoint(network)
         if ws_endpoint is None:

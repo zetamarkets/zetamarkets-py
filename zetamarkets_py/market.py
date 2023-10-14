@@ -37,7 +37,14 @@ class Market:
     _asks_last_update_slot: Optional[int] = None
 
     @classmethod
-    async def load(cls, network: Network, connection: AsyncClient, asset: Asset, market_state_address: Pubkey):
+    async def load(
+        cls,
+        network: Network,
+        connection: AsyncClient,
+        asset: Asset,
+        market_state_address: Pubkey,
+        log_level: int = logging.CRITICAL,
+    ):
         # Initialize
         zeta_program_id = constants.ZETA_PID[network]
         matching_engine_program_id = constants.MATCHING_ENGINE_PID[network]
@@ -54,6 +61,7 @@ class Market:
         _quote_zeta_vault_address = pda.get_zeta_vault_address(zeta_program_id, _market_state.quote_mint)
 
         logger = logging.getLogger(f"{__name__}.{cls.__name__}.{asset.name}")
+        logger.setLevel(log_level)
 
         instance = cls(
             connection=connection,

@@ -27,22 +27,42 @@ async def main():
     # Subscribe to both bids and asks over the same websocket connection
     async with connect(ws_endpoint) as ws:
         # Subscribe to the first address
-        await ws.account_subscribe(
-            bids_address,
-            commitment=commitment,
-            encoding="base64+zstd",
+        bids_subscription_future = asyncio.ensure_future(
+            ws.account_subscribe(
+                bids_address,
+                commitment=commitment,
+                encoding="base64+zstd",
+            )
         )
-        bids_subscription_id = (await ws.recv())[0].result
-        print(f"Bids subscription id: {bids_subscription_id}")
 
         # Subscribe to the second address
-        await ws.account_subscribe(
-            asks_address,
-            commitment=commitment,
-            encoding="base64+zstd",
+        asks_subscription_future = asyncio.ensure_future(
+            ws.account_subscribe(
+                asks_address,
+                commitment=commitment,
+                encoding="base64+zstd",
+            )
         )
-        asks_subscription_id = (await ws.recv())[0].result
+
+        # Wait for both subscriptions to be completed before proceeding
+        await asyncio.gather(bids_subscription_future, asks_subscription_future)
+
+        # Collect subscription IDs
+        subscription_ids = []
+        while len(subscription_ids) < 2:
+            result = (await ws.recv())[0].result
+            # Filter for just the initial subscription id message
+            if isinstance(result, int):
+                subscription_ids.append(result)
+
+        # Assign subscription IDs to bids and asks
+        bids_subscription_id, asks_subscription_id = subscription_ids
+
+        print(f"Bids subscription id: {bids_subscription_id}")
         print(f"Asks subscription id: {asks_subscription_id}")
+
+        # Wait for both subscriptions to be completed before proceeding
+        await asyncio.gather(bids_subscription_future, asks_subscription_future)
 
         # Listen for messages related to both subscriptions
         async for msg in ws:
