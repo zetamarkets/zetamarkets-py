@@ -1,5 +1,7 @@
+import logging
 import re
 
+import colorlog
 from solana.utils.cluster import cluster_api_url
 
 from zetamarkets_py import constants
@@ -47,3 +49,17 @@ def get_tif_offset(expiry_ts: int, epoch_length: int, current_ts: int) -> int:
 
     tif_offset = expiry_ts - epoch_start
     return min(tif_offset, epoch_length)
+
+
+def create_logger(name: str, log_level: int = logging.CRITICAL):
+    logger = logging.getLogger(name)
+    logger.setLevel(log_level)
+    formatter = colorlog.ColoredFormatter("%(log_color)s%(levelname)s:%(name)s:%(message)s")
+
+    # Create console handler and set level to same as the logger
+    ch = logging.StreamHandler()
+    ch.setLevel(log_level)
+    ch.setFormatter(formatter)
+
+    logger.addHandler(ch)
+    return logger

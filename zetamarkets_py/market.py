@@ -60,8 +60,8 @@ class Market:
         _base_zeta_vault_address = pda.get_zeta_vault_address(zeta_program_id, _market_state.base_mint)
         _quote_zeta_vault_address = pda.get_zeta_vault_address(zeta_program_id, _market_state.quote_mint)
 
-        logger = logging.getLogger(f"{__name__}.{cls.__name__}.{asset.name}")
-        logger.setLevel(log_level)
+        # not currently used
+        logger = utils.create_logger(f"{__name__}.{cls.__name__}.{asset.name}", log_level)
 
         instance = cls(
             connection=connection,

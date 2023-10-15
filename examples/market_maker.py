@@ -71,6 +71,7 @@ class MarketMaker:
             assets=[asset],
             tx_opts=tx_opts,
             network=network,
+            log_level="INFO",
         )
         open_orders = await client.fetch_open_orders(asset)
         return cls(client, asset, size, edge, offset, open_orders)

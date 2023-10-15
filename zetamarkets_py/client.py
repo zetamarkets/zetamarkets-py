@@ -105,8 +105,8 @@ class Client:
         """
         Create a new client
         """
-        logger = logging.getLogger(f"{__name__}.{cls.__name__}")
-        logger.setLevel(log_level)
+        logger = utils.create_logger(f"{__name__}.{cls.__name__}", log_level)
+
         if endpoint is None:
             endpoint = utils.cluster_endpoint(network)
         if ws_endpoint is None:
@@ -773,6 +773,7 @@ class Client:
         if post_instructions is not None:
             ixs.extend(post_instructions)
         self._logger.info(f"Placing {len(orders)} orders for {asset}")
+
         return await self._send_versioned_transaction(ixs)
 
     async def replace_orders_for_market(

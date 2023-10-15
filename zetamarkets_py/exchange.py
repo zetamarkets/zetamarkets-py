@@ -1,6 +1,6 @@
 from __future__ import annotations
-import logging
 
+import logging
 import os
 from dataclasses import dataclass
 
@@ -8,7 +8,7 @@ from anchorpy import EventParser, Idl, Program, Provider, Wallet
 from solana.rpc.async_api import AsyncClient
 from solders.pubkey import Pubkey
 
-from zetamarkets_py import constants, pda
+from zetamarkets_py import constants, pda, utils
 from zetamarkets_py.market import Market
 from zetamarkets_py.types import Asset, Network
 from zetamarkets_py.zeta_client.accounts.pricing import Pricing
@@ -17,9 +17,6 @@ from zetamarkets_py.zeta_client.accounts.state import State
 idl_path = os.path.join(os.path.dirname(__file__), "idl/zeta.json")
 with open(idl_path, "r") as f:
     idl = Idl.from_json(f.read())
-
-
-# TODO: add logging e.g. logger = logging.getLogger("pyserum.market.Market")
 
 
 @dataclass
@@ -74,8 +71,8 @@ class Exchange:
             asset: await Market.load(network, connection, asset, pricing.markets[asset.to_index()]) for asset in assets
         }
 
-        logger = logging.getLogger(f"{__name__}.{cls.__name__}")
-        logger.setLevel(log_level)
+        # not currently used
+        logger = utils.create_logger(f"{__name__}.{cls.__name__}", log_level)
 
         instance = cls(
             connection=connection,
