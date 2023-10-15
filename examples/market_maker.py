@@ -1,6 +1,7 @@
 import argparse
 import asyncio
 import time
+import traceback
 from datetime import datetime, timedelta
 from typing import List
 
@@ -114,19 +115,18 @@ class MarketMaker:
             finally:
                 await client.close_connection()
 
-    async def subscribe_zeta_price(self):
-        async def on_bid_update(orderbook: Orderbook):
+    async def subscribe_zeta_bid(self):
+        async for orderbook in self.client.subscribe_orderbook(self.asset, Side.Bid):
             print(f"Best bid: {orderbook._get_l2(1)}")
-            pass
 
-        async def on_ask_update(orderbook: Orderbook):
+    async def subscribe_zeta_ask(self):
+        async for orderbook in self.client.subscribe_orderbook(self.asset, Side.Ask):
             print(f"Best ask: {orderbook._get_l2(1)}")
-            pass
 
-        await asyncio.gather(
-            self.client.subscribe_orderbook(self.asset, Side.Bid, on_bid_update),
-            self.client.subscribe_orderbook(self.asset, Side.Ask, on_ask_update),
-        )
+    async def subscribe_zeta_price(self):
+        bid_task = asyncio.create_task(self.subscribe_zeta_bid())
+        ask_task = asyncio.create_task(self.subscribe_zeta_ask())
+        await asyncio.gather(bid_task, ask_task)
 
     async def update_quotes(self):
         if self._is_quoting:
@@ -197,17 +197,26 @@ class MarketMaker:
 
     async def run(self):
         try:
-            zeta_subscription = asyncio.create_task(self.subscribe_zeta_price())
-            binance_subscription = asyncio.create_task(self.subscribe_fair_price())
+            tasks = [
+                asyncio.create_task(self.subscribe_zeta_price()),
+                asyncio.create_task(self.subscribe_fair_price()),
+            ]
+
+            # Monitor tasks for exceptions
             while True:
-                await asyncio.sleep(1)
+                await asyncio.sleep(1)  # Check every second
+                for task in tasks:
+                    if task.done() and task.exception() is not None:
+                        e = task.exception()
+                        print(f"An error occurred in a task: {e}")
+                        traceback.print_exception(type(e), e, e.__traceback__)
         except KeyboardInterrupt:
             print("Exiting...")
         finally:
             # Cancel all orders on exit
+            for task in tasks:
+                task.cancel()
             await self.client.cancel_orders_for_market(self.asset)
-            zeta_subscription.cancel()
-            binance_subscription.cancel()
 
 
 async def main():
