@@ -10,7 +10,6 @@ from zetamarkets_py.events import (
     OrderCompleteEvent,
     PlaceOrderEventWithArgs,
     TradeEvent,
-    TradeEventWithArgs,
 )
 
 
@@ -33,14 +32,11 @@ async def main():
     async for tx_events in client.subscribe_transactions():
         # Loop over the events in each tx
         for event in tx_events:
-            # Event can be PlaceOrder, Trade (maker or taker), OrderComplete or Liquidate
+            # Event can be PlaceOrder, Trade, OrderComplete or Liquidate
             if isinstance(event, PlaceOrderEventWithArgs):
                 print("Place order event: ", event)
             elif isinstance(event, TradeEvent):
-                print("Maker trade event: ", event)
-            elif isinstance(event, TradeEventWithArgs):
-                # Maker and taker come from different instructions, so only taker trades have arg data
-                print("Taker trade event: ", event)
+                print("Trade event: ", event)
             elif isinstance(event, OrderCompleteEvent):
                 print("Order complete event: ", event)
             elif isinstance(event, LiquidationEvent):

@@ -42,43 +42,6 @@ class PlaceOrderEventWithArgs:
         )
 
 
-# Taker trade comes from place_perp_order
-# Maker trade comes from crank_event_queue and has no extra ix args (see TradeEvent)
-@dataclass
-class TradeEventWithArgs:
-    # ix args
-    price: float
-    side: Side
-
-    # ix event
-    margin_account: Pubkey
-    size: float
-    client_order_id: int
-    order_id: int
-    asset: Asset
-    authority: Pubkey
-    is_taker: bool
-    sequence_number: int
-    fee: float
-
-    @classmethod
-    def from_event_and_args(cls, event: Event, args: Container):
-        assert event.name.startswith("TradeEvent")
-        return cls(
-            price=utils.convert_fixed_int_to_decimal(args.price),
-            side=Side.from_index(args.side.index),
-            margin_account=event.data.margin_account,
-            size=utils.convert_fixed_lot_to_decimal(event.data.size),
-            client_order_id=event.data.client_order_id,
-            order_id=event.data.order_id,
-            asset=Asset.from_index(event.data.asset.index),
-            authority=event.data.user,
-            is_taker=event.data.is_taker,
-            sequence_number=event.data.sequence_number,
-            fee=utils.convert_fixed_int_to_decimal(event.data.fee),
-        )
-
-
 @dataclass
 class PlaceOrderEvent:
     fee: float
@@ -224,7 +187,7 @@ class LiquidationEvent:
 
 ZetaEvent = Union[PlaceOrderEvent, TradeEvent, CancelOrderEvent, LiquidationEvent]
 
-ZetaEnrichedEvent = Union[PlaceOrderEventWithArgs, TradeEvent, TradeEventWithArgs, CancelOrderEvent, LiquidationEvent]
+ZetaEnrichedEvent = Union[PlaceOrderEventWithArgs, TradeEvent, CancelOrderEvent, LiquidationEvent]
 
 
 class TransactionEvent(Enum):
