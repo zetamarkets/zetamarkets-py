@@ -506,7 +506,7 @@ class Client:
 
                 if ix_name.startswith("place_perp_order"):
                     if event.name.startswith(TradeEvent.__name__):
-                        events_to_return.append(TradeEvent.from_event_and_args(event))  # Taker fill
+                        events_to_return.append(TradeEvent.from_event(event))  # Taker fill
                     elif event.name.startswith(PlaceOrderEvent.__name__):
                         events_to_return.append(PlaceOrderEventWithArgs.from_event_and_args(event, ix_arg))
                     elif event.name.startswith(OrderCompleteEvent.__name__):
