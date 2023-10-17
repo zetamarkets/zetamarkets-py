@@ -5,6 +5,12 @@ import anchorpy
 from solana.rpc.commitment import Confirmed
 
 from zetamarkets_py.client import Client
+from zetamarkets_py.events import (
+    LiquidationEvent,
+    OrderCompleteEvent,
+    PlaceOrderEvent,
+    TradeEvent,
+)
 
 
 async def main():
@@ -25,7 +31,14 @@ async def main():
         # Loop over the events in each tx
         for event in tx_events:
             # Event can be PlaceOrder, Trade, OrderComplete or Liquidate
-            print(event)
+            if isinstance(event, PlaceOrderEvent):
+                print("Place order event: ", event)
+            elif isinstance(event, TradeEvent):
+                print("Trade event: ", event)
+            elif isinstance(event, OrderCompleteEvent):
+                print("Order complete event: ", event)
+            elif isinstance(event, LiquidationEvent):
+                print("Liquidation event: ", event)
 
 
 asyncio.run(main())

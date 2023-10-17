@@ -15,7 +15,6 @@ from solana.rpc.types import TxOpts
 from zetamarkets_py import utils
 from zetamarkets_py.client import Client
 from zetamarkets_py.constants import MIN_LOT_SIZE
-from zetamarkets_py.orderbook import Orderbook
 from zetamarkets_py.types import (
     Asset,
     Network,
@@ -84,7 +83,7 @@ class MarketMaker:
         while retry_count < max_retries:
             try:
                 # get the latest bid/ask price from Binance USD-M futures
-                ts = bm.symbol_ticker_futures_socket(self.asset.to_string().upper() + "USDT")
+                ts = bm.symbol_ticker_futures_socket(str(self.asset).upper() + "USDT")
                 async with ts as tscm:
                     while True:
                         response = await tscm.recv()

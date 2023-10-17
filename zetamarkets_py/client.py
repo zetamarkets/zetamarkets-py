@@ -32,7 +32,7 @@ from zetamarkets_py.events import (
     PlaceOrderEvent,
     PlaceOrderEventWithArgs,
     TradeEvent,
-    TradeEventWithPlacePerpOrderArgs,
+    TradeEventWithArgs,
     ZetaEnrichedEvent,
     ZetaEvent,
 )
@@ -507,7 +507,8 @@ class Client:
 
                 if ix_name.startswith("place_perp_order"):
                     if event.name.startswith(TradeEvent.__name__):
-                        events_to_return.append(TradeEventWithPlacePerpOrderArgs.from_event_and_args(event, ix_arg))
+                        # Taker fill
+                        events_to_return.append(TradeEventWithArgs.from_event_and_args(event, ix_arg))
                     elif event.name.startswith(PlaceOrderEvent.__name__):
                         events_to_return.append(PlaceOrderEventWithArgs.from_event_and_args(event, ix_arg))
                     elif event.name.startswith(OrderCompleteEvent.__name__):
@@ -515,6 +516,7 @@ class Client:
 
                 elif ix_name.startswith("crank_event_queue"):
                     if event.name.startswith(TradeEvent.__name__):
+                        # Maker fill
                         events_to_return.append(TradeEvent.from_event(event))
                     elif event.name.startswith(OrderCompleteEvent.__name__):
                         events_to_return.append(OrderCompleteEvent.from_event(event))

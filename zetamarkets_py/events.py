@@ -43,9 +43,9 @@ class PlaceOrderEventWithArgs:
 
 
 # Taker trade comes from place_perp_order
-# Maker trade comes from crank_event_queue and has no extra ix args
+# Maker trade comes from crank_event_queue and has no extra ix args (see TradeEvent)
 @dataclass
-class TradeEventWithPlacePerpOrderArgs:
+class TradeEventWithArgs:
     # ix args
     price: float
     side: Side
@@ -224,7 +224,7 @@ class LiquidationEvent:
 
 ZetaEvent = Union[PlaceOrderEvent, TradeEvent, CancelOrderEvent, LiquidationEvent]
 
-ZetaEnrichedEvent = Union[PlaceOrderEventWithArgs, TradeEventWithPlacePerpOrderArgs, CancelOrderEvent, LiquidationEvent]
+ZetaEnrichedEvent = Union[PlaceOrderEventWithArgs, TradeEvent, TradeEventWithArgs, CancelOrderEvent, LiquidationEvent]
 
 
 class TransactionEvent(Enum):
