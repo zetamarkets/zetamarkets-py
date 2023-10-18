@@ -5,7 +5,7 @@ import time
 import traceback
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
-from typing import List, Optional, Tuple, cast
+from typing import List, Optional, Tuple, Union, cast
 
 import based58
 import websockets
@@ -13,6 +13,7 @@ from anchorpy import Event, Provider, Wallet
 from anchorpy.provider import DEFAULT_OPTIONS
 from construct import Container
 from jsonrpcclient import request
+from solana.blockhash import BlockhashCache
 from solana.rpc.async_api import AsyncClient
 from solana.rpc.commitment import Commitment, Confirmed
 from solana.rpc.core import RPCException
@@ -102,6 +103,7 @@ class Client:
         tx_opts: TxOpts = DEFAULT_OPTIONS,
         network: Network = Network.MAINNET,
         log_level: int = logging.CRITICAL,
+        blockhash_cache: Union[BlockhashCache, bool] = False,
     ):
         """
         Create a new client
@@ -112,7 +114,7 @@ class Client:
             endpoint = utils.cluster_endpoint(network)
         if ws_endpoint is None:
             ws_endpoint = utils.http_to_ws(endpoint)
-        connection = AsyncClient(endpoint=endpoint, commitment=commitment, blockhash_cache=False)
+        connection = AsyncClient(endpoint=endpoint, commitment=commitment, blockhash_cache=blockhash_cache)
         exchange = await Exchange.load(
             network=network,
             connection=connection,
