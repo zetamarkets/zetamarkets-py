@@ -251,7 +251,7 @@ class Client:
         commitment: Commitment,
         max_retries: int = 3,
         encoding: str = "base64+zstd",
-    ) -> AsyncIterator[bytes]:
+    ) -> AsyncIterator[Tuple[bytes, int]]:
         retries = max_retries
         while True:
             try:
@@ -288,7 +288,7 @@ class Client:
 
     async def subscribe_orderbook(
         self, asset: Asset, side: Side, commitment: Optional[Commitment] = None, max_retries: int = 3
-    ) -> AsyncIterator[Orderbook]:
+    ) -> AsyncIterator[Tuple[Orderbook, int]]:
         commitment = commitment or self.connection.commitment
         address = (
             self.exchange.markets[asset]._market_state.bids
@@ -304,7 +304,7 @@ class Client:
 
     async def subscribe_clock(
         self, commitment: Optional[Commitment] = None, max_retries: int = 3
-    ) -> AsyncIterator[Clock]:
+    ) -> AsyncIterator[Tuple[Clock, int]]:
         commitment = commitment or self.connection.commitment
 
         self._logger.info("Subscribing to Clock")

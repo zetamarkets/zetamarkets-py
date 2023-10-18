@@ -115,11 +115,11 @@ class MarketMaker:
                 await client.close_connection()
 
     async def subscribe_zeta_bid(self):
-        async for orderbook in self.client.subscribe_orderbook(self.asset, Side.Bid):
+        async for orderbook, _ in self.client.subscribe_orderbook(self.asset, Side.Bid):
             print(f"Best bid: {orderbook._get_l2(1)}")
 
     async def subscribe_zeta_ask(self):
-        async for orderbook in self.client.subscribe_orderbook(self.asset, Side.Ask):
+        async for orderbook, _ in self.client.subscribe_orderbook(self.asset, Side.Ask):
             print(f"Best ask: {orderbook._get_l2(1)}")
 
     async def subscribe_zeta_price(self):
