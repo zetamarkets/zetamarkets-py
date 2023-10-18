@@ -74,15 +74,14 @@ class Orderbook:
                 return True
         return False
 
-    def _get_l2(self, depth: int, filter_tif: bool = True) -> list[OrderInfo]:
+    # using local time as a hack as opposed to self.exchange.clock.account.unix_timestamp
+    def _get_l2(self, depth: int, clock_ts: int = int(time.time())) -> list[OrderInfo]:
         """Get the Level 2 market information."""
         descending = self.side == Side.Bid
         # The first element of the inner list is price, the second is quantity.
         levels: list[list[int]] = []
         for node in self._slab.items(descending):
             seq_num = self._get_seq_num_from_slab(node.key, self.side)
-            # using local time as a hack as opposed to self.exchange.clock.account.unix_timestamp
-            clock_ts = int(time.time())
             order_expired = self._is_order_expired(
                 clock_ts,
                 node.tif_offset,
@@ -90,7 +89,7 @@ class Orderbook:
                 seq_num,
                 self._market_state.start_epoch_seq_num,
             )
-            if filter_tif and order_expired:
+            if order_expired:
                 continue
             price = self._get_price_from_slab(node)
             if len(levels) > 0 and levels[len(levels) - 1][0] == price:

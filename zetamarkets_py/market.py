@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import itertools
 import logging
+import time
 from dataclasses import dataclass
 from typing import Optional, Tuple
 
@@ -88,13 +89,13 @@ class Market:
     def _is_subscribed_asks(self) -> bool:
         return self._asks_subscription_task is not None
 
-    async def print_orderbook(self, depth: int = 10, filter_tif: bool = True) -> None:
+    async def print_orderbook(self, depth: int = 10) -> None:
         print("Ask Orders:")
-        ask_l2 = await self.get_l2(Side.Ask, depth, filter_tif)
+        ask_l2 = await self.get_l2(Side.Ask, depth)
         if ask_l2 is not None:
             print(*ask_l2[::-1], sep="\n")
         print("Bid Orders:")
-        bid_l2 = await self.get_l2(Side.Bid, depth, filter_tif)
+        bid_l2 = await self.get_l2(Side.Bid, depth)
         if bid_l2 is not None:
             print(*bid_l2, sep="\n")
 
@@ -146,16 +147,15 @@ class Market:
     async def load_fills(self, limit=100) -> Optional[list[FilledOrder]]:
         """Note: this method may not work since we've modified our event queue (TODO: check this))"""
         raise NotImplementedError
-        # event_queue = await self.load_event_queue()
-        # events = event_queue.nodes
-        # return self._parse_fills(events, limit)
 
-    async def get_l2(self, side: Side, depth: int = 1000, filter_tif: bool = True) -> Optional[list[OrderInfo]]:
+    async def get_l2(
+        self, side: Side, depth: int = 1000, clock_ts: int = int(time.time())
+    ) -> Optional[list[OrderInfo]]:
         """Get the Level 2 market information."""
         orderbook = await (self.load_bids() if side == Side.Bid else self.load_asks())
         if orderbook is None:
             return None
-        return orderbook._get_l2(depth, filter_tif)
+        return orderbook._get_l2(depth, clock_ts)
 
     @staticmethod
     def _parse_orders_for_owner(

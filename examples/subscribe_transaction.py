@@ -29,7 +29,7 @@ async def main():
 
     # Subscribe to margin account transactions
     print(f"Listening for transactions on margin account: {client._margin_account_address}")
-    async for tx_events in client.subscribe_transactions():
+    async for tx_events, _ in client.subscribe_transactions():
         # Loop over the events in each tx
         for event in tx_events:
             # Event can be PlaceOrder, Trade, OrderComplete or Liquidate

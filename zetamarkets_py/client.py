@@ -5,7 +5,7 @@ import time
 import traceback
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
-from typing import List, Optional, cast
+from typing import List, Optional, Tuple, cast
 
 import based58
 import websockets
@@ -38,6 +38,7 @@ from zetamarkets_py.events import (
 from zetamarkets_py.exchange import Exchange
 from zetamarkets_py.orderbook import Orderbook
 from zetamarkets_py.serum_client.accounts.orderbook import OrderbookAccount
+from zetamarkets_py.solana_client.accounts.clock import CLOCK, Clock
 from zetamarkets_py.types import (
     Asset,
     Network,
@@ -63,6 +64,7 @@ from zetamarkets_py.zeta_client.instructions import (
 # TODO: implement better error handling and tracebacks
 # TODO: implement withdraw and liquidation
 # TODO: implement priority fees to exchange
+# TODO: implement clock subscription
 
 
 @dataclass
@@ -237,6 +239,12 @@ class Client:
         oo = await self.exchange.markets[asset].load_orders_for_owner(self._open_orders_addresses[asset])
         return oo
 
+    async def fetch_clock(self):
+        clock = await Clock.fetch(self.connection, self.connection.commitment)
+        if clock is None:
+            raise Exception("Clock not found, cannot fetch clock")
+        return clock
+
     async def _account_subscribe(
         self,
         address: Pubkey,
@@ -258,8 +266,9 @@ class Client:
                     subscription_id = cast(int, first_resp[0].result)
                     async for msg in ws:
                         try:
+                            slot = int(msg[0].result.context.slot)
                             account_bytes = cast(bytes, msg[0].result.value.data)  # type: ignore
-                            yield account_bytes
+                            yield account_bytes, slot
                         except Exception:
                             self._logger.error(f"Error processing account data: {traceback.format_exc()}")
                             break
@@ -288,17 +297,27 @@ class Client:
         )
 
         self._logger.info(f"Subscribing to Orderbook:{side}.")
-        async for account_bytes in self._account_subscribe(address, commitment, max_retries):
+        async for account_bytes, slot in self._account_subscribe(address, commitment, max_retries):
             account = OrderbookAccount.decode(account_bytes)
             orderbook = Orderbook(side, account, self.exchange.markets[asset]._market_state)
-            yield orderbook
+            yield orderbook, slot
+
+    async def subscribe_clock(
+        self, commitment: Optional[Commitment] = None, max_retries: int = 3
+    ) -> AsyncIterator[Clock]:
+        commitment = commitment or self.connection.commitment
+
+        self._logger.info("Subscribing to Clock")
+        async for account_bytes, slot in self._account_subscribe(CLOCK, commitment, max_retries):
+            clock = Clock.decode(account_bytes)
+            yield clock, slot
 
     # TODO: maybe at some point support subscribing to all exchange events, not just margin account
     async def subscribe_events(
         self,
         commitment: Optional[Commitment] = None,
         max_retries: int = 3,
-    ) -> AsyncIterator[List[ZetaEvent]]:
+    ) -> AsyncIterator[Tuple[List[ZetaEvent], int]]:
         if self._margin_account_address is None:
             raise Exception("Margin account not loaded, cannot subscribe to events")
         commitment = commitment or self.connection.commitment
@@ -316,9 +335,9 @@ class Client:
                     subscription_id = cast(int, first_resp[0].result)
                     async for msg in ws:
                         try:
-                            events = self.parse_event_payload(msg)
+                            events, slot = self.parse_event_payload(msg)
                             if len(events) > 0:
-                                yield events
+                                yield events, slot
 
                         except Exception:
                             self._logger.error(f"Error processing event data: {traceback.format_exc()}")
@@ -337,7 +356,8 @@ class Client:
                     break
                 await asyncio.sleep(2)  # Pause for a while before retrying
 
-    def parse_event_payload(self, msg) -> List[ZetaEvent]:
+    def parse_event_payload(self, msg) -> Tuple[List[ZetaEvent], int]:
+        slot = int(msg[0].result.context.slot)
         logs = cast(list[str], msg[0].result.value.logs)  # type: ignore
         parsed: list[Event] = []
         self.exchange._event_parser.parse_logs(logs, lambda evt: parsed.append(evt))
@@ -364,13 +384,13 @@ class Client:
             else:
                 pass
 
-        return events
+        return events, slot
 
     async def subscribe_transactions(
         self,
         commitment: Optional[Commitment] = None,
         max_retries: int = 3,
-    ) -> AsyncIterator[List[ZetaEnrichedEvent]]:
+    ) -> AsyncIterator[Tuple[List[ZetaEnrichedEvent], int]]:
         """
         This method is used to subscribe to transactions.
 
@@ -410,9 +430,9 @@ class Client:
 
                     async for msg in ws:
                         try:
-                            events = self.parse_transaction_payload(msg)
+                            events, slot = self.parse_transaction_payload(msg)
                             if len(events) > 0:
-                                yield events
+                                yield events, slot
 
                         except Exception:
                             self._logger.error(f"Error processing transaction data: {traceback.format_exc()}")
@@ -437,8 +457,9 @@ class Client:
                     break
                 await asyncio.sleep(2)  # Pause for a while before retrying
 
-    def parse_transaction_payload(self, msg) -> List[ZetaEnrichedEvent]:
+    def parse_transaction_payload(self, msg) -> Tuple[List[ZetaEnrichedEvent], int]:
         json_msg = json.loads(msg)
+        slot = int(json_msg["params"]["result"]["context"]["slot"])
         tx_value = json_msg["params"]["result"]["value"]
         log_messages = tx_value["meta"]["logMessages"]
         message = tx_value["transaction"]["message"]
@@ -524,7 +545,7 @@ class Client:
                         if order_complete_event.order_complete_type == OrderCompleteType.Cancel:
                             events_to_return.append(CancelOrderEvent.from_order_complete_event(order_complete_event))
 
-        return events_to_return
+        return events_to_return, slot
 
     # Instructions
 

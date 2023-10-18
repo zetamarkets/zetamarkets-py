@@ -28,7 +28,6 @@ class Exchange:
     state: State
     pricing: Pricing
     markets: dict[Asset, Market]
-    # clock: Optional[Clock] = None
 
     _event_parser: EventParser
 
@@ -88,9 +87,6 @@ class Exchange:
             _mint_authority_address=_mint_authority_address,
             _logger=logger,
         )
-
-        # Load Clock
-        # instance.clock = await Clock.fetch(connection, connection.commitment)
 
         return instance
 

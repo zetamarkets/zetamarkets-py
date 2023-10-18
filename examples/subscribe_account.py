@@ -16,7 +16,7 @@ async def main():
     client = await Client.load(endpoint=endpoint, ws_endpoint=ws_endpoint, commitment=commitment, assets=[asset])
 
     # subscribe_orderbook yields Orderbook objects, which come with a bunch of helper methods
-    async for orderbook in client.subscribe_orderbook(asset, Side.Bid):
+    async for orderbook, _ in client.subscribe_orderbook(asset, Side.Bid):
         print("=" * 20 + "Bids" + "=" * 20)
         for level in orderbook._get_l2(5):
             print(level)
