@@ -371,7 +371,11 @@ class Client:
                     events.append(place_order_event)
             elif event.name.startswith(OrderCompleteEvent.__name__):
                 order_complete_event = OrderCompleteEvent.from_event(event)
-                if order_complete_event.order_complete_type == OrderCompleteType.Cancel:
+                # Ignore fills
+                if (
+                    order_complete_event.order_complete_type == OrderCompleteType.Cancel
+                    or order_complete_event.order_complete_type == OrderCompleteType.Booted
+                ):
                     cancel_event = CancelOrderEvent.from_order_complete_event(order_complete_event)
                     if cancel_event.margin_account == self._margin_account_address:
                         events.append(cancel_event)
@@ -532,19 +536,18 @@ class Client:
                         events_to_return.append(TradeEvent.from_event(event))  # Taker fill
                     elif event.name.startswith(PlaceOrderEvent.__name__):
                         events_to_return.append(PlaceOrderEventWithArgs.from_event_and_args(event, ix_arg))
-                    elif event.name.startswith(OrderCompleteEvent.__name__):
-                        events_to_return.append(OrderCompleteEvent.from_event(event))
 
                 elif ix_name.startswith("crank_event_queue"):
                     if event.name.startswith(TradeEvent.__name__):
-                        events_to_return.append(TradeEvent.from_event(event))  # Maker fill
-                    elif event.name.startswith(OrderCompleteEvent.__name__):
-                        events_to_return.append(OrderCompleteEvent.from_event(event))
+                        events_to_return.append(TradeEvent.from_event(event))  # Maker fill\
 
                 elif ix_name.startswith("cancel_"):
                     if event.name.startswith(OrderCompleteEvent.__name__):
                         order_complete_event = OrderCompleteEvent.from_event(event)
-                        if order_complete_event.order_complete_type == OrderCompleteType.Cancel:
+                        if (
+                            order_complete_event.order_complete_type == OrderCompleteType.Cancel
+                            or order_complete_event.order_complete_type == OrderCompleteType.Booted
+                        ):
                             events_to_return.append(CancelOrderEvent.from_order_complete_event(order_complete_event))
 
         return events_to_return, slot
