@@ -12,6 +12,7 @@ import websockets
 from anchorpy import Event, Provider, Wallet
 from anchorpy.provider import DEFAULT_OPTIONS
 from construct import Container
+from deprecated import deprecated
 from jsonrpcclient import request
 from solana.blockhash import BlockhashCache
 from solana.rpc.async_api import AsyncClient
@@ -209,21 +210,22 @@ class Client:
         self._account_exists_cache[open_orders_address] = exists
         return exists
 
+    @deprecated(version="0.1.21", reason="You should use fetch_margin_state instead")
     async def fetch_balance(self):
         margin_account = await self.margin_account.fetch(
             self.connection,
             self._margin_account_address,
-            self.connection.commitment,
-            self.exchange.program_id,
+            program_id=self.exchange.program_id,
         )
         balance = utils.convert_fixed_int_to_decimal(margin_account.balance)
         return balance
 
+    @deprecated(version="0.1.21", reason="You should use fetch_margin_state instead")
     async def fetch_position(self, asset: Asset):
         if self.margin_account is None or self._margin_account_address is None:
             raise Exception("Margin account not loaded, cannot fetch position")
         margin_account = await self.margin_account.fetch(
-            self.connection, self._margin_account_address, self.connection.commitment, self.exchange.program_id
+            self.connection, self._margin_account_address, program_id=self.exchange.program_id
         )
         if margin_account is None:
             raise Exception("Margin account not found, cannot fetch position")
@@ -235,6 +237,26 @@ class Client:
         )
         return position
 
+    async def fetch_margin_state(self):
+        if self.margin_account is None or self._margin_account_address is None:
+            raise Exception("Margin account not loaded, cannot fetch margin account state")
+        margin_account = await self.margin_account.fetch(
+            self.connection, self._margin_account_address, program_id=self.exchange.program_id
+        )
+        if margin_account is None:
+            raise Exception("Margin account not found, cannot fetch margin state")
+        balance = utils.convert_fixed_int_to_decimal(margin_account.balance)
+        positions = {
+            a: Position(
+                utils.convert_fixed_lot_to_decimal(margin_account.product_ledgers[a.to_index()].position.size),
+                utils.convert_fixed_int_to_decimal(
+                    margin_account.product_ledgers[a.to_index()].position.cost_of_trades
+                ),
+            )
+            for a in self.exchange.assets
+        }
+        return balance, positions
+
     async def fetch_open_orders(self, asset: Asset):
         if self._open_orders_addresses is None:
             raise Exception("Open orders accounts not loaded, cannot fetch open orders")
@@ -242,7 +264,7 @@ class Client:
         return oo
 
     async def fetch_clock(self):
-        clock = await Clock.fetch(self.connection, self.connection.commitment)
+        clock = await Clock.fetch(self.connection)
         if clock is None:
             raise Exception("Clock not found, cannot fetch clock")
         return clock
@@ -815,18 +837,30 @@ class Client:
         raise NotImplementedError
 
     async def _send_versioned_transaction(self, ixs: list[Instruction]):
-        # TODO: prefetch blockhash (look into blockhash cache)
-        recent_blockhash = (
-            self.connection.blockhash_cache.get()
-            if self.connection.blockhash_cache
-            else (await self.connection.get_latest_blockhash(constants.BLOCKHASH_COMMITMENT)).value.blockhash
-        )
+        # Prefetch blockhash, using cache if available
+        if self.connection.blockhash_cache:
+            try:
+                recent_blockhash = self.connection.blockhash_cache.get()
+                last_valid_block_height = None
+                self._logger.debug(f"Blockhash cache hit, using cached blockhash: {recent_blockhash}")
+            except ValueError:
+                blockhash_resp = await self.connection.get_latest_blockhash(constants.BLOCKHASH_COMMITMENT)
+                recent_blockhash = self.connection._process_blockhash_resp(blockhash_resp, used_immediately=True)
+                last_valid_block_height = blockhash_resp.value.last_valid_block_height
+                self._logger.debug(f"Blockhash cache miss, fetched from RPC: {recent_blockhash}")
+        else:
+            blockhash_resp = await self.connection.get_latest_blockhash(constants.BLOCKHASH_COMMITMENT)
+            recent_blockhash = self.connection.parse_recent_blockhash(blockhash_resp)
+            last_valid_block_height = blockhash_resp.value.last_valid_block_height
+            self._logger.debug(f"Blockhash cache not enabled, fetched from RPC: {recent_blockhash}")
+
         msg = MessageV0.try_compile(
             self.provider.wallet.public_key, ixs, [constants.ZETA_LUT[self.network]], recent_blockhash
         )
         tx = VersionedTransaction(msg, [self.provider.wallet.payer])
         try:
-            signature = await self.provider.send(tx)
+            opts = self.provider.opts._replace(last_valid_block_height=last_valid_block_height)
+            signature = await self.provider.send(tx, opts)
         except RPCException as exc:
             # This won't work on zDEX errors
             # TODO: add ZDEX error parsing

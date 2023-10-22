@@ -73,9 +73,9 @@ def get_combined_socialized_loss_address(program_id: Pubkey) -> Pubkey:
     )[0]
 
 
-def get_associated_token_address(owner: Pubkey, mint: Pubkey) -> Pubkey:
+def get_associated_token_address(authority: Pubkey, mint: Pubkey) -> Pubkey:
     return Pubkey.find_program_address(
-        [bytes(owner), bytes(TOKEN_PROGRAM_ID), bytes(mint)],
+        [bytes(authority), bytes(TOKEN_PROGRAM_ID), bytes(mint)],
         ASSOCIATED_TOKEN_PROGRAM_ID,
     )[0]
 

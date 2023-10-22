@@ -62,7 +62,7 @@ class MarketMaker:
         commitment=Confirmed,
     ):
         tx_opts = TxOpts(
-            skip_preflight=True, skip_confirmation=False, preflight_commitment=commitment
+            skip_preflight=False, skip_confirmation=False, preflight_commitment=commitment
         )  # skip preflight to save time
         client = await Client.load(
             endpoint=endpoint,

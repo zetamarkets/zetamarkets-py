@@ -51,7 +51,7 @@ def get_tif_offset(expiry_ts: int, epoch_length: int, current_ts: int) -> int:
     return min(tif_offset, epoch_length)
 
 
-def create_logger(name: str, log_level: int = logging.CRITICAL):
+def create_logger(name: str, log_level: int = logging.CRITICAL, file_name: str = None) -> logging.Logger:
     logger = logging.getLogger(name)
     logger.setLevel(log_level)
     formatter = colorlog.ColoredFormatter("%(log_color)s%(levelname)s:%(name)s:%(message)s")
@@ -60,6 +60,12 @@ def create_logger(name: str, log_level: int = logging.CRITICAL):
     ch = logging.StreamHandler()
     ch.setLevel(log_level)
     ch.setFormatter(formatter)
-
     logger.addHandler(ch)
+
+    if file_name:
+        fh = logging.FileHandler(file_name)
+        fh.setLevel(log_level)
+        file_formatter = logging.Formatter("%(asctime)s:%(levelname)s:%(name)s:%(message)s")
+        fh.setFormatter(file_formatter)
+        logger.addHandler(fh)
     return logger

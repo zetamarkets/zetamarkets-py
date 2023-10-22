@@ -20,7 +20,7 @@ async def main():
     await client.deposit(0.1)
 
     # check balance on-chain
-    balance = await client.fetch_balance()
+    balance, positions = await client.fetch_margin_state()
     print(f"Balance: {balance}")
 
     # (optional) order options

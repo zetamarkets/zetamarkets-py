@@ -118,6 +118,7 @@ class TradeEvent:
     margin_account: Pubkey
     price: float
     size: float
+    cost_of_trades: float
     side: Side
     client_order_id: int
     order_id: int
@@ -135,6 +136,7 @@ class TradeEvent:
             price=utils.convert_fixed_int_to_decimal(event.data.cost_of_trades)
             / utils.convert_fixed_lot_to_decimal(event.data.size),
             size=utils.convert_fixed_lot_to_decimal(event.data.size),
+            cost_of_trades=utils.convert_fixed_int_to_decimal(event.data.cost_of_trades),
             side=Side.Bid if event.data.is_bid else Side.Ask,
             client_order_id=event.data.client_order_id,
             order_id=event.data.order_id,
