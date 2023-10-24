@@ -14,6 +14,7 @@ class Asset(Enum):
     ETH = "ETH"
     APT = "APT"
     ARB = "ARB"
+    BNB = "BNB"
 
     def to_index(self):
         members = list(self.__class__.__members__.values())

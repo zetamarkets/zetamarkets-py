@@ -21,6 +21,7 @@ MINTS = {
     Asset.SOL: Pubkey.from_string("So11111111111111111111111111111111111111112"),
     Asset.BTC: Pubkey.from_string("qfnqNqs3nCAHjnyCgLRDbBtq4p2MtHZxw8YjSyYhPoL"),
     Asset.ETH: Pubkey.from_string("FeGn77dhg1KXRRFeSwwMiykZnZPw5JXW6naf2aQgZDQf"),
+    Asset.BNB: Pubkey.from_string("9gP2kCy3wA1ctvYWQk75guqXuHfrEomqydHLtcTCqiLa"),
 }
 
 # These are generated flexible PDAs and aren't reflective of an spl token mint.
