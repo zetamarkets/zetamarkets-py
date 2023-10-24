@@ -133,8 +133,7 @@ class TradeEvent:
         assert event.name.startswith(cls.__name__)
         return cls(
             margin_account=event.data.margin_account,
-            price=utils.convert_fixed_int_to_decimal(event.data.cost_of_trades)
-            / utils.convert_fixed_lot_to_decimal(event.data.size),
+            price=utils.convert_fixed_int_to_decimal(event.data.price),
             size=utils.convert_fixed_lot_to_decimal(event.data.size),
             cost_of_trades=utils.convert_fixed_int_to_decimal(event.data.cost_of_trades),
             side=Side.Bid if event.data.is_bid else Side.Ask,
