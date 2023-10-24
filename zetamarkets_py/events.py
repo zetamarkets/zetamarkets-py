@@ -127,6 +127,7 @@ class TradeEvent:
     is_taker: bool
     sequence_number: int
     fee: float
+    price: float
 
     @classmethod
     def from_event(cls, event: Event):
@@ -145,6 +146,7 @@ class TradeEvent:
             is_taker=event.data.is_taker,
             sequence_number=event.data.sequence_number,
             fee=utils.convert_fixed_int_to_decimal(event.data.fee),
+            price=utils.convert_fixed_int_to_decimal(event.data.price)
         )
 
 
