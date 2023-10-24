@@ -116,6 +116,7 @@ class CancelOrderEvent:
 @dataclass
 class TradeEvent:
     margin_account: Pubkey
+    price: float
     size: float
     cost_of_trades: float
     side: Side
@@ -126,13 +127,13 @@ class TradeEvent:
     is_taker: bool
     sequence_number: int
     fee: float
-    price: float
 
     @classmethod
     def from_event(cls, event: Event):
         assert event.name.startswith(cls.__name__)
         return cls(
             margin_account=event.data.margin_account,
+            price=utils.convert_fixed_int_to_decimal(event.data.price),
             size=utils.convert_fixed_lot_to_decimal(event.data.size),
             cost_of_trades=utils.convert_fixed_int_to_decimal(event.data.cost_of_trades),
             side=Side.Bid if event.data.is_bid else Side.Ask,
@@ -143,7 +144,6 @@ class TradeEvent:
             is_taker=event.data.is_taker,
             sequence_number=event.data.sequence_number,
             fee=utils.convert_fixed_int_to_decimal(event.data.fee),
-            price=utils.convert_fixed_int_to_decimal(event.data.price)
         )
 
 
