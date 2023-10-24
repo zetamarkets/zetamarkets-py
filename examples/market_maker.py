@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+import logging
 import time
 import traceback
 from datetime import datetime, timedelta
@@ -71,7 +72,7 @@ class MarketMaker:
             assets=[asset],
             tx_opts=tx_opts,
             network=network,
-            log_level="INFO",
+            log_level=logging.INFO,
         )
         open_orders = await client.fetch_open_orders(asset)
         return cls(client, asset, size, edge, offset, open_orders)
@@ -291,7 +292,10 @@ async def main():
     print(f"Edge: {args.edge} bps")
     print(f"Offset: {args.offset} bps")
 
-    wallet = anchorpy.Wallet.local()  # get local filesystem keypair wallet
+    # Load your wallet
+    wallet = anchorpy.Wallet.local()  # read in local filesystem keypair wallet
+    # wallet = anchorpy.Wallet(Keypair.from_json(os.environ["SOLANA_PRIVATE_KEY"])) # alternatively from env var
+
     mm = await MarketMaker.load(
         endpoint, wallet, args.asset, args.size, args.edge, args.offset, args.network, args.commitment
     )

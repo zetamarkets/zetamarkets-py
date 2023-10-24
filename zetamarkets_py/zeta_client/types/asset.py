@@ -26,6 +26,7 @@ class APTJSON(typing.TypedDict):
 class ARBJSON(typing.TypedDict):
     kind: typing.Literal["ARB"]
 
+
 class BNBJSON(typing.TypedDict):
     kind: typing.Literal["BNB"]
 
@@ -122,7 +123,8 @@ class ARB:
         return {
             "ARB": {},
         }
-    
+
+
 @dataclass
 class BNB:
     discriminator: typing.ClassVar = 5

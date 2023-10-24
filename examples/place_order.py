@@ -17,11 +17,12 @@ async def main():
     client = await Client.load(endpoint=endpoint, wallet=wallet, assets=[asset])
 
     # deposit 0.1 USDC into margin account
+    print("Depositing 0.1 USDC into margin account")
     await client.deposit(0.1)
 
     # check balance on-chain
     balance, positions = await client.fetch_margin_state()
-    print(f"Balance: {balance}")
+    print(f"Balance: ${balance}")
 
     # (optional) order options
     # here you can specify TIF order expiry, client order id, order type (limit, post-only, ...) etc.
@@ -30,15 +31,17 @@ async def main():
     # place order
     side = Side.Bid
     order = OrderArgs(price=0.1, size=0.001, side=side, order_opts=order_opts)
+    print(f"Placing {order.side} order: {order.size}x {str(asset)}-PERP @ ${order.price}")
     await client.place_orders_for_market(asset=asset, orders=[order])
 
     # check open orders
     open_orders = await client.fetch_open_orders(Asset.SOL)
-    print("Open Orders:")
+    print("Current open orders:")
     for order in open_orders:
-        print(f"{order.side.name} {order.info.size}x ${order.info.price}")
+        print(f"- {order.side.name} {order.info.size}x {str(asset)}-PERP @ ${order.info.price}")
 
     # cancel order
+    print(f"Cancelling order with id: {open_orders[0].order_id}")
     await client.cancel_order(Asset.SOL, order_id=open_orders[0].order_id, side=side)
 
 

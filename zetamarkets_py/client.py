@@ -12,7 +12,6 @@ import websockets
 from anchorpy import Event, Provider, Wallet
 from anchorpy.provider import DEFAULT_OPTIONS
 from construct import Container
-from deprecated import deprecated
 from jsonrpcclient import request
 from solana.blockhash import BlockhashCache
 from solana.rpc.async_api import AsyncClient
@@ -63,26 +62,37 @@ from zetamarkets_py.zeta_client.instructions import (
 )
 
 # TODO: add docstrings for most methods
-# TODO: implement better error handling and tracebacks
 # TODO: implement withdraw and liquidation
 # TODO: implement priority fees to exchange
-# TODO: implement clock subscription
 
 
 @dataclass
 class Client:
     """
-    Cross margin client
+    This class represents the Zeta Client. It contains all the necessary attributes and methods
+    for interacting with the Zeta Exchange from the user side, including loading the client, fetching state and pricing,
+    and handling various market assets.
+
+    Note:
+        Loading the client is asynchronous, so it is recommended to use :func:`load` to
+        initialize the client.
     """
 
     provider: Provider
+    """The network and wallet context to send transactions paid for and signed by the provider."""
     network: Network
+    """The Solana network identifier (i.e. mainnet_beta, devnet etc.)."""
     connection: AsyncClient
+    """The connection to the Solana network."""
     endpoint: str
+    "The http(s) RPC endpoint."
     ws_endpoint: str
+    """The websocket RPC endpoint."""
     exchange: Exchange
+    """The Zeta Exchange object."""
 
     margin_account: Optional[CrossMarginAccount]
+    """The margin account of the Zeta program."""
 
     _margin_account_address: Optional[Pubkey]
     _open_orders_addresses: Optional[dict[Asset, Pubkey]]
@@ -107,7 +117,21 @@ class Client:
         blockhash_cache: Union[BlockhashCache, bool] = False,
     ):
         """
-        Create a new client
+        Asynchronously load the Zeta Client.
+
+        Args:
+            endpoint (str, optional): The http(s) RPC endpoint. Defaults to None.
+            ws_endpoint (str, optional): The websocket RPC endpoint. Defaults to None.
+            commitment (Commitment, optional): The commitment level of the Solana network. Defaults to Confirmed.
+            wallet (Wallet, optional): The wallet used for transactions. Defaults to None.
+            assets (list[Asset], optional): The list of assets to be used. Defaults to all available assets.
+            tx_opts (TxOpts, optional): Transaction options. Defaults to DEFAULT_OPTIONS.
+            network (Network, optional): The network of the Zeta program. Defaults to Network.MAINNET.
+            log_level (int, optional): The level of logging. Defaults to logging.CRITICAL.
+            blockhash_cache (Union[BlockhashCache, bool], optional): The blockhash cache. Disabled by default.
+
+        Returns:
+            Client: An instance of the Client class.
         """
         logger = utils.create_logger(f"{__name__}.{cls.__name__}", log_level)
 
@@ -175,6 +199,12 @@ class Client:
         )
 
     async def _check_user_usdc_account_exists(self):
+        """
+        Check if the user's USDC account exists.
+
+        Returns:
+            bool: True if the account exists, False otherwise.
+        """
         if self._margin_account_manager_address in self._account_exists_cache:
             return self._account_exists_cache[self._margin_account_manager_address]
         resp = await self.connection.get_account_info(self._user_usdc_address)
@@ -183,6 +213,12 @@ class Client:
         return exists
 
     async def _check_margin_account_manager_exists(self):
+        """
+        Check if the margin account manager exists.
+
+        Returns:
+            bool: True if the account manager exists, False otherwise.
+        """
         if self._margin_account_manager_address in self._account_exists_cache:
             return self._account_exists_cache[self._margin_account_manager_address]
         resp = await self.connection.get_account_info(self._user_usdc_address)
@@ -191,6 +227,12 @@ class Client:
         return exists
 
     async def _check_margin_account_exists(self):
+        """
+        Check if the margin account exists.
+
+        Returns:
+            bool: True if the account exists, False otherwise.
+        """
         if self._margin_account_manager_address in self._account_exists_cache:
             return self._account_exists_cache[self._margin_account_manager_address]
         account = await CrossMarginAccount.fetch(self.connection, self._margin_account_address)
@@ -200,6 +242,18 @@ class Client:
         return exists
 
     async def _check_open_orders_account_exists(self, asset: Asset):
+        """
+        Check if the open orders account for a specific asset exists.
+
+        Args:
+            asset (Asset): The asset for which to check the open orders account.
+
+        Raises:
+            Exception: If the open orders accounts are not loaded.
+
+        Returns:
+            bool: True if the open orders account exists, False otherwise.
+        """
         if self._open_orders_addresses is None:
             raise Exception("Open orders accounts not loaded, cannot check if account exists")
         open_orders_address = self._open_orders_addresses[asset]
@@ -210,34 +264,16 @@ class Client:
         self._account_exists_cache[open_orders_address] = exists
         return exists
 
-    @deprecated(version="0.1.21", reason="You should use fetch_margin_state instead")
-    async def fetch_balance(self):
-        margin_account = await self.margin_account.fetch(
-            self.connection,
-            self._margin_account_address,
-            program_id=self.exchange.program_id,
-        )
-        balance = utils.convert_fixed_int_to_decimal(margin_account.balance)
-        return balance
-
-    @deprecated(version="0.1.21", reason="You should use fetch_margin_state instead")
-    async def fetch_position(self, asset: Asset):
-        if self.margin_account is None or self._margin_account_address is None:
-            raise Exception("Margin account not loaded, cannot fetch position")
-        margin_account = await self.margin_account.fetch(
-            self.connection, self._margin_account_address, program_id=self.exchange.program_id
-        )
-        if margin_account is None:
-            raise Exception("Margin account not found, cannot fetch position")
-        position = Position(
-            utils.convert_fixed_lot_to_decimal(margin_account.product_ledgers[asset.to_index()].position.size),
-            utils.convert_fixed_int_to_decimal(
-                margin_account.product_ledgers[asset.to_index()].position.cost_of_trades
-            ),
-        )
-        return position
-
     async def fetch_margin_state(self):
+        """
+        Fetch the state of the margin account.
+
+        Raises:
+            Exception: If the margin account is not loaded or not found.
+
+        Returns:
+            Tuple[Decimal, Dict[Asset, zetamarkets_py.types.Position]]: The balance and positions of the margin account.
+        """
         if self.margin_account is None or self._margin_account_address is None:
             raise Exception("Margin account not loaded, cannot fetch margin account state")
         margin_account = await self.margin_account.fetch(
@@ -258,12 +294,33 @@ class Client:
         return balance, positions
 
     async def fetch_open_orders(self, asset: Asset):
+        """
+        Fetch the open orders for a specific asset.
+
+        Args:
+            asset (Asset): The asset for which to fetch the open orders.
+
+        Raises:
+            Exception: If the open orders accounts are not loaded.
+
+        Returns:
+            List[Order]: The open orders for the asset.
+        """
         if self._open_orders_addresses is None:
             raise Exception("Open orders accounts not loaded, cannot fetch open orders")
         oo = await self.exchange.markets[asset].load_orders_for_owner(self._open_orders_addresses[asset])
         return oo
 
     async def fetch_clock(self):
+        """
+        Fetch the Solana clock.
+
+        Raises:
+            Exception: If the clock is not found.
+
+        Returns:
+            Clock: The clock.
+        """
         clock = await Clock.fetch(self.connection)
         if clock is None:
             raise Exception("Clock not found, cannot fetch clock")
@@ -276,6 +333,18 @@ class Client:
         max_retries: int = 3,
         encoding: str = "base64+zstd",
     ) -> AsyncIterator[Tuple[bytes, int]]:
+        """
+        Subscribe to an account and yield account data and slot.
+
+        Args:
+            address (Pubkey): The public key of the account to subscribe to.
+            commitment (Commitment): The commitment level to use for the subscription.
+            max_retries (int, optional): The maximum number of retries for the subscription. Defaults to 3.
+            encoding (str, optional): The encoding to use for the subscription. Defaults to "base64+zstd".
+
+        Yields:
+            AsyncIterator[Tuple[bytes, int]]: An async iterator that yields tuples of account data and slot.
+        """
         retries = max_retries
         while True:
             try:
@@ -290,7 +359,7 @@ class Client:
                     subscription_id = cast(int, first_resp[0].result)
                     async for msg in ws:
                         try:
-                            slot = int(msg[0].result.context.slot)
+                            slot = int(msg[0].result.context.slot)  # type: ignore
                             account_bytes = cast(bytes, msg[0].result.value.data)  # type: ignore
                             yield account_bytes, slot
                         except Exception:
@@ -313,6 +382,18 @@ class Client:
     async def subscribe_orderbook(
         self, asset: Asset, side: Side, commitment: Optional[Commitment] = None, max_retries: int = 3
     ) -> AsyncIterator[Tuple[Orderbook, int]]:
+        """
+        Subscribe to an orderbook and yield orderbook data and slot.
+
+        Args:
+            asset (Asset): The asset for which to subscribe to the orderbook.
+            side (Side): The side of the orderbook to subscribe to.
+            commitment (Commitment, optional): The commitment level to use for the subscription. Defaults to None.
+            max_retries (int, optional): The maximum number of retries for the subscription. Defaults to 3.
+
+        Yields:
+            AsyncIterator[Tuple[Orderbook, int]]: An async iterator that yields tuples of orderbook data and slot.
+        """
         commitment = commitment or self.connection.commitment
         address = (
             self.exchange.markets[asset]._market_state.bids
@@ -329,6 +410,16 @@ class Client:
     async def subscribe_clock(
         self, commitment: Optional[Commitment] = None, max_retries: int = 3
     ) -> AsyncIterator[Tuple[Clock, int]]:
+        """
+        Subscribe to a clock and yield clock data and slot.
+
+        Args:
+            commitment (Commitment, optional): The commitment level to use for the subscription. Defaults to None.
+            max_retries (int, optional): The maximum number of retries for the subscription. Defaults to 3.
+
+        Yields:
+            AsyncIterator[Tuple[Clock, int]]: An async iterator that yields tuples of clock data and slot.
+        """
         commitment = commitment or self.connection.commitment
 
         self._logger.info("Subscribing to Clock")
@@ -342,6 +433,16 @@ class Client:
         commitment: Optional[Commitment] = None,
         max_retries: int = 3,
     ) -> AsyncIterator[Tuple[List[ZetaEvent], int]]:
+        """
+        Subscribe to events and yield event data and slot.
+
+        Args:
+            commitment (Commitment, optional): The commitment level to use for the subscription. Defaults to None.
+            max_retries (int, optional): The maximum number of retries for the subscription. Defaults to 3.
+
+        Yields:
+            AsyncIterator[Tuple[List[ZetaEvent], int]]: An async iterator that yields tuples of event data and slot.
+        """
         if self._margin_account_address is None:
             raise Exception("Margin account not loaded, cannot subscribe to events")
         commitment = commitment or self.connection.commitment
@@ -359,7 +460,7 @@ class Client:
                     subscription_id = cast(int, first_resp[0].result)
                     async for msg in ws:
                         try:
-                            events, slot = self.parse_event_payload(msg)
+                            events, slot = self._parse_event_payload(msg)
                             if len(events) > 0:
                                 yield events, slot
 
@@ -380,7 +481,16 @@ class Client:
                     break
                 await asyncio.sleep(2)  # Pause for a while before retrying
 
-    def parse_event_payload(self, msg) -> Tuple[List[ZetaEvent], int]:
+    def _parse_event_payload(self, msg) -> Tuple[List[ZetaEvent], int]:
+        """
+        Parse the event payload from the message.
+
+        Args:
+            msg: The message received from the websocket.
+
+        Returns:
+            Tuple[List[ZetaEvent], int]: A tuple containing a list of ZetaEvents and the slot number.
+        """
         slot = int(msg[0].result.context.slot)
         logs = cast(list[str], msg[0].result.value.logs)  # type: ignore
         parsed: list[Event] = []
@@ -423,8 +533,10 @@ class Client:
         This method is used to subscribe to transactions.
 
         Args:
-            commitment (Optional[Commitment], optional): The commitment level to use for the subscription. Defaults to None.
-            max_retries (int, optional): The maximum number of retries for the subscription in case of failure. Defaults to 3.
+            commitment (Optional[Commitment], optional): The commitment level to use for the subscription.
+                Defaults to None.
+            max_retries (int, optional): The maximum number of retries for the subscription in case of failure.
+                Defaults to 3.
 
         Yields:
             List[ZetaEvent]: A list of ZetaEvents that are yielded as they are received.
@@ -458,7 +570,7 @@ class Client:
 
                     async for msg in ws:
                         try:
-                            events, slot = self.parse_transaction_payload(msg)
+                            events, slot = self._parse_transaction_payload(msg)
                             if len(events) > 0:
                                 yield events, slot
 
@@ -485,7 +597,16 @@ class Client:
                     break
                 await asyncio.sleep(2)  # Pause for a while before retrying
 
-    def parse_transaction_payload(self, msg) -> Tuple[List[ZetaEnrichedEvent], int]:
+    def _parse_transaction_payload(self, msg) -> Tuple[List[ZetaEnrichedEvent], int]:
+        """
+        Parse the transaction payload from the message.
+
+        Args:
+            msg: The message received from the websocket.
+
+        Returns:
+            Tuple[List[ZetaEvent], int]: A tuple containing a list of ZetaEnrichedEvent and the slot number.
+        """
         json_msg = json.loads(msg)
         slot = int(json_msg["params"]["result"]["context"]["slot"])
         tx_value = json_msg["params"]["result"]["value"]
@@ -577,6 +698,19 @@ class Client:
     # Instructions
 
     async def deposit(self, amount: float, subaccount_index: int = 0):
+        """
+        This method is used to deposit a specified amount into the user's margin account.
+
+        Args:
+            amount (float): The amount to be deposited.
+            subaccount_index (int, optional): The index of the subaccount. Defaults to 0.
+
+        Raises:
+            Exception: If the user does not have a USDC account.
+
+        Returns:
+            Transaction: The transaction object of the deposit operation.
+        """
         ixs = []
         if not await self._check_margin_account_manager_exists():
             self._logger.info("User has no cross-margin account manager, creating one...")
@@ -595,6 +729,15 @@ class Client:
         return await self._send_versioned_transaction(ixs)
 
     def _init_margin_account_manager_ix(self) -> Instruction:
+        """
+        Initialize the margin account manager instruction.
+
+        Raises:
+            Exception: If the margin account manager address is not loaded.
+
+        Returns:
+            Instruction: The initialized cross margin account manager instruction.
+        """
         if self._margin_account_manager_address is None:
             raise Exception("Margin account manager address not loaded, cannot deposit")
         return initialize_cross_margin_account_manager(
@@ -608,6 +751,18 @@ class Client:
         )
 
     def _init_margin_account_ix(self, subaccount_index: int = 0) -> Instruction:
+        """
+        Initialize the margin account instruction.
+
+        Args:
+            subaccount_index (int, optional): The index of the subaccount. Defaults to 0.
+
+        Raises:
+            Exception: If the margin account address is not loaded.
+
+        Returns:
+            Instruction: The initialized cross margin account instruction.
+        """
         if self._margin_account_address is None or self._margin_account_manager_address is None:
             raise Exception("Margin account address not loaded, cannot deposit")
         return initialize_cross_margin_account(
@@ -623,6 +778,18 @@ class Client:
         )
 
     def _deposit_ix(self, amount: float) -> Instruction:
+        """
+        Deposit instruction.
+
+        Args:
+            amount (float): The amount to be deposited.
+
+        Raises:
+            Exception: If the user USDC address is not loaded.
+
+        Returns:
+            Instruction: The deposit instruction.
+        """
         if self._user_usdc_address is None or self._margin_account_address is None:
             raise Exception("User USDC address not loaded, cannot deposit")
         return deposit_v2(
@@ -641,9 +808,27 @@ class Client:
 
     # TODO: withdraw (and optionally close)
     async def withdraw(self):
+        """
+        Withdraw method.
+
+        Raises:
+            NotImplementedError: This method is not implemented yet.
+        """
         raise NotImplementedError
 
     def _init_open_orders_ix(self, asset: Asset) -> Instruction:
+        """
+        Initialize the open orders instruction.
+
+        Args:
+            asset (Asset): The asset for which to initialize the open orders.
+
+        Raises:
+            Exception: If the asset is not loaded into the client or if the open orders address is not loaded.
+
+        Returns:
+            Instruction: The initialized open orders instruction.
+        """
         if asset not in self.exchange.assets:
             raise Exception(f"Asset {asset.name} not loaded into client, cannot initialize open orders")
         if self._open_orders_addresses is None or self._margin_account_address is None:
@@ -674,6 +859,23 @@ class Client:
         side: Side,
         order_opts: Optional[OrderOptions] = None,
     ) -> Instruction:
+        """
+        Build a PlaceOrder instruction.
+
+        Args:
+            asset (Asset): The asset for which to place the order.
+            price (float): The price of the order.
+            size (float): The size of the order.
+            side (Side): The side of the order (bid or ask).
+            order_opts (Optional[OrderOptions], optional): The options for the order. Defaults to None.
+
+        Raises:
+            Exception: If the asset is not loaded into the client, or if the margin account address or open orders
+                addresses are not loaded.
+
+        Returns:
+            Instruction: The place order instruction.
+        """
         if order_opts is None:
             order_opts = OrderOptions()
 
@@ -741,11 +943,36 @@ class Client:
         )
 
     async def cancel_order(self, asset: Asset, order_id: int, side: Side):
+        """
+        Cancel an order.
+
+        Args:
+            asset (Asset): The asset for which to cancel the order.
+            order_id (int): The ID of the order to cancel.
+            side (Side): The side of the order (buy or sell).
+
+        Returns:
+            Transaction: The transaction of the cancelled order.
+        """
         ixs = [self._cancel_order_ix(asset, order_id, side)]
         self._logger.info(f"Cancelling order {order_id} for {asset}")
         return await self._send_versioned_transaction(ixs)
 
     def _cancel_order_ix(self, asset: Asset, order_id: int, side: Side) -> Instruction:
+        """
+        Build a CancelOrder instruction.
+
+        Args:
+            asset (Asset): The asset for which to cancel the order.
+            order_id (int): The ID of the order to cancel.
+            side (Side): The side of the order (bid or ask).
+
+        Raises:
+            Exception: If the margin account address or open orders addresses are not loaded.
+
+        Returns:
+            Instruction: The cancel order instruction.
+        """
         if self._margin_account_address is None:
             raise Exception("Margin account address not loaded, cannot cancel order")
         if self._open_orders_addresses is None:
@@ -772,6 +999,18 @@ class Client:
     # TODO: cancelorderbyclientorderid
 
     def _cancel_orders_for_market_ix(self, asset: Asset) -> Instruction:
+        """
+        Build an instruction for cancelling all orders on a given market.
+
+        Args:
+            asset (Asset): The asset for which to cancel all orders.
+
+        Raises:
+            Exception: If the margin account address or open orders addresses are not loaded.
+
+        Returns:
+            Instruction: The cancel all orders for a market instruction.
+        """
         if self._margin_account_address is None:
             raise Exception("Margin account address not loaded, cannot cancel orders")
         if self._open_orders_addresses is None:
@@ -796,6 +1035,15 @@ class Client:
         )
 
     async def cancel_orders_for_market(self, asset: Asset):
+        """
+        Cancel all orders for a market.
+
+        Args:
+            asset (Asset): The asset for which to cancel all orders.
+
+        Returns:
+            Transaction: The transaction of the cancelled orders.
+        """
         ixs = [self._cancel_orders_for_market_ix(asset)]
         self._logger.info(f"Cancelling all orders for {asset}")
         return await self._send_versioned_transaction(ixs)
@@ -807,6 +1055,20 @@ class Client:
         pre_instructions: Optional[list[Instruction]] = None,
         post_instructions: Optional[list[Instruction]] = None,
     ):
+        """
+        Place orders for a market.
+
+        Args:
+            asset (Asset): The asset for which to place the orders.
+            orders (list[OrderArgs]): The list of orders to place.
+            pre_instructions (Optional[list[Instruction]], optional): The list of instructions to execute before
+                placing the orders. Defaults to None.
+            post_instructions (Optional[list[Instruction]], optional): The list of instructions to execute after
+                placing the orders. Defaults to None.
+
+        Returns:
+            Transaction: The transaction of the placed orders.
+        """
         # TODO: warn about log truncation above 10 orders
         ixs = []
         if not await self._check_open_orders_account_exists(asset):
@@ -828,15 +1090,40 @@ class Client:
         asset: Asset,
         orders: list[OrderArgs],
     ):
+        """
+        Replace orders for a market (atomically cancel all orders and replace them).
+
+        Args:
+            asset (Asset): The asset for which to replace the orders.
+            orders (list[OrderArgs]): The list of new orders to place.
+
+        Returns:
+            Transaction: The transaction of the replaced orders.
+        """
         return await self.place_orders_for_market(
             asset, orders, pre_instructions=[self._cancel_orders_for_market_ix(asset)]
         )
 
     # TODO: liquidate
     async def liquidate(self):
+        """
+        Liquidate method.
+
+        Raises:
+            NotImplementedError: This method is not implemented yet.
+        """
         raise NotImplementedError
 
     async def _send_versioned_transaction(self, ixs: list[Instruction]):
+        """
+        Send a versioned transaction.
+
+        Args:
+            ixs (list[Instruction]): The list of instructions to include in the transaction.
+
+        Returns:
+            str: The signature of the transaction.
+        """
         # Prefetch blockhash, using cache if available
         if self.connection.blockhash_cache:
             try:

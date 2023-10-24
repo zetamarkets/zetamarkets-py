@@ -39,10 +39,28 @@ napoleon_google_docstring = True
 # napoleon_use_param = False
 # napoleon_use_ivar = True
 
+autosummary_generate = True
+
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = "furo"
 html_static_path = ["_static"]
-
-autosummary_generate = True
+html_logo = "../../logos/zeta-py-small.png"
+html_favicon = "../../logos/zeta-py-icon.ico"
+html_css_files = [
+    "pied-piper-admonition.css",
+    "https://assets.readthedocs.org/static/css/readthedocs-doc-embed.css",
+    "https://assets.readthedocs.org/static/css/badge_only.css",
+]
+html_js_files = ["readthedocs-dummy.js", "https://assets.readthedocs.org/static/javascript/readthedocs-doc-embed.js"]
+html_context = {
+    "READTHEDOCS": True,
+    "current_version": "latest",
+    "conf_py_path": "/docs/source",
+    "display_github": True,
+    "github_user": "0xtristan",
+    "github_repo": "zetamarkets-py",
+    "github_version": "master",
+    "slug": "zetamarkets_py",
+}

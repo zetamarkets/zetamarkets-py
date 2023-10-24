@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from enum import Enum
 from typing import Union
 
 from anchorpy import Event
@@ -13,6 +12,13 @@ from zetamarkets_py.types import Asset, OrderCompleteType, Side
 # PlaceOrderEvent but we add the args from the PlaceOrder instruction itself, as well as the tx slot and signature
 @dataclass
 class PlaceOrderEventWithArgs:
+    """Program event for placing an order.
+
+    Note:
+        This class is an extension of the :class:`PlaceOrderEvent` class. It includes additional arguments from the
+        PlaceOrder instruction.
+    """
+
     # ix args
     price: float
     size: float
@@ -44,6 +50,8 @@ class PlaceOrderEventWithArgs:
 
 @dataclass
 class PlaceOrderEvent:
+    """Program event for placing an order."""
+
     fee: float
     oracle_price: float
     order_id: int
@@ -66,6 +74,11 @@ class PlaceOrderEvent:
 
 @dataclass
 class OrderCompleteEvent:
+    """Program event for an order being completed.
+
+    Note: This event is emitted when an order is either fully filled, cancelled or booted (i.e. TIF expiry).
+    """
+
     margin_account: Pubkey
     authority: Pubkey
     asset: Asset
@@ -92,6 +105,11 @@ class OrderCompleteEvent:
 
 @dataclass
 class CancelOrderEvent:
+    """Event for cancelling an order.
+
+    Note: This event is emitted when an order is cancelled, including auto-cancels like TIF.
+    """
+
     margin_account: Pubkey
     authority: Pubkey
     asset: Asset
@@ -115,6 +133,8 @@ class CancelOrderEvent:
 
 @dataclass
 class TradeEvent:
+    """Program event for a trade."""
+
     margin_account: Pubkey
     price: float
     size: float
@@ -149,6 +169,8 @@ class TradeEvent:
 
 @dataclass
 class LiquidationEvent:
+    """Program event for a liquidation."""
+
     liquidator_reward: float
     insurance_reward: float
     side: Side
@@ -189,25 +211,3 @@ class LiquidationEvent:
 ZetaEvent = Union[PlaceOrderEvent, TradeEvent, CancelOrderEvent, LiquidationEvent]
 
 ZetaEnrichedEvent = Union[PlaceOrderEventWithArgs, TradeEvent, CancelOrderEvent, LiquidationEvent]
-
-
-class TransactionEvent(Enum):
-    """
-    A place order event for the user margin account.
-    """
-
-    PlaceOrderEvent = PlaceOrderEvent
-    """
-    An OrderComplete event for the user margin account.
-    Happens when an order is either fully filled or cancelled
-    """
-
-    OrderCompleteEvent = OrderCompleteEvent
-    """
-    A trade event for the user margin account.
-    """
-    TradeEvent = TradeEvent
-    """
-    A liquidation event for the user margin account.
-    """
-    LiquidationEvent = LiquidationEvent

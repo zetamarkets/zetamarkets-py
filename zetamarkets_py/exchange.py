@@ -21,13 +21,29 @@ with open(idl_path, "r") as f:
 
 @dataclass
 class Exchange:
+    """
+    This class represents the Zeta Exchange. It contains all the necessary attributes and methods
+    for interacting with the Zeta Exchange, including loading the exchange, fetching state and pricing,
+    and handling various market assets.
+
+    Note:
+        Loading the exchange is asynchronous, so it is recommended to use :func:`load` to
+        initialize the exchange.
+    """
+
     # Initialize
     connection: AsyncClient
+    """The connection to the Solana network."""
     program_id: Pubkey
+    """The public key of the Zeta program."""
     program: Program
+    """The Zeta program."""
     state: State
+    """The state account of the Zeta program."""
     pricing: Pricing
+    """The pricing account of the Zeta program. Stores mark prices, funding rates etc."""
     markets: dict[Asset, Market]
+    """A dictionary mapping assets to their respective markets."""
 
     _event_parser: EventParser
 
@@ -46,6 +62,21 @@ class Exchange:
         assets: list[Asset] = Asset.all(),
         log_level: int = logging.CRITICAL,
     ) -> "Exchange":
+        """
+        Asynchronously load the Zeta Exchange.
+
+        Args:
+            network (Network): The network to connect to.
+            connection (AsyncClient): The connection to the Solana network.
+            assets (list[Asset], optional): The list of assets to load. Defaults to all assets.
+            log_level (int, optional): The logging level. Defaults to logging.CRITICAL.
+
+        Returns:
+            Exchange: The loaded Zeta Exchange.
+
+        Raises:
+            Exception: If the state or pricing is not found at their respective addresses.
+        """
         program_id = constants.ZETA_PID[network]
         provider = Provider(connection, Wallet.dummy())
         program = Program(idl, program_id, provider)
@@ -92,15 +123,23 @@ class Exchange:
 
     @property
     def endpoint(self) -> str:
+        """
+        Returns the RPC endpoint.
+
+        Returns:
+            str: The endpoint URI.
+        """
         return self.connection._provider.endpoint_uri
 
     @property
     def assets(self) -> list[Asset]:
-        return list(self.markets.keys())
+        """
+        Returns a list of keys from the markets dictionary.
 
-    # Priority Fees
-    def toggle_auto_priority_fee(self):
-        self._use_auto_priority_fee = not self._use_auto_priority_fee
+        Returns:
+            list[Asset]: A list of Asset objects.
+        """
+        return list(self.markets.keys())
 
     # TODO: add auto priority fee
     # TODO: add to solders

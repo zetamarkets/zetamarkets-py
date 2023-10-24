@@ -13,9 +13,23 @@ from zetamarkets_py.types import Network, Order, OrderInfo, Side
 
 
 class Orderbook:
-    """Represents an order book."""
+    """Represents an order book.
+
+    Attributes:
+        side (Side): The side of the order book.
+    """
 
     def __init__(self, side: Side, orderbook: OrderbookAccount, market_state: MarketState) -> None:
+        """Initializes the Orderbook class.
+
+        Args:
+            side (Side): The side of the order book.
+            orderbook (OrderbookAccount): The orderbook account.
+            market_state (MarketState): The market state.
+
+        Raises:
+            Exception: If the order book is not initialized or neither of bids or asks.
+        """
         if not (orderbook.account_flags.initialized and orderbook.account_flags.bids ^ orderbook.account_flags.asks):
             raise Exception("Invalid order book, either not initialized or neither of bids or asks")
         self.side = side
@@ -32,6 +46,19 @@ class Orderbook:
         market_state: MarketState,
         program_id: Pubkey = constants.MATCHING_ENGINE_PID[Network.MAINNET],
     ) -> Optional["Orderbook"]:
+        """Loads the order book.
+
+        Args:
+            conn (AsyncClient): The connection.
+            address (Pubkey): The address.
+            commitment (Commitment): The commitment.
+            side (Side): The side.
+            market_state (MarketState): The market state.
+            program_id (Pubkey, optional): The program ID. Defaults to constants.MATCHING_ENGINE_PID[Network.MAINNET].
+
+        Returns:
+            Optional[Orderbook]: The order book if it exists, None otherwise.
+        """
         orderbook = await OrderbookAccount.fetch(conn, address, commitment, program_id)
         if orderbook is None:
             return None
@@ -39,17 +66,26 @@ class Orderbook:
 
     @staticmethod
     def _get_price_from_slab(node: Union[SlabInnerNode, SlabLeafNode]) -> int:
-        """Get price from a slab node key.
+        """Gets the price from a slab node key.
 
-        The key is constructed as the (price << 64) + (seq_no if ask_order else !seq_no).
+        Args:
+            node (Union[SlabInnerNode, SlabLeafNode]): The slab node.
+
+        Returns:
+            int: The price.
         """
         return node.key >> 64
 
     @staticmethod
     def _get_seq_num_from_slab(key: int, side: Side) -> int:
-        """Get sequence number from a slab node key.
+        """Gets the sequence number from a slab node key.
 
-        The key is constructed as the (price << 64) + (seq_no if ask_order else !seq_no).
+        Args:
+            key (int): The key.
+            side (Side): The side.
+
+        Returns:
+            int: The sequence number.
         """
         # TODO: bit length might be variable bc of python
         # if key.bit_length() != 128:
@@ -68,7 +104,18 @@ class Orderbook:
     def _is_order_expired(
         clock_ts: int, tif_offset: int, epoch_start_ts: int, seq_num: int, epoch_start_seq_num: int
     ) -> int:
-        """ """
+        """Checks if the order is expired.
+
+        Args:
+            clock_ts (int): The clock timestamp.
+            tif_offset (int): The time in force offset.
+            epoch_start_ts (int): The epoch start timestamp.
+            seq_num (int): The sequence number.
+            epoch_start_seq_num (int): The epoch start sequence number.
+
+        Returns:
+            int: 1 if the order is expired, 0 otherwise.
+        """
         if tif_offset > 0:
             if epoch_start_ts + tif_offset < clock_ts or seq_num <= epoch_start_seq_num:
                 return True
@@ -76,7 +123,15 @@ class Orderbook:
 
     # using local time as a hack as opposed to self.exchange.clock.account.unix_timestamp
     def _get_l2(self, depth: int, clock_ts: int = int(time.time())) -> list[OrderInfo]:
-        """Get the Level 2 market information."""
+        """Gets the Level 2 market information.
+
+        Args:
+            depth (int): The depth.
+            clock_ts (int, optional): The clock timestamp. Defaults to int(time.time()).
+
+        Returns:
+            list[OrderInfo]: The Level 2 market information.
+        """
         descending = self.side == Side.Bid
         # The first element of the inner list is price, the second is quantity.
         levels: list[list[int]] = []
@@ -107,9 +162,19 @@ class Orderbook:
         ]
 
     def __iter__(self) -> Iterable[Order]:
+        """Returns an iterator over the orders.
+
+        Returns:
+            Iterable[Order]: An iterator over the orders.
+        """
         return self.orders()
 
     def orders(self) -> Iterable[Order]:
+        """Yields the orders.
+
+        Yields:
+            Order: The order.
+        """
         for node in self._slab.items():
             price = self._get_price_from_slab(node)
             open_orders_address = node.owner

@@ -11,7 +11,7 @@
     <a href="https://opensource.org/licenses/Apache-2.0"
       ><img
         alt="License"
-        src="https://img.shields.io/badge/License-Apache%202.0-blueviolet"
+        src="https://img.shields.io/badge/License-Apache_2.0-blue.svg"
     /></a>
     <a href="https://discord.gg/dD7YREfBkR"
       ><img
