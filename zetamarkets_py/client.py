@@ -18,7 +18,9 @@ from solana.rpc.async_api import AsyncClient
 from solana.rpc.commitment import Commitment, Confirmed
 from solana.rpc.core import RPCException
 from solana.rpc.types import TxOpts
-from solana.rpc.websocket_api import SolanaWsClientProtocol, connect
+
+# from solana.rpc.websocket_api import SolanaWsClientProtocol, connect
+from zetamarkets_py.websocket_api import SolanaWsClientProtocol, connect
 from solders.instruction import Instruction
 from solders.message import MessageV0
 from solders.pubkey import Pubkey
@@ -60,6 +62,7 @@ from zetamarkets_py.zeta_client.instructions import (
     initialize_open_orders_v3,
     place_perp_order_v3,
 )
+from websockets.legacy.client import WebSocketClientProtocol
 
 # TODO: add docstrings for most methods
 # TODO: implement withdraw and liquidation
@@ -527,7 +530,7 @@ class Client:
     async def subscribe_transactions(
         self,
         commitment: Optional[Commitment] = None,
-        max_retries: int = 3,
+        # max_retries: int = 3,
     ) -> AsyncIterator[Tuple[List[ZetaEnrichedEvent], int]]:
         """
         This method is used to subscribe to transactions.
@@ -546,56 +549,51 @@ class Client:
         """
         # self._logger.warning("This method is experimental and requires a Triton RPC node.")
         commitment = commitment or self.connection.commitment
-        retries = max_retries
-        while retries > 0:
+        # TODO: upgrade to websockets 12.0
+        # TODO: change to async for connection for auto retry behaviour
+        # TODO: modify solanapy websocket stuff and make it support txs + types and subclassing (so we dont have to handle json)
+        # async for ws in connect(self.ws_endpoint + "/whirligig"):  # type: ignore
+        async for ws in websockets.connect(
+            self.ws_endpoint + "/whirligig"
+        ):  # , create_protocol=SolanaWsClientProtocol):
             try:
-                async with websockets.connect(self.ws_endpoint + "/whirligig") as ws:  # type: ignore
-                    transaction_subscribe = request(
-                        "transactionSubscribe",
-                        params=[
-                            {
-                                "mentions": [str(self._margin_account_address)],
-                                "failed": False,
-                                "vote": False,
-                            },
-                            {
-                                "commitment": str(commitment),
-                            },
-                        ],
-                    )
+                transaction_subscribe = request(
+                    "transactionSubscribe",
+                    params=[
+                        {
+                            "mentions": [str(self._margin_account_address)],
+                            "failed": False,
+                            "vote": False,
+                        },
+                        {
+                            "commitment": str(commitment),
+                        },
+                    ],
+                )
+                await ws.send(json.dumps(transaction_subscribe))
+                # await ws.transaction_subscribe(
+                #     commitment=commitment, filter_=RpcTransactionLogsFilterMentions(self._margin_account_address)
+                # )
+                first_resp = await ws.recv()
+                subscription_id = cast(int, first_resp)
 
-                    await ws.send(json.dumps(transaction_subscribe))
-                    first_resp = await ws.recv()
-                    subscription_id = cast(int, first_resp)
+                async for msg in ws:
+                    try:
+                        events, slot = self._parse_transaction_payload(msg)
+                        if len(events) > 0:
+                            yield events, slot
+                    except Exception:
+                        self._logger.error(f"Error processing transaction data: {traceback.format_exc()}")
+                        break
 
-                    async for msg in ws:
-                        try:
-                            events, slot = self._parse_transaction_payload(msg)
-                            if len(events) > 0:
-                                yield events, slot
-
-                        except Exception:
-                            self._logger.error(f"Error processing transaction data: {traceback.format_exc()}")
-                            break
-
-                    request(
-                        "transactionUnsubscribe",
-                        params=[subscription_id],
-                    )
-                    await ws.send(json.dumps(transaction_subscribe))
-
-            except asyncio.CancelledError:
-                self._logger.info("WebSocket subscription task cancelled.")
-                break
-            except websockets.exceptions.ConnectionClosed:
-                self._logger.error("WebSocket connection closed unexpectedly. Attempting to reconnect...")
-            except Exception as e:
-                self._logger.error(f"Error subscribing to {self.__class__.__name__}: {e}. Retrying...")
-                retries -= 1
-                if retries <= 0:
-                    self._logger.error("Max retries reached. Unable to subscribe to transactions.")
-                    break
-                await asyncio.sleep(2)  # Pause for a while before retrying
+                transaction_unsubscribe = request(
+                    "transactionUnsubscribe",
+                    params=[subscription_id],
+                )
+                await ws.send(json.dumps(transaction_unsubscribe))
+            except websockets.ConnectionClosed:
+                self._logger.info("Websocket closed, reconnecting...")
+                continue
 
     def _parse_transaction_payload(self, msg) -> Tuple[List[ZetaEnrichedEvent], int]:
         """
