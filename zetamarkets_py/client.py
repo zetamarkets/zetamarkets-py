@@ -19,8 +19,7 @@ from solana.rpc.commitment import Commitment, Confirmed
 from solana.rpc.core import RPCException
 from solana.rpc.types import TxOpts
 
-# from solana.rpc.websocket_api import SolanaWsClientProtocol, connect
-from zetamarkets_py.websocket_api import SolanaWsClientProtocol, connect
+from solana.rpc.websocket_api import SolanaWsClientProtocol, connect
 from solders.instruction import Instruction
 from solders.message import MessageV0
 from solders.pubkey import Pubkey
@@ -333,7 +332,6 @@ class Client:
         self,
         address: Pubkey,
         commitment: Commitment,
-        max_retries: int = 3,
         encoding: str = "base64+zstd",
     ) -> AsyncIterator[Tuple[bytes, int]]:
         """
@@ -342,48 +340,36 @@ class Client:
         Args:
             address (Pubkey): The public key of the account to subscribe to.
             commitment (Commitment): The commitment level to use for the subscription.
-            max_retries (int, optional): The maximum number of retries for the subscription. Defaults to 3.
             encoding (str, optional): The encoding to use for the subscription. Defaults to "base64+zstd".
 
         Yields:
             AsyncIterator[Tuple[bytes, int]]: An async iterator that yields tuples of account data and slot.
         """
-        retries = max_retries
-        while True:
+        async for ws in connect(self.ws_endpoint):
+            solana_ws: SolanaWsClientProtocol = cast(SolanaWsClientProtocol, ws)
             try:
-                async with connect(self.ws_endpoint) as ws:
-                    solana_ws: SolanaWsClientProtocol = cast(SolanaWsClientProtocol, ws)
-                    await solana_ws.account_subscribe(
-                        address,
-                        commitment=commitment,
-                        encoding=encoding,
-                    )
-                    first_resp = await solana_ws.recv()
-                    subscription_id = cast(int, first_resp[0].result)
-                    async for msg in ws:
-                        try:
-                            slot = int(msg[0].result.context.slot)  # type: ignore
-                            account_bytes = cast(bytes, msg[0].result.value.data)  # type: ignore
-                            yield account_bytes, slot
-                        except Exception:
-                            self._logger.error(f"Error processing account data: {traceback.format_exc()}")
-                            break
-                    await solana_ws.account_unsubscribe(subscription_id)
-            except asyncio.CancelledError:
-                self._logger.info("WebSocket subscription task cancelled.")
-                break
-            except websockets.exceptions.ConnectionClosed:
-                self._logger.error("WebSocket connection closed unexpectedly. Attempting to reconnect...")
-            except Exception as e:
-                self._logger.error(f"Error subscribing to {self.__class__.__name__}: {e}. Retrying...")
-                retries -= 1
-                if retries <= 0:
-                    self._logger.error("Max retries reached. Unable to subscribe to account.")
-                    break
-                await asyncio.sleep(2)  # Pause for a while before retrying
+                await solana_ws.account_subscribe(
+                    address,
+                    commitment=commitment,
+                    encoding=encoding,
+                )
+                first_resp = await solana_ws.recv()
+                subscription_id = cast(int, first_resp[0].result)
+                async for msg in ws:
+                    try:
+                        slot = int(msg[0].result.context.slot)  # type: ignore
+                        account_bytes = cast(bytes, msg[0].result.value.data)  # type: ignore
+                        yield account_bytes, slot
+                    except Exception:
+                        self._logger.error(f"Error processing account data: {traceback.format_exc()}")
+                        break
+                await solana_ws.account_unsubscribe(subscription_id)
+            except websockets.ConnectionClosed:
+                self._logger.warning("Websocket closed, reconnecting...")
+                continue
 
     async def subscribe_orderbook(
-        self, asset: Asset, side: Side, commitment: Optional[Commitment] = None, max_retries: int = 3
+        self, asset: Asset, side: Side, commitment: Optional[Commitment] = None
     ) -> AsyncIterator[Tuple[Orderbook, int]]:
         """
         Subscribe to an orderbook and yield orderbook data and slot.
@@ -392,7 +378,6 @@ class Client:
             asset (Asset): The asset for which to subscribe to the orderbook.
             side (Side): The side of the orderbook to subscribe to.
             commitment (Commitment, optional): The commitment level to use for the subscription. Defaults to None.
-            max_retries (int, optional): The maximum number of retries for the subscription. Defaults to 3.
 
         Yields:
             AsyncIterator[Tuple[Orderbook, int]]: An async iterator that yields tuples of orderbook data and slot.
@@ -405,20 +390,17 @@ class Client:
         )
 
         self._logger.info(f"Subscribing to Orderbook:{side}.")
-        async for account_bytes, slot in self._account_subscribe(address, commitment, max_retries):
+        async for account_bytes, slot in self._account_subscribe(address, commitment):
             account = OrderbookAccount.decode(account_bytes)
             orderbook = Orderbook(side, account, self.exchange.markets[asset]._market_state)
             yield orderbook, slot
 
-    async def subscribe_clock(
-        self, commitment: Optional[Commitment] = None, max_retries: int = 3
-    ) -> AsyncIterator[Tuple[Clock, int]]:
+    async def subscribe_clock(self, commitment: Optional[Commitment] = None) -> AsyncIterator[Tuple[Clock, int]]:
         """
         Subscribe to a clock and yield clock data and slot.
 
         Args:
             commitment (Commitment, optional): The commitment level to use for the subscription. Defaults to None.
-            max_retries (int, optional): The maximum number of retries for the subscription. Defaults to 3.
 
         Yields:
             AsyncIterator[Tuple[Clock, int]]: An async iterator that yields tuples of clock data and slot.
@@ -426,7 +408,7 @@ class Client:
         commitment = commitment or self.connection.commitment
 
         self._logger.info("Subscribing to Clock")
-        async for account_bytes, slot in self._account_subscribe(CLOCK, commitment, max_retries):
+        async for account_bytes, slot in self._account_subscribe(CLOCK, commitment):
             clock = Clock.decode(account_bytes)
             yield clock, slot
 
@@ -434,14 +416,12 @@ class Client:
     async def subscribe_events(
         self,
         commitment: Optional[Commitment] = None,
-        max_retries: int = 3,
     ) -> AsyncIterator[Tuple[List[ZetaEvent], int]]:
         """
         Subscribe to events and yield event data and slot.
 
         Args:
             commitment (Commitment, optional): The commitment level to use for the subscription. Defaults to None.
-            max_retries (int, optional): The maximum number of retries for the subscription. Defaults to 3.
 
         Yields:
             AsyncIterator[Tuple[List[ZetaEvent], int]]: An async iterator that yields tuples of event data and slot.
@@ -449,40 +429,29 @@ class Client:
         if self._margin_account_address is None:
             raise Exception("Margin account not loaded, cannot subscribe to events")
         commitment = commitment or self.connection.commitment
-        retries = max_retries
-        while retries > 0:
+        async for ws in connect(self.ws_endpoint):
+            solana_ws: SolanaWsClientProtocol = cast(SolanaWsClientProtocol, ws)
             try:
-                async with connect(self.ws_endpoint) as ws:
-                    solana_ws: SolanaWsClientProtocol = cast(SolanaWsClientProtocol, ws)
-                    # Subscribe to logs that mention the margin account
-                    await solana_ws.logs_subscribe(
-                        commitment=commitment,
-                        filter_=RpcTransactionLogsFilterMentions(self._margin_account_address),
-                    )
-                    first_resp = await solana_ws.recv()
-                    subscription_id = cast(int, first_resp[0].result)
-                    async for msg in ws:
-                        try:
-                            events, slot = self._parse_event_payload(msg)
-                            if len(events) > 0:
-                                yield events, slot
+                # Subscribe to logs that mention the margin account
+                await solana_ws.logs_subscribe(
+                    commitment=commitment,
+                    filter_=RpcTransactionLogsFilterMentions(self._margin_account_address),
+                )
+                first_resp = await solana_ws.recv()
+                subscription_id = cast(int, first_resp[0].result)
+                async for msg in ws:
+                    try:
+                        events, slot = self._parse_event_payload(msg)
+                        if len(events) > 0:
+                            yield events, slot
 
-                        except Exception:
-                            self._logger.error(f"Error processing event data: {traceback.format_exc()}")
-                            break
-                    await solana_ws.logs_unsubscribe(subscription_id)
-            except asyncio.CancelledError:
-                self._logger.info("WebSocket subscription task cancelled.")
-                break
-            except websockets.exceptions.ConnectionClosed:
-                self._logger.error("WebSocket connection closed unexpectedly. Attempting to reconnect...")
-            except Exception as e:
-                self._logger.error(f"Error subscribing to {self.__class__.__name__}: {e}. Retrying...")
-                retries -= 1
-                if retries <= 0:
-                    self._logger.error("Max retries reached. Unable to subscribe to events.")
-                    break
-                await asyncio.sleep(2)  # Pause for a while before retrying
+                    except Exception:
+                        self._logger.error(f"Error processing event data: {traceback.format_exc()}")
+                        break
+                await solana_ws.logs_unsubscribe(subscription_id)
+            except websockets.ConnectionClosed:
+                self._logger.warning("Websocket closed, reconnecting...")
+                continue
 
     def _parse_event_payload(self, msg) -> Tuple[List[ZetaEvent], int]:
         """
@@ -530,7 +499,6 @@ class Client:
     async def subscribe_transactions(
         self,
         commitment: Optional[Commitment] = None,
-        # max_retries: int = 3,
     ) -> AsyncIterator[Tuple[List[ZetaEnrichedEvent], int]]:
         """
         This method is used to subscribe to transactions.
@@ -538,8 +506,6 @@ class Client:
         Args:
             commitment (Optional[Commitment], optional): The commitment level to use for the subscription.
                 Defaults to None.
-            max_retries (int, optional): The maximum number of retries for the subscription in case of failure.
-                Defaults to 3.
 
         Yields:
             List[ZetaEvent]: A list of ZetaEvents that are yielded as they are received.
@@ -555,12 +521,8 @@ class Client:
 
         commitment = commitment or self.connection.commitment
         # TODO: upgrade to websockets 12.0
-        # TODO: change to async for connection for auto retry behaviour
         # TODO: modify solanapy websocket stuff and make it support txs + types and subclassing (so we dont have to handle json)
-        # async for ws in connect(self.ws_endpoint + "/whirligig"):  # type: ignore
-        async for ws in websockets.connect(
-            self.ws_endpoint + "/whirligig"
-        ):  # , create_protocol=SolanaWsClientProtocol):
+        async for ws in websockets.connect(self.ws_endpoint + "/whirligig"):
             try:
                 transaction_subscribe = request(
                     "transactionSubscribe",
@@ -576,9 +538,7 @@ class Client:
                     ],
                 )
                 await ws.send(json.dumps(transaction_subscribe))
-                # await ws.transaction_subscribe(
-                #     commitment=commitment, filter_=RpcTransactionLogsFilterMentions(self._margin_account_address)
-                # )
+
                 first_resp = await ws.recv()
                 subscription_id = cast(int, first_resp)
 
@@ -597,7 +557,7 @@ class Client:
                 )
                 await ws.send(json.dumps(transaction_unsubscribe))
             except websockets.ConnectionClosed:
-                self._logger.info("Websocket closed, reconnecting...")
+                self._logger.warning("Websocket closed, reconnecting...")
                 continue
 
     def _parse_transaction_payload(self, msg) -> Tuple[List[ZetaEnrichedEvent], int]:

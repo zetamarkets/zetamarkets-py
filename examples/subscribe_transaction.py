@@ -25,7 +25,11 @@ async def main():
 
     # Load in client without any markets
     client = await Client.load(
-        endpoint=endpoint, ws_endpoint=ws_endpoint, commitment=commitment, wallet=wallet, assets=[]
+        endpoint=endpoint,
+        ws_endpoint=ws_endpoint,
+        commitment=commitment,
+        wallet=wallet,
+        assets=[],
     )
 
     # Subscribe to margin account transactions
