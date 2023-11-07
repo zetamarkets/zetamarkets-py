@@ -8,6 +8,8 @@ from typing import List, Optional, Tuple, Union, cast
 
 import based58
 import websockets
+import websockets.exceptions  # force eager imports
+import websockets.legacy.client  # force eager imports
 from anchorpy import Event, Provider, Wallet
 from anchorpy.provider import DEFAULT_OPTIONS
 from construct import Container
@@ -17,7 +19,7 @@ from solana.rpc.async_api import AsyncClient
 from solana.rpc.commitment import Commitment, Confirmed
 from solana.rpc.core import RPCException
 from solana.rpc.types import TxOpts
-from solana.rpc.websocket_api import SolanaWsClientProtocol, connect
+from solana.rpc.websocket_api import connect
 from solders.instruction import Instruction
 from solders.message import MessageV0
 from solders.pubkey import Pubkey
@@ -343,14 +345,13 @@ class Client:
             AsyncIterator[Tuple[bytes, int]]: An async iterator that yields tuples of account data and slot.
         """
         async for ws in connect(self.ws_endpoint):
-            solana_ws: SolanaWsClientProtocol = cast(SolanaWsClientProtocol, ws)
             try:
-                await solana_ws.account_subscribe(
+                await ws.account_subscribe(
                     address,
                     commitment=commitment,
                     encoding=encoding,
                 )
-                first_resp = await solana_ws.recv()
+                first_resp = await ws.recv()
                 subscription_id = cast(int, first_resp[0].result)
                 async for msg in ws:
                     try:
@@ -360,8 +361,8 @@ class Client:
                     except Exception:
                         self._logger.error(f"Error processing account data: {traceback.format_exc()}")
                         break
-                await solana_ws.account_unsubscribe(subscription_id)
-            except websockets.ConnectionClosed:
+                await ws.account_unsubscribe(subscription_id)
+            except websockets.exceptions.ConnectionClosed:
                 self._logger.warning("Websocket closed, reconnecting...")
                 continue
 
@@ -427,14 +428,13 @@ class Client:
             raise Exception("Margin account not loaded, cannot subscribe to events")
         commitment = commitment or self.connection.commitment
         async for ws in connect(self.ws_endpoint):
-            solana_ws: SolanaWsClientProtocol = cast(SolanaWsClientProtocol, ws)
             try:
                 # Subscribe to logs that mention the margin account
-                await solana_ws.logs_subscribe(
+                await ws.logs_subscribe(
                     commitment=commitment,
                     filter_=RpcTransactionLogsFilterMentions(self._margin_account_address),
                 )
-                first_resp = await solana_ws.recv()
+                first_resp = await ws.recv()
                 subscription_id = cast(int, first_resp[0].result)
                 async for msg in ws:
                     try:
@@ -445,8 +445,8 @@ class Client:
                     except Exception:
                         self._logger.error(f"Error processing event data: {traceback.format_exc()}")
                         break
-                await solana_ws.logs_unsubscribe(subscription_id)
-            except websockets.ConnectionClosed:
+                await ws.logs_unsubscribe(subscription_id)
+            except websockets.exceptions.ConnectionClosed:
                 self._logger.warning("Websocket closed, reconnecting...")
                 continue
 
@@ -519,7 +519,7 @@ class Client:
         commitment = commitment or self.connection.commitment
         # TODO: upgrade to websockets 12.0
         # TODO: modify solanapy websocket stuff and make it support txs + types and subclassing (so we dont have to handle json)
-        async for ws in websockets.connect(self.ws_endpoint + "/whirligig"):
+        async for ws in websockets.legacy.client.connect(self.ws_endpoint + "/whirligig"):
             try:
                 transaction_subscribe = request(
                     "transactionSubscribe",
@@ -553,7 +553,7 @@ class Client:
                     params=[subscription_id],
                 )
                 await ws.send(json.dumps(transaction_unsubscribe))
-            except websockets.ConnectionClosed:
+            except websockets.exceptions.ConnectionClosed:
                 self._logger.warning("Websocket closed, reconnecting...")
                 continue
 
