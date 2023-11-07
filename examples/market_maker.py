@@ -77,11 +77,11 @@ class MarketMaker:
         open_orders = await client.fetch_open_orders(asset)
         return cls(client, asset, size, edge, offset, open_orders)
 
-    async def subscribe_fair_price(self, max_retries=3):
+    async def subscribe_fair_price(self):
         client = await AsyncClient.create()
         bm = BinanceSocketManager(client)
         retry_count = 0
-        while retry_count < max_retries:
+        while True:
             try:
                 # get the latest bid/ask price from Binance USD-M futures
                 ts = bm.symbol_ticker_futures_socket(str(self.asset).upper() + "USDT")
@@ -111,7 +111,6 @@ class MarketMaker:
                 break
             except Exception as e:
                 print(f"Unexpected error: {e}")
-                retry_count += 1
             finally:
                 await client.close_connection()
 
