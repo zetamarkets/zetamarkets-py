@@ -1,4 +1,3 @@
-import asyncio
 import json
 import logging
 import time
@@ -18,7 +17,6 @@ from solana.rpc.async_api import AsyncClient
 from solana.rpc.commitment import Commitment, Confirmed
 from solana.rpc.core import RPCException
 from solana.rpc.types import TxOpts
-
 from solana.rpc.websocket_api import SolanaWsClientProtocol, connect
 from solders.instruction import Instruction
 from solders.message import MessageV0
@@ -61,7 +59,6 @@ from zetamarkets_py.zeta_client.instructions import (
     initialize_open_orders_v3,
     place_perp_order_v3,
 )
-from websockets.legacy.client import WebSocketClientProtocol
 
 # TODO: add docstrings for most methods
 # TODO: implement withdraw and liquidation
