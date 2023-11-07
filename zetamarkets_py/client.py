@@ -113,7 +113,7 @@ class Client:
         assets: list[Asset] = Asset.all(),
         tx_opts: TxOpts = DEFAULT_OPTIONS,
         network: Network = Network.MAINNET,
-        log_level: int = logging.CRITICAL,
+        log_level: int = logging.WARNING,
         blockhash_cache: Union[BlockhashCache, bool] = False,
     ):
         """
@@ -544,7 +544,12 @@ class Client:
         Warning:
             This method is experimental and requires a Triton RPC node.
         """
-        # self._logger.warning("This method is experimental and requires a Triton RPC node.")
+
+        if "rpcpool.com" not in self.ws_endpoint:
+            self._logger.warning(
+                'Provided ws_endpoint does not contain "rpcpool.com". This method is experimental and requires a Triton RPC node for transactionSubscribe'
+            )
+
         commitment = commitment or self.connection.commitment
         retries = max_retries
         while retries > 0:
@@ -683,6 +688,10 @@ class Client:
                 elif ix_name.startswith("crank_event_queue"):
                     if event.name.startswith(TradeEvent.__name__):
                         events_to_return.append(TradeEvent.from_event(event))  # Maker fill\
+                    elif str(event.name).startswith(str(OrderCompleteEvent.__name__)):
+                        order_complete_event = OrderCompleteEvent.from_event(event)
+                        if order_complete_event.order_complete_type == OrderCompleteType.Booted:  # TIF expiry
+                            events_to_return.append(CancelOrderEvent.from_order_complete_event(order_complete_event))
 
                 elif ix_name.startswith("cancel_"):
                     if event.name.startswith(OrderCompleteEvent.__name__):
