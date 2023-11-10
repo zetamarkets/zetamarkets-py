@@ -27,9 +27,9 @@ async def main():
 
     # Subscribe to margin account events
     print(f"Listening for events on margin account: {client._margin_account_address}")
-    async for tx_events, _ in client.subscribe_events():
+    async for events, _ in client.subscribe_events():
         # Loop over the events in each tx
-        for event in tx_events:
+        for event in events:
             # Event can be PlaceOrder, Trade, OrderComplete or Liquidate
             if isinstance(event, PlaceOrderEvent):
                 print("Place order event: ", event)

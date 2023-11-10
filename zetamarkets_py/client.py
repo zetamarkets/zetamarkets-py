@@ -29,6 +29,7 @@ from solders.transaction import VersionedTransaction
 from zetamarkets_py import constants, pda, utils
 from zetamarkets_py.events import (
     CancelOrderEvent,
+    EventMeta,
     LiquidationEvent,
     OrderCompleteEvent,
     PlaceOrderEvent,
@@ -414,7 +415,7 @@ class Client:
     async def subscribe_events(
         self,
         commitment: Optional[Commitment] = None,
-    ) -> AsyncIterator[Tuple[List[ZetaEvent], int]]:
+    ) -> AsyncIterator[Tuple[List[ZetaEvent], EventMeta]]:
         """
         Subscribe to events and yield event data and slot.
 
@@ -438,9 +439,9 @@ class Client:
                 subscription_id = cast(int, first_resp[0].result)
                 async for msg in ws:
                     try:
-                        events, slot = self._parse_event_payload(msg)
-                        if len(events) > 0:
-                            yield events, slot
+                        events, meta = self._parse_event_payload(msg)
+                        if len(events) > 0 or not meta.is_successful:
+                            yield events, meta
 
                     except Exception:
                         self._logger.error(f"Error processing event data: {traceback.format_exc()}")
@@ -450,7 +451,7 @@ class Client:
                 self._logger.warning("Websocket closed, reconnecting...")
                 continue
 
-    def _parse_event_payload(self, msg) -> Tuple[List[ZetaEvent], int]:
+    def _parse_event_payload(self, msg) -> Tuple[List[ZetaEvent], EventMeta]:
         """
         Parse the event payload from the message.
 
@@ -462,6 +463,11 @@ class Client:
         """
         slot = int(msg[0].result.context.slot)
         logs = cast(list[str], msg[0].result.value.logs)  # type: ignore
+        error = msg[0].result.value.err
+        meta = EventMeta(slot, error)
+        if error is not None:
+            return [], meta
+
         parsed: list[Event] = []
         self.exchange._event_parser.parse_logs(logs, lambda evt: parsed.append(evt))
         events = []
@@ -491,12 +497,12 @@ class Client:
             else:
                 pass
 
-        return events, slot
+        return events, meta
 
     async def subscribe_transactions(
         self,
         commitment: Optional[Commitment] = None,
-    ) -> AsyncIterator[Tuple[List[ZetaEnrichedEvent], int]]:
+    ) -> AsyncIterator[Tuple[List[ZetaEnrichedEvent], EventMeta]]:
         """
         This method is used to subscribe to transactions.
 
@@ -526,7 +532,7 @@ class Client:
                     params=[
                         {
                             "mentions": [str(self._margin_account_address)],
-                            "failed": False,
+                            # "failed": False,
                             "vote": False,
                         },
                         {
@@ -541,9 +547,9 @@ class Client:
 
                 async for msg in ws:
                     try:
-                        events, slot = self._parse_transaction_payload(msg)
-                        if len(events) > 0:
-                            yield events, slot
+                        events, meta = self._parse_transaction_payload(msg)
+                        if len(events) > 0 or not meta.is_successful:
+                            yield events, meta
                     except Exception:
                         self._logger.error(f"Error processing transaction data: {traceback.format_exc()}")
                         break
@@ -557,7 +563,7 @@ class Client:
                 self._logger.warning("Websocket closed, reconnecting...")
                 continue
 
-    def _parse_transaction_payload(self, msg) -> Tuple[List[ZetaEnrichedEvent], int]:
+    def _parse_transaction_payload(self, msg) -> Tuple[List[ZetaEnrichedEvent], EventMeta]:
         """
         Parse the transaction payload from the message.
 
@@ -572,6 +578,10 @@ class Client:
         tx_value = json_msg["params"]["result"]["value"]
         log_messages = tx_value["meta"]["logMessages"]
         message = tx_value["transaction"]["message"]
+        error = tx_value["meta"]["err"]
+        meta = EventMeta(slot, error)
+        if error is not None:
+            return [], meta
 
         if isinstance(message[0], int) or "instructions" not in message[0]:
             message_indexed = message[1]
@@ -631,7 +641,12 @@ class Client:
             for event in events:
                 # Skip event that aren't for our account but mention our account
                 # eg if we do a taker trade, we want to skip the maker crank events
-                if str(event.data.margin_account) != str(self._margin_account_address):
+                account_check = (
+                    str(event.data.liquidatee_margin_account)
+                    if ix_name.startswith("liquidation")
+                    else str(event.data.margin_account)
+                )
+                if account_check != str(self._margin_account_address):
                     continue
 
                 if ix_name.startswith("place_perp_order"):
@@ -657,7 +672,7 @@ class Client:
                         ):
                             events_to_return.append(CancelOrderEvent.from_order_complete_event(order_complete_event))
 
-        return events_to_return, slot
+        return events_to_return, meta
 
     # Instructions
 

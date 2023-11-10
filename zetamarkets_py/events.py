@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Union
+from typing import Any, Optional, Union
 
 from anchorpy import Event
 from construct import Container
@@ -211,3 +211,13 @@ class LiquidationEvent:
 ZetaEvent = Union[PlaceOrderEvent, TradeEvent, CancelOrderEvent, LiquidationEvent]
 
 ZetaEnrichedEvent = Union[PlaceOrderEventWithArgs, TradeEvent, CancelOrderEvent, LiquidationEvent]
+
+
+@dataclass
+class EventMeta:
+    slot: int
+    error: Optional[Any]
+
+    @property
+    def is_successful(self) -> bool:
+        return self.error is None
