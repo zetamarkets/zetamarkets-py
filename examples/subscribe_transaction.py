@@ -8,7 +8,6 @@ from zetamarkets_py.client import Client
 from zetamarkets_py.events import (
     CancelOrderEvent,
     LiquidationEvent,
-    OrderCompleteEvent,
     PlaceOrderEventWithArgs,
     TradeEvent,
 )
@@ -44,8 +43,6 @@ async def main():
                 print("Trade event: ", event)
             elif isinstance(event, CancelOrderEvent):
                 print("Cancel order event: ", event)
-            elif isinstance(event, OrderCompleteEvent):
-                print("Order complete event: ", event)
             elif isinstance(event, LiquidationEvent):
                 print("Liquidation event: ", event)
 
