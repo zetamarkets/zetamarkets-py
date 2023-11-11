@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import time
@@ -307,10 +308,16 @@ class Client:
             AccountRiskSummary: The risk summary of the account.
         """
         # check balance on-chain
-        balance, positions = await self.fetch_margin_state()
+        margin_promise = self.fetch_margin_state()
 
         # mark prices
-        mark_prices = {a: p / 10**6 for a, p in zip(Asset.all(), self.exchange.pricing.mark_prices)}
+        pricing_promise = self.exchange.pricing.fetch(
+            self.connection, self.exchange._pricing_address, program_id=self.exchange.program_id
+        )
+        (balance, positions), pricing_account = await asyncio.gather(margin_promise, pricing_promise)
+        mark_prices = {
+            a: utils.convert_fixed_int_to_decimal(p) for a, p in zip(Asset.all(), pricing_account.mark_prices)
+        }
 
         # equity
         upnl = sum([abs(p.size * mark_prices[a]) - p.cost_of_trades for a, p in positions.items()])
@@ -323,13 +330,16 @@ class Client:
         position_value = sum([p.size * mark_prices[a] for a, p in positions.items()])
         initial_margin = sum(
             [
-                abs(p.size) * mark_prices[a] * margin_params[a].future_margin_initial / 10**8
+                abs(p.size) * mark_prices[a] * margin_params[a].future_margin_initial / 10**constants.MARGIN_PRECISION
                 for a, p in positions.items()
             ]
         )
         maintenance_margin = sum(
             [
-                abs(p.size) * mark_prices[a] * margin_params[a].future_margin_maintenance / 10**8
+                abs(p.size)
+                * mark_prices[a]
+                * margin_params[a].future_margin_maintenance
+                / 10**constants.MARGIN_PRECISION
                 for a, p in positions.items()
             ]
         )
