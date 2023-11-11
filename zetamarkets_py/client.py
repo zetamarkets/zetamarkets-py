@@ -43,6 +43,7 @@ from zetamarkets_py.orderbook import Orderbook
 from zetamarkets_py.serum_client.accounts.orderbook import OrderbookAccount
 from zetamarkets_py.solana_client.accounts.clock import CLOCK, Clock
 from zetamarkets_py.types import (
+    AccountRiskSummary,
     Asset,
     Network,
     OrderArgs,
@@ -294,6 +295,57 @@ class Client:
             for a in self.exchange.assets
         }
         return balance, positions
+
+    async def get_account_risk_summary(self):
+        """
+        Get the risk summary of the account.
+
+        This method fetches the margin state of the account, calculates the equity, margin parameters, margin usage,
+        and leverage, and returns an AccountRiskSummary object.
+
+        Returns:
+            AccountRiskSummary: The risk summary of the account.
+        """
+        # check balance on-chain
+        balance, positions = await self.fetch_margin_state()
+
+        # mark prices
+        mark_prices = {a: p / 10**6 for a, p in zip(Asset.all(), self.exchange.pricing.mark_prices)}
+
+        # equity
+        upnl = sum([abs(p.size * mark_prices[a]) - p.cost_of_trades for a, p in positions.items()])
+        equity = balance + upnl
+
+        # margin parameters
+        margin_params = {a: m for a, m in zip(Asset.all(), self.exchange.pricing.margin_parameters)}
+
+        # calculate margin usage
+        position_value = sum([p.size * mark_prices[a] for a, p in positions.items()])
+        initial_margin = sum(
+            [
+                abs(p.size) * mark_prices[a] * margin_params[a].future_margin_initial / 10**8
+                for a, p in positions.items()
+            ]
+        )
+        maintenance_margin = sum(
+            [
+                abs(p.size) * mark_prices[a] * margin_params[a].future_margin_maintenance / 10**8
+                for a, p in positions.items()
+            ]
+        )
+        margin_utilization = maintenance_margin / equity
+        leverage = abs(position_value) / equity
+
+        return AccountRiskSummary(
+            balance,
+            upnl,
+            equity,
+            position_value,
+            initial_margin,
+            maintenance_margin,
+            margin_utilization,
+            leverage,
+        )
 
     async def fetch_open_orders(self, asset: Asset):
         """

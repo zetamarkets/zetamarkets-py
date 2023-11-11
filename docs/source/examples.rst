@@ -10,3 +10,4 @@ Examples
    examples/subscribe_event
    examples/subscribe_transaction
    examples/market_maker
+   examples/check_risk
