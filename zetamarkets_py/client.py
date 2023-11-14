@@ -333,7 +333,14 @@ class Client:
         }
 
         # equity
-        upnl = sum([abs(p.size * mark_prices[a]) - p.cost_of_trades for a, p in positions.items()])
+        upnl = sum(
+            [
+                (p.size * mark_prices[a] - p.cost_of_trades)
+                if p.size > 0
+                else (p.size * mark_prices[a] + p.cost_of_trades)
+                for a, p in positions.items()
+            ]
+        )
         equity = balance + upnl
 
         # margin parameters
