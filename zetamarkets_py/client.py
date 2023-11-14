@@ -1,4 +1,3 @@
-import asyncio
 import json
 import logging
 import time
@@ -7,6 +6,7 @@ from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from typing import List, Optional, Tuple, Union, cast
 
+import anchorpy
 import based58
 import websockets
 import websockets.exceptions  # force eager imports
@@ -54,6 +54,7 @@ from zetamarkets_py.types import (
     Side,
 )
 from zetamarkets_py.zeta_client.accounts.cross_margin_account import CrossMarginAccount
+from zetamarkets_py.zeta_client.accounts.pricing import Pricing
 from zetamarkets_py.zeta_client.errors import from_tx_error
 from zetamarkets_py.zeta_client.instructions import (
     cancel_all_market_orders,
@@ -268,6 +269,28 @@ class Client:
         self._account_exists_cache[open_orders_address] = exists
         return exists
 
+    def _format_margin_state(self, margin_account: CrossMarginAccount) -> Tuple[float, dict[Asset, Position]]:
+        """
+        Format the state of the margin account.
+
+        Args:
+            margin_account (CrossMarginAccount): The margin account to format.
+
+        Returns:
+            Tuple[Decimal, Dict[Asset, Position]]: The balance and positions of the margin account.
+        """
+        balance = utils.convert_fixed_int_to_decimal(margin_account.balance)
+        positions = {
+            a: Position(
+                utils.convert_fixed_lot_to_decimal(margin_account.product_ledgers[a.to_index()].position.size),
+                utils.convert_fixed_int_to_decimal(
+                    margin_account.product_ledgers[a.to_index()].position.cost_of_trades
+                ),
+            )
+            for a in self.exchange.assets
+        }
+        return balance, positions
+
     async def fetch_margin_state(self):
         """
         Fetch the state of the margin account.
@@ -285,17 +308,7 @@ class Client:
         )
         if margin_account is None:
             raise Exception("Margin account not found, cannot fetch margin state")
-        balance = utils.convert_fixed_int_to_decimal(margin_account.balance)
-        positions = {
-            a: Position(
-                utils.convert_fixed_lot_to_decimal(margin_account.product_ledgers[a.to_index()].position.size),
-                utils.convert_fixed_int_to_decimal(
-                    margin_account.product_ledgers[a.to_index()].position.cost_of_trades
-                ),
-            )
-            for a in self.exchange.assets
-        }
-        return balance, positions
+        return self._format_margin_state(margin_account)
 
     async def get_account_risk_summary(self):
         """
@@ -307,14 +320,13 @@ class Client:
         Returns:
             AccountRiskSummary: The risk summary of the account.
         """
-        # check balance on-chain
-        margin_promise = self.fetch_margin_state()
-
-        # mark prices
-        pricing_promise = self.exchange.pricing.fetch(
-            self.connection, self.exchange._pricing_address, program_id=self.exchange.program_id
+        # Batched RPC call to margin acc and prices
+        account_infos = await anchorpy.utils.rpc.get_multiple_accounts(
+            self.connection, [self._margin_account_address, self.exchange._pricing_address]
         )
-        (balance, positions), pricing_account = await asyncio.gather(margin_promise, pricing_promise)
+        margin_account = CrossMarginAccount.decode(account_infos[0].account.data)
+        pricing_account = Pricing.decode(account_infos[1].account.data)
+        balance, positions = self._format_margin_state(margin_account)
         mark_prices = {
             a: utils.convert_fixed_int_to_decimal(p) for a, p in zip(Asset.all(), pricing_account.mark_prices)
         }
@@ -355,6 +367,8 @@ class Client:
             maintenance_margin,
             margin_utilization,
             leverage,
+            positions,
+            mark_prices,
         )
 
     async def fetch_open_orders(self, asset: Asset):

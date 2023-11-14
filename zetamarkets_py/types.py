@@ -215,3 +215,5 @@ class AccountRiskSummary:
     maintenance_margin: float
     margin_utilization: float
     leverage: float
+    positions: dict[Asset, Position]
+    mark_prices: dict[Asset, float]
