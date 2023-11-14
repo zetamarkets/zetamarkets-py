@@ -1,4 +1,3 @@
-import asyncio
 import json
 import logging
 import time
@@ -7,6 +6,7 @@ from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from typing import List, Optional, Tuple, Union, cast
 
+import anchorpy
 import based58
 import websockets
 import websockets.exceptions  # force eager imports
@@ -41,19 +41,19 @@ from zetamarkets_py.events import (
 )
 from zetamarkets_py.exchange import Exchange
 from zetamarkets_py.orderbook import Orderbook
+from zetamarkets_py.risk import AccountRiskSummary, Position
 from zetamarkets_py.serum_client.accounts.orderbook import OrderbookAccount
 from zetamarkets_py.solana_client.accounts.clock import CLOCK, Clock
 from zetamarkets_py.types import (
-    AccountRiskSummary,
     Asset,
     Network,
     OrderArgs,
     OrderCompleteType,
     OrderOptions,
-    Position,
     Side,
 )
 from zetamarkets_py.zeta_client.accounts.cross_margin_account import CrossMarginAccount
+from zetamarkets_py.zeta_client.accounts.pricing import Pricing
 from zetamarkets_py.zeta_client.errors import from_tx_error
 from zetamarkets_py.zeta_client.instructions import (
     cancel_all_market_orders,
@@ -286,15 +286,7 @@ class Client:
         if margin_account is None:
             raise Exception("Margin account not found, cannot fetch margin state")
         balance = utils.convert_fixed_int_to_decimal(margin_account.balance)
-        positions = {
-            a: Position(
-                utils.convert_fixed_lot_to_decimal(margin_account.product_ledgers[a.to_index()].position.size),
-                utils.convert_fixed_int_to_decimal(
-                    margin_account.product_ledgers[a.to_index()].position.cost_of_trades
-                ),
-            )
-            for a in self.exchange.assets
-        }
+        positions = {a: Position.from_margin_account(margin_account, a) for a in self.exchange.assets}
         return balance, positions
 
     async def get_account_risk_summary(self):
@@ -307,55 +299,13 @@ class Client:
         Returns:
             AccountRiskSummary: The risk summary of the account.
         """
-        # check balance on-chain
-        margin_promise = self.fetch_margin_state()
-
-        # mark prices
-        pricing_promise = self.exchange.pricing.fetch(
-            self.connection, self.exchange._pricing_address, program_id=self.exchange.program_id
+        # Batched RPC call to margin acc and prices
+        account_infos = await anchorpy.utils.rpc.get_multiple_accounts(
+            self.connection, [self._margin_account_address, self.exchange._pricing_address]
         )
-        (balance, positions), pricing_account = await asyncio.gather(margin_promise, pricing_promise)
-        mark_prices = {
-            a: utils.convert_fixed_int_to_decimal(p) for a, p in zip(Asset.all(), pricing_account.mark_prices)
-        }
-
-        # equity
-        upnl = sum([abs(p.size * mark_prices[a]) - p.cost_of_trades for a, p in positions.items()])
-        equity = balance + upnl
-
-        # margin parameters
-        margin_params = {a: m for a, m in zip(Asset.all(), self.exchange.pricing.margin_parameters)}
-
-        # calculate margin usage
-        position_value = sum([p.size * mark_prices[a] for a, p in positions.items()])
-        initial_margin = sum(
-            [
-                abs(p.size) * mark_prices[a] * margin_params[a].future_margin_initial / 10**constants.MARGIN_PRECISION
-                for a, p in positions.items()
-            ]
-        )
-        maintenance_margin = sum(
-            [
-                abs(p.size)
-                * mark_prices[a]
-                * margin_params[a].future_margin_maintenance
-                / 10**constants.MARGIN_PRECISION
-                for a, p in positions.items()
-            ]
-        )
-        margin_utilization = maintenance_margin / equity
-        leverage = abs(position_value) / equity
-
-        return AccountRiskSummary(
-            balance,
-            upnl,
-            equity,
-            position_value,
-            initial_margin,
-            maintenance_margin,
-            margin_utilization,
-            leverage,
-        )
+        margin_account = CrossMarginAccount.decode(account_infos[0].account.data)
+        pricing_account = Pricing.decode(account_infos[1].account.data)
+        return AccountRiskSummary.from_margin_and_pricing_accounts(margin_account, pricing_account)
 
     async def fetch_open_orders(self, asset: Asset):
         """
@@ -409,13 +359,13 @@ class Client:
         """
         async for ws in connect(self.ws_endpoint):
             try:
-                await ws.account_subscribe(
+                await ws.account_subscribe(  # type: ignore
                     address,
                     commitment=commitment,
                     encoding=encoding,
                 )
                 first_resp = await ws.recv()
-                subscription_id = cast(int, first_resp[0].result)
+                subscription_id = cast(int, first_resp[0].result)  # type: ignore
                 async for msg in ws:
                     try:
                         slot = int(msg[0].result.context.slot)  # type: ignore
@@ -424,7 +374,7 @@ class Client:
                     except Exception:
                         self._logger.error(f"Error processing account data: {traceback.format_exc()}")
                         break
-                await ws.account_unsubscribe(subscription_id)
+                await ws.account_unsubscribe(subscription_id)  # type: ignore
             except websockets.exceptions.ConnectionClosed:
                 self._logger.warning("Websocket closed, reconnecting...")
                 continue
@@ -493,12 +443,12 @@ class Client:
         async for ws in connect(self.ws_endpoint):
             try:
                 # Subscribe to logs that mention the margin account
-                await ws.logs_subscribe(
+                await ws.logs_subscribe(  # type: ignore
                     commitment=commitment,
                     filter_=RpcTransactionLogsFilterMentions(self._margin_account_address),
                 )
                 first_resp = await ws.recv()
-                subscription_id = cast(int, first_resp[0].result)
+                subscription_id = cast(int, first_resp[0].result)  # type: ignore
                 async for msg in ws:
                     try:
                         events, meta = self._parse_event_payload(msg)
@@ -508,7 +458,7 @@ class Client:
                     except Exception:
                         self._logger.error(f"Error processing event data: {traceback.format_exc()}")
                         break
-                await ws.logs_unsubscribe(subscription_id)
+                await ws.logs_unsubscribe(subscription_id)  # type: ignore
             except websockets.exceptions.ConnectionClosed:
                 self._logger.warning("Websocket closed, reconnecting...")
                 continue
