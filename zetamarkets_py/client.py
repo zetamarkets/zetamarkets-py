@@ -359,13 +359,13 @@ class Client:
         """
         async for ws in connect(self.ws_endpoint):
             try:
-                await ws.account_subscribe(
+                await ws.account_subscribe(  # type: ignore
                     address,
                     commitment=commitment,
                     encoding=encoding,
                 )
                 first_resp = await ws.recv()
-                subscription_id = cast(int, first_resp[0].result)
+                subscription_id = cast(int, first_resp[0].result)  # type: ignore
                 async for msg in ws:
                     try:
                         slot = int(msg[0].result.context.slot)  # type: ignore
@@ -374,7 +374,7 @@ class Client:
                     except Exception:
                         self._logger.error(f"Error processing account data: {traceback.format_exc()}")
                         break
-                await ws.account_unsubscribe(subscription_id)
+                await ws.account_unsubscribe(subscription_id)  # type: ignore
             except websockets.exceptions.ConnectionClosed:
                 self._logger.warning("Websocket closed, reconnecting...")
                 continue
@@ -443,12 +443,12 @@ class Client:
         async for ws in connect(self.ws_endpoint):
             try:
                 # Subscribe to logs that mention the margin account
-                await ws.logs_subscribe(
+                await ws.logs_subscribe(  # type: ignore
                     commitment=commitment,
                     filter_=RpcTransactionLogsFilterMentions(self._margin_account_address),
                 )
                 first_resp = await ws.recv()
-                subscription_id = cast(int, first_resp[0].result)
+                subscription_id = cast(int, first_resp[0].result)  # type: ignore
                 async for msg in ws:
                     try:
                         events, meta = self._parse_event_payload(msg)
@@ -458,7 +458,7 @@ class Client:
                     except Exception:
                         self._logger.error(f"Error processing event data: {traceback.format_exc()}")
                         break
-                await ws.logs_unsubscribe(subscription_id)
+                await ws.logs_unsubscribe(subscription_id)  # type: ignore
             except websockets.exceptions.ConnectionClosed:
                 self._logger.warning("Websocket closed, reconnecting...")
                 continue

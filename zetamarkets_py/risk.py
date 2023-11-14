@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+
 from zetamarkets_py import constants, utils
 from zetamarkets_py.types import Asset
 from zetamarkets_py.zeta_client.accounts.cross_margin_account import CrossMarginAccount
