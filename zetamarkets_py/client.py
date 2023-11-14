@@ -347,7 +347,7 @@ class Client:
         margin_params = {a: m for a, m in zip(Asset.all(), self.exchange.pricing.margin_parameters)}
 
         # calculate margin usage
-        position_value = sum([p.size * mark_prices[a] for a, p in positions.items()])
+        position_value = sum([abs(p.size) * mark_prices[a] for a, p in positions.items()])
 
         # initial margin includes orders, finding the worst-case position
         initial_margin = 0
@@ -384,7 +384,7 @@ class Client:
             ]
         )
         margin_utilization = maintenance_margin / equity
-        leverage = abs(position_value) / equity
+        leverage = position_value / equity
 
         return AccountRiskSummary(
             balance,
