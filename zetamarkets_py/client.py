@@ -1,4 +1,3 @@
-import asyncio
 import json
 import logging
 import time
@@ -42,16 +41,15 @@ from zetamarkets_py.events import (
 )
 from zetamarkets_py.exchange import Exchange
 from zetamarkets_py.orderbook import Orderbook
+from zetamarkets_py.risk import AccountRiskSummary, Position
 from zetamarkets_py.serum_client.accounts.orderbook import OrderbookAccount
 from zetamarkets_py.solana_client.accounts.clock import CLOCK, Clock
 from zetamarkets_py.types import (
-    AccountRiskSummary,
     Asset,
     Network,
     OrderArgs,
     OrderCompleteType,
     OrderOptions,
-    Position,
     Side,
 )
 from zetamarkets_py.zeta_client.accounts.cross_margin_account import CrossMarginAccount
@@ -270,28 +268,6 @@ class Client:
         self._account_exists_cache[open_orders_address] = exists
         return exists
 
-    def _format_margin_state(self, margin_account: CrossMarginAccount) -> Tuple[float, dict[Asset, Position]]:
-        """
-        Format the state of the margin account.
-
-        Args:
-            margin_account (CrossMarginAccount): The margin account to format.
-
-        Returns:
-            Tuple[Decimal, Dict[Asset, Position]]: The balance and positions of the margin account.
-        """
-        balance = utils.convert_fixed_int_to_decimal(margin_account.balance)
-        positions = {
-            a: Position(
-                utils.convert_fixed_lot_to_decimal(margin_account.product_ledgers[a.to_index()].position.size),
-                utils.convert_fixed_int_to_decimal(
-                    margin_account.product_ledgers[a.to_index()].position.cost_of_trades
-                ),
-            )
-            for a in self.exchange.assets
-        }
-        return balance, positions
-
     async def fetch_margin_state(self):
         """
         Fetch the state of the margin account.
@@ -309,7 +285,9 @@ class Client:
         )
         if margin_account is None:
             raise Exception("Margin account not found, cannot fetch margin state")
-        return self._format_margin_state(margin_account)
+        balance = utils.convert_fixed_int_to_decimal(margin_account.balance)
+        positions = {a: Position.from_margin_account(margin_account, a) for a in self.exchange.assets}
+        return balance, positions
 
     async def get_account_risk_summary(self):
         """
@@ -327,77 +305,7 @@ class Client:
         )
         margin_account = CrossMarginAccount.decode(account_infos[0].account.data)
         pricing_account = Pricing.decode(account_infos[1].account.data)
-        balance, positions = self._format_margin_state(margin_account)
-        mark_prices = {
-            a: utils.convert_fixed_int_to_decimal(p) for a, p in zip(Asset.all(), pricing_account.mark_prices)
-        }
-
-        # equity
-        upnl = sum(
-            [
-                (p.size * mark_prices[a] - p.cost_of_trades)
-                if p.size > 0
-                else (p.size * mark_prices[a] + p.cost_of_trades)
-                for a, p in positions.items()
-            ]
-        )
-        equity = balance + upnl
-
-        # margin parameters
-        margin_params = {a: m for a, m in zip(Asset.all(), self.exchange.pricing.margin_parameters)}
-
-        # calculate margin usage
-        position_value = sum([abs(p.size) * mark_prices[a] for a, p in positions.items()])
-
-        # initial margin includes orders, finding the worst-case position
-        initial_margin = 0
-        for i, ledger in enumerate(margin_account.product_ledgers):
-            a = Asset.from_index(i)
-            size = ledger.position.size
-            bid_open_orders = ledger.order_state.opening_orders[0]
-            ask_open_orders = ledger.order_state.opening_orders[1]
-
-            long_lots = utils.convert_fixed_lot_to_decimal(bid_open_orders)
-            short_lots = utils.convert_fixed_lot_to_decimal(ask_open_orders)
-
-            if size == 0 and long_lots == 0 and short_lots == 0:
-                continue
-
-            if size > 0:
-                long_lots += abs(utils.convert_fixed_lot_to_decimal(size))
-            elif size < 0:
-                short_lots += abs(utils.convert_fixed_lot_to_decimal(size))
-
-            lots = long_lots if long_lots > short_lots else short_lots
-            initial_margin += (
-                abs(lots) * mark_prices[a] * margin_params[a].future_margin_initial / 10**constants.MARGIN_PRECISION
-            )
-
-        # maintenance margin uses positions only
-        maintenance_margin = sum(
-            [
-                abs(p.size)
-                * mark_prices[a]
-                * margin_params[a].future_margin_maintenance
-                / 10**constants.MARGIN_PRECISION
-                for a, p in positions.items()
-            ]
-        )
-        margin_utilization = maintenance_margin / equity
-        leverage = position_value / equity
-
-        return AccountRiskSummary(
-            balance,
-            upnl,
-            equity,
-            position_value,
-            initial_margin,
-            maintenance_margin,
-            margin_utilization,
-            leverage,
-            positions,
-            mark_prices,
-        )
+        return AccountRiskSummary.from_margin_and_pricing_accounts(margin_account, pricing_account)
 
     async def fetch_open_orders(self, asset: Asset):
         """

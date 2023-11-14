@@ -132,18 +132,6 @@ class OrderCompleteType(Enum):
 
 
 @dataclass
-class Position:
-    """Data class for position details."""
-
-    size: float
-    cost_of_trades: float
-
-    @property
-    def average_price(self) -> float:
-        return self.cost_of_trades / self.size
-
-
-@dataclass
 class TIFOptions:
     """Data class for Time in Force options."""
 
@@ -203,17 +191,3 @@ class OrderArgs:
     size: float
     side: Side
     order_opts: OrderOptions = field(default_factory=OrderOptions)
-
-
-@dataclass
-class AccountRiskSummary:
-    balance: float
-    unrealized_pnl: float
-    equity: float
-    position_value: float
-    initial_margin: float
-    maintenance_margin: float
-    margin_utilization: float
-    leverage: float
-    positions: dict[Asset, Position]
-    mark_prices: dict[Asset, float]
