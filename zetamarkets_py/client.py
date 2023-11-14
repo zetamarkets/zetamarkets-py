@@ -348,12 +348,32 @@ class Client:
 
         # calculate margin usage
         position_value = sum([p.size * mark_prices[a] for a, p in positions.items()])
-        initial_margin = sum(
-            [
-                abs(p.size) * mark_prices[a] * margin_params[a].future_margin_initial / 10**constants.MARGIN_PRECISION
-                for a, p in positions.items()
-            ]
-        )
+
+        # initial margin includes orders, finding the worst-case position
+        initial_margin = 0
+        for i, ledger in enumerate(margin_account.product_ledgers):
+            a = Asset.from_index(i)
+            size = ledger.position.size
+            bid_open_orders = ledger.order_state.opening_orders[0]
+            ask_open_orders = ledger.order_state.opening_orders[1]
+
+            long_lots = utils.convert_fixed_lot_to_decimal(bid_open_orders)
+            short_lots = utils.convert_fixed_lot_to_decimal(ask_open_orders)
+
+            if size == 0 and long_lots == 0 and short_lots == 0:
+                continue
+
+            if size > 0:
+                long_lots += abs(utils.convert_fixed_lot_to_decimal(size))
+            elif size < 0:
+                short_lots += abs(utils.convert_fixed_lot_to_decimal(size))
+
+            lots = long_lots if long_lots > short_lots else short_lots
+            initial_margin += (
+                abs(lots) * mark_prices[a] * margin_params[a].future_margin_initial / 10**constants.MARGIN_PRECISION
+            )
+
+        # maintenance margin uses positions only
         maintenance_margin = sum(
             [
                 abs(p.size)
