@@ -512,8 +512,7 @@ class Client:
         return events, meta
 
     async def subscribe_transactions(
-        self,
-        commitment: Optional[Commitment] = None,
+        self, commitment: Optional[Commitment] = None, ignore_truncation: bool = False
     ) -> AsyncIterator[Tuple[List[ZetaEnrichedEvent], EventMeta]]:
         """
         This method is used to subscribe to transactions.
@@ -559,7 +558,7 @@ class Client:
 
                 async for msg in ws:
                     try:
-                        events, meta = self._parse_transaction_payload(msg)
+                        events, meta = self._parse_transaction_payload(msg, ignore_truncation)
                         if len(events) > 0 or not meta.is_successful:
                             yield events, meta
                     except Exception:
@@ -575,7 +574,9 @@ class Client:
                 self._logger.warning("Websocket closed, reconnecting...")
                 continue
 
-    def _parse_transaction_payload(self, msg) -> Tuple[List[ZetaEnrichedEvent], EventMeta]:
+    def _parse_transaction_payload(
+        self, msg, ignore_truncation: bool = False
+    ) -> Tuple[List[ZetaEnrichedEvent], EventMeta]:
         """
         Parse the transaction payload from the message.
 
@@ -625,6 +626,8 @@ class Client:
         split_indices = []
         for i in range(len(log_messages)):
             if log_messages[i] == "Log truncated":
+                if ignore_truncation:
+                    break
                 raise Exception("Logs truncated, missing event data")
             if log_messages[i].endswith("invoke [1]"):
                 split_indices.append(i)
