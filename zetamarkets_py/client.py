@@ -520,6 +520,8 @@ class Client:
         Args:
             commitment (Optional[Commitment], optional): The commitment level to use for the subscription.
                 Defaults to None.
+            ignore_truncation(bool): Bool to ignore the "Logs truncated, missing event data" warning.
+                Defaults to False.
 
         Yields:
             List[ZetaEvent]: A list of ZetaEvents that are yielded as they are received.
@@ -582,6 +584,7 @@ class Client:
 
         Args:
             msg: The message received from the websocket.
+            ignore_truncation: Bool to ignore the "Logs truncated, missing event data" warning. Defaults to False.
 
         Returns:
             Tuple[List[ZetaEvent], int]: A tuple containing a list of ZetaEnrichedEvent and the slot number.
@@ -628,7 +631,7 @@ class Client:
             if log_messages[i] == "Log truncated":
                 if ignore_truncation:
                     break
-                raise Exception("Logs truncated, missing event data")
+                self._logger.warning("Logs truncated, missing event data")
             if log_messages[i].endswith("invoke [1]"):
                 split_indices.append(i)
 
