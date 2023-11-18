@@ -286,7 +286,10 @@ class Client:
         if margin_account is None:
             raise Exception("Margin account not found, cannot fetch margin state")
         balance = utils.convert_fixed_int_to_decimal(margin_account.balance)
-        positions = {a: Position.from_margin_account(margin_account, a) for a in self.exchange.assets}
+        positions = {
+            Asset.from_index(i): Position.from_margin_account(margin_account, i)
+            for i in range(len(self.exchange.assets))
+        }
         return balance, positions
 
     async def get_account_risk_summary(self):
