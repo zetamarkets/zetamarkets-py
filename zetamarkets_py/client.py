@@ -642,7 +642,9 @@ class Client:
         if len(split_log_messages) > 0:
             split_log_messages = split_log_messages[1:]
 
-        if len(ix_args) != len(split_log_messages) or len(ix_names) != len(split_log_messages):
+        if not ignore_truncation and (
+            len(ix_args) != len(split_log_messages) or len(ix_names) != len(split_log_messages)
+        ):
             raise Exception("Mismatched transaction info lengths")
 
         # For each individual instruction, find the ix name and the events
