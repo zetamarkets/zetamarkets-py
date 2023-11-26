@@ -116,6 +116,9 @@ class Orderbook:
         Returns:
             int: 1 if the order is expired, 0 otherwise.
         """
+        print(
+            f"tif_offset ({tif_offset}) + epoch_start_ts ({epoch_start_ts}) [ = {epoch_start_ts + tif_offset}] < clock_ts ({clock_ts}) or seq_num ({seq_num}) <= epoch_start_seq_num ({epoch_start_seq_num})"
+        )
         if tif_offset > 0:
             if epoch_start_ts + tif_offset < clock_ts or seq_num <= epoch_start_seq_num:
                 return True
