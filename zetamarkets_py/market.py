@@ -51,6 +51,20 @@ class Market:
     _asks_last_update_slot: Optional[int] = None
 
     @classmethod
+    async def refresh_market_state(
+        instance: Market, connection: AsyncClient, market_state_address: Pubkey, network: Network
+    ):
+        while True:
+            if time.time() * 1000 > instance._market_state.epoch_start_ts + instance._market_state.epoch_length:
+                instance._logger.info("TIF epoch rolled over, fetching new market state")
+                instance._market_state = await MarketState.fetch(
+                    connection, market_state_address, connection.commitment, constants.MATCHING_ENGINE_PID[network]
+                )
+
+            # Most of the time this will do nothing, but every ~18h it will fetch
+            await asyncio.sleep(0.5)
+
+    @classmethod
     async def load(
         cls,
         network: Network,
@@ -102,6 +116,8 @@ class Market:
             _quote_zeta_vault_address=_quote_zeta_vault_address,
             _logger=logger,
         )
+
+        asyncio.create_task(instance.refresh_market_state())
 
         return instance
 
