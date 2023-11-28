@@ -50,14 +50,13 @@ class Market:
     _bids_last_update_slot: Optional[int] = None
     _asks_last_update_slot: Optional[int] = None
 
-    @classmethod
     async def refresh_market_state(
-        instance: Market, connection: AsyncClient, market_state_address: Pubkey, network: Network
+        self: Market, connection: AsyncClient, market_state_address: Pubkey, network: Network
     ):
         while True:
-            if time.time() * 1000 > instance._market_state.epoch_start_ts + instance._market_state.epoch_length:
-                instance._logger.info("TIF epoch rolled over, fetching new market state")
-                instance._market_state = await MarketState.fetch(
+            if time.time() > self._market_state.epoch_start_ts + self._market_state.epoch_length:
+                self._logger.info("TIF epoch rolled over, fetching new market state")
+                self._market_state = await MarketState.fetch(
                     connection, market_state_address, connection.commitment, constants.MATCHING_ENGINE_PID[network]
                 )
 
@@ -71,7 +70,7 @@ class Market:
         connection: AsyncClient,
         asset: Asset,
         market_state_address: Pubkey,
-        log_level: int = logging.CRITICAL,
+        log_level: int = logging.INFO,
     ):
         """Asynchronously load the Market.
 
@@ -117,7 +116,7 @@ class Market:
             _logger=logger,
         )
 
-        asyncio.create_task(instance.refresh_market_state())
+        asyncio.create_task(instance.refresh_market_state(connection, market_state_address, network))
 
         return instance
 
