@@ -116,9 +116,14 @@ class Orderbook:
         Returns:
             int: 1 if the order is expired, 0 otherwise.
         """
+        print(
+            f"TEMP DEBUG: tif_offset={tif_offset}, clock_ts={clock_ts}, epoch_length={epoch_length}, seq_num={seq_num}, epoch_start_seq_num={epoch_start_seq_num}"
+        )
         if tif_offset > 0:
             if tif_offset < clock_ts % epoch_length or seq_num <= epoch_start_seq_num:
+                print(f"TEMP DEBUG: order expired")
                 return True
+        print(f"TEMP DEBUG: order not expired")
         return False
 
     # using local time as a hack as opposed to self.exchange.clock.account.unix_timestamp
