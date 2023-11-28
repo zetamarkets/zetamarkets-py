@@ -262,7 +262,7 @@
         {
           "name": "authority",
           "isMut": false,
-          "isSigner": true
+          "isSigner": false
         },
         {
           "name": "payer",
@@ -298,7 +298,7 @@
         {
           "name": "authority",
           "isMut": false,
-          "isSigner": true
+          "isSigner": false
         },
         {
           "name": "payer",
@@ -5436,7 +5436,9 @@
     },
     {
       "name": "crankEventQueue",
-      "docs": ["The only events that need to be cranked are maker fills."],
+      "docs": [
+        "The only events that need to be cranked are maker fills."
+      ],
       "accounts": [
         {
           "name": "state",
@@ -6125,25 +6127,37 @@
           {
             "name": "markPrices",
             "type": {
-              "array": ["u64", 6]
+              "array": [
+                "u64",
+                7
+              ]
             }
           },
           {
             "name": "markPricesPadding",
             "type": {
-              "array": ["u64", 19]
+              "array": [
+                "u64",
+                18
+              ]
             }
           },
           {
             "name": "updateTimestamps",
             "type": {
-              "array": ["u64", 6]
+              "array": [
+                "u64",
+                7
+              ]
             }
           },
           {
             "name": "updateTimestampsPadding",
             "type": {
-              "array": ["u64", 19]
+              "array": [
+                "u64",
+                18
+              ]
             }
           },
           {
@@ -6153,7 +6167,7 @@
                 {
                   "defined": "AnchorDecimal"
                 },
-                6
+                7
               ]
             }
           },
@@ -6164,7 +6178,7 @@
                 {
                   "defined": "AnchorDecimal"
                 },
-                19
+                18
               ]
             }
           },
@@ -6175,7 +6189,7 @@
                 {
                   "defined": "AnchorDecimal"
                 },
-                6
+                7
               ]
             }
           },
@@ -6186,68 +6200,98 @@
                 {
                   "defined": "AnchorDecimal"
                 },
-                19
+                18
               ]
             }
           },
           {
             "name": "latestMidpoints",
             "type": {
-              "array": ["u64", 6]
+              "array": [
+                "u64",
+                7
+              ]
             }
           },
           {
             "name": "latestMidpointsPadding",
             "type": {
-              "array": ["u64", 19]
+              "array": [
+                "u64",
+                18
+              ]
             }
           },
           {
             "name": "oracles",
             "type": {
-              "array": ["publicKey", 6]
+              "array": [
+                "publicKey",
+                7
+              ]
             }
           },
           {
             "name": "oraclesPadding",
             "type": {
-              "array": ["publicKey", 19]
+              "array": [
+                "publicKey",
+                18
+              ]
             }
           },
           {
             "name": "oracleBackupFeeds",
             "type": {
-              "array": ["publicKey", 6]
+              "array": [
+                "publicKey",
+                7
+              ]
             }
           },
           {
             "name": "oracleBackupFeedsPadding",
             "type": {
-              "array": ["publicKey", 19]
+              "array": [
+                "publicKey",
+                18
+              ]
             }
           },
           {
             "name": "markets",
             "type": {
-              "array": ["publicKey", 6]
+              "array": [
+                "publicKey",
+                7
+              ]
             }
           },
           {
             "name": "marketsPadding",
             "type": {
-              "array": ["publicKey", 19]
+              "array": [
+                "publicKey",
+                18
+              ]
             }
           },
           {
             "name": "perpSyncQueues",
             "type": {
-              "array": ["publicKey", 6]
+              "array": [
+                "publicKey",
+                7
+              ]
             }
           },
           {
             "name": "perpSyncQueuesPadding",
             "type": {
-              "array": ["publicKey", 19]
+              "array": [
+                "publicKey",
+                18
+              ]
             }
           },
           {
@@ -6257,7 +6301,7 @@
                 {
                   "defined": "PerpParameters"
                 },
-                6
+                7
               ]
             }
           },
@@ -6268,7 +6312,7 @@
                 {
                   "defined": "PerpParameters"
                 },
-                19
+                18
               ]
             }
           },
@@ -6279,7 +6323,7 @@
                 {
                   "defined": "MarginParameters"
                 },
-                6
+                7
               ]
             }
           },
@@ -6290,7 +6334,7 @@
                 {
                   "defined": "MarginParameters"
                 },
-                19
+                18
               ]
             }
           },
@@ -6301,7 +6345,7 @@
                 {
                   "defined": "Product"
                 },
-                6
+                7
               ]
             }
           },
@@ -6312,20 +6356,26 @@
                 {
                   "defined": "Product"
                 },
-                19
+                18
               ]
             }
           },
           {
             "name": "zetaGroupKeys",
             "type": {
-              "array": ["publicKey", 6]
+              "array": [
+                "publicKey",
+                7
+              ]
             }
           },
           {
             "name": "zetaGroupKeysPadding",
             "type": {
-              "array": ["publicKey", 19]
+              "array": [
+                "publicKey",
+                18
+              ]
             }
           },
           {
@@ -6343,19 +6393,28 @@
           {
             "name": "haltForcePricing",
             "type": {
-              "array": ["bool", 6]
+              "array": [
+                "bool",
+                7
+              ]
             }
           },
           {
             "name": "haltForcePricingPadding",
             "type": {
-              "array": ["bool", 19]
+              "array": [
+                "bool",
+                18
+              ]
             }
           },
           {
             "name": "padding",
             "type": {
-              "array": ["u8", 2707]
+              "array": [
+                "u8",
+                2707
+              ]
             }
           }
         ]
@@ -6373,13 +6432,19 @@
           {
             "name": "markPrices",
             "type": {
-              "array": ["u64", 46]
+              "array": [
+                "u64",
+                46
+              ]
             }
           },
           {
             "name": "markPricesPadding",
             "type": {
-              "array": ["u64", 91]
+              "array": [
+                "u64",
+                91
+              ]
             }
           },
           {
@@ -6411,67 +6476,100 @@
           {
             "name": "updateTimestamp",
             "type": {
-              "array": ["u64", 2]
+              "array": [
+                "u64",
+                2
+              ]
             }
           },
           {
             "name": "updateTimestampPadding",
             "type": {
-              "array": ["u64", 4]
+              "array": [
+                "u64",
+                4
+              ]
             }
           },
           {
             "name": "retreatExpirationTimestamp",
             "type": {
-              "array": ["u64", 2]
+              "array": [
+                "u64",
+                2
+              ]
             }
           },
           {
             "name": "retreatExpirationTimestampPadding",
             "type": {
-              "array": ["u64", 4]
+              "array": [
+                "u64",
+                4
+              ]
             }
           },
           {
             "name": "interestRate",
             "type": {
-              "array": ["i64", 2]
+              "array": [
+                "i64",
+                2
+              ]
             }
           },
           {
             "name": "interestRatePadding",
             "type": {
-              "array": ["i64", 4]
+              "array": [
+                "i64",
+                4
+              ]
             }
           },
           {
             "name": "nodes",
             "type": {
-              "array": ["u64", 5]
+              "array": [
+                "u64",
+                5
+              ]
             }
           },
           {
             "name": "volatility",
             "type": {
-              "array": ["u64", 10]
+              "array": [
+                "u64",
+                10
+              ]
             }
           },
           {
             "name": "volatilityPadding",
             "type": {
-              "array": ["u64", 20]
+              "array": [
+                "u64",
+                20
+              ]
             }
           },
           {
             "name": "nodeKeys",
             "type": {
-              "array": ["publicKey", 138]
+              "array": [
+                "publicKey",
+                138
+              ]
             }
           },
           {
             "name": "haltForcePricing",
             "type": {
-              "array": ["bool", 6]
+              "array": [
+                "bool",
+                6
+              ]
             }
           },
           {
@@ -6497,7 +6595,10 @@
           {
             "name": "padding",
             "type": {
-              "array": ["u8", 1593]
+              "array": [
+                "u8",
+                1593
+              ]
             }
           }
         ]
@@ -6519,7 +6620,10 @@
           {
             "name": "indexes",
             "type": {
-              "array": ["u8", 138]
+              "array": [
+                "u8",
+                138
+              ]
             }
           }
         ]
@@ -6585,7 +6689,10 @@
           {
             "name": "null",
             "type": {
-              "array": ["u8", 7]
+              "array": [
+                "u8",
+                7
+              ]
             }
           },
           {
@@ -6691,7 +6798,7 @@
                 {
                   "defined": "HaltStateV2"
                 },
-                6
+                7
               ]
             }
           },
@@ -6702,7 +6809,7 @@
                 {
                   "defined": "HaltStateV2"
                 },
-                19
+                18
               ]
             }
           },
@@ -6713,7 +6820,10 @@
           {
             "name": "padding",
             "type": {
-              "array": ["u8", 306]
+              "array": [
+                "u8",
+                306
+              ]
             }
           }
         ]
@@ -6743,7 +6853,10 @@
           {
             "name": "strikes",
             "type": {
-              "array": ["u64", 23]
+              "array": [
+                "u64",
+                23
+              ]
             }
           }
         ]
@@ -6792,7 +6905,10 @@
           {
             "name": "noncePadding",
             "type": {
-              "array": ["u8", 2]
+              "array": [
+                "u8",
+                2
+              ]
             }
           },
           {
@@ -6832,7 +6948,10 @@
           {
             "name": "marginParametersPadding",
             "type": {
-              "array": ["u8", 104]
+              "array": [
+                "u8",
+                104
+              ]
             }
           },
           {
@@ -6888,7 +7007,10 @@
           {
             "name": "deprecatedPadding",
             "type": {
-              "array": ["u8", 8]
+              "array": [
+                "u8",
+                8
+              ]
             }
           },
           {
@@ -6930,7 +7052,10 @@
           {
             "name": "padding",
             "type": {
-              "array": ["u8", 964]
+              "array": [
+                "u8",
+                964
+              ]
             }
           }
         ]
@@ -6952,7 +7077,10 @@
           {
             "name": "nodeUpdates",
             "type": {
-              "array": ["i64", 5]
+              "array": [
+                "i64",
+                5
+              ]
             }
           },
           {
@@ -6982,7 +7110,10 @@
           {
             "name": "seriesExpiry",
             "type": {
-              "array": ["u64", 5]
+              "array": [
+                "u64",
+                5
+              ]
             }
           },
           {
@@ -7020,7 +7151,10 @@
           {
             "name": "padding",
             "type": {
-              "array": ["u8", 262]
+              "array": [
+                "u8",
+                262
+              ]
             }
           }
         ]
@@ -7091,13 +7225,19 @@
           {
             "name": "openOrdersNonces",
             "type": {
-              "array": ["u8", 6]
+              "array": [
+                "u8",
+                7
+              ]
             }
           },
           {
             "name": "openOrdersNoncesPadding",
             "type": {
-              "array": ["u8", 19]
+              "array": [
+                "u8",
+                18
+              ]
             }
           },
           {
@@ -7111,7 +7251,7 @@
                 {
                   "defined": "AnchorDecimal"
                 },
-                6
+                7
               ]
             }
           },
@@ -7122,7 +7262,7 @@
                 {
                   "defined": "AnchorDecimal"
                 },
-                19
+                18
               ]
             }
           },
@@ -7133,7 +7273,7 @@
                 {
                   "defined": "ProductLedger"
                 },
-                6
+                7
               ]
             }
           },
@@ -7144,7 +7284,7 @@
                 {
                   "defined": "ProductLedger"
                 },
-                19
+                18
               ]
             }
           },
@@ -7155,7 +7295,10 @@
           {
             "name": "padding",
             "type": {
-              "array": ["u8", 1984]
+              "array": [
+                "u8",
+                1984
+              ]
             }
           }
         ]
@@ -7185,13 +7328,19 @@
           {
             "name": "openOrdersNonce",
             "type": {
-              "array": ["u8", 138]
+              "array": [
+                "u8",
+                138
+              ]
             }
           },
           {
             "name": "seriesExpiry",
             "type": {
-              "array": ["u64", 5]
+              "array": [
+                "u64",
+                5
+              ]
             }
           },
           {
@@ -7255,7 +7404,10 @@
           {
             "name": "padding",
             "type": {
-              "array": ["u8", 338]
+              "array": [
+                "u8",
+                338
+              ]
             }
           }
         ]
@@ -7491,7 +7643,10 @@
           {
             "name": "alias",
             "type": {
-              "array": ["u8", 15]
+              "array": [
+                "u8",
+                15
+              ]
             }
           },
           {
@@ -7595,13 +7750,19 @@
           {
             "name": "markPricesSet",
             "type": {
-              "array": ["bool", 2]
+              "array": [
+                "bool",
+                2
+              ]
             }
           },
           {
             "name": "markPricesSetPadding",
             "type": {
-              "array": ["bool", 3]
+              "array": [
+                "bool",
+                3
+              ]
             }
           },
           {
@@ -7611,25 +7772,37 @@
           {
             "name": "marketNodesCleaned",
             "type": {
-              "array": ["bool", 2]
+              "array": [
+                "bool",
+                2
+              ]
             }
           },
           {
             "name": "marketNodesCleanedPadding",
             "type": {
-              "array": ["bool", 4]
+              "array": [
+                "bool",
+                4
+              ]
             }
           },
           {
             "name": "marketCleaned",
             "type": {
-              "array": ["bool", 46]
+              "array": [
+                "bool",
+                46
+              ]
             }
           },
           {
             "name": "marketCleanedPadding",
             "type": {
-              "array": ["bool", 91]
+              "array": [
+                "bool",
+                91
+              ]
             }
           },
           {
@@ -7751,7 +7924,10 @@
           {
             "name": "padding",
             "type": {
-              "array": ["u8", 15]
+              "array": [
+                "u8",
+                15
+              ]
             }
           }
         ]
@@ -7829,7 +8005,10 @@
           {
             "name": "openingOrders",
             "type": {
-              "array": ["u64", 2]
+              "array": [
+                "u64",
+                2
+              ]
             }
           }
         ]
@@ -7867,7 +8046,10 @@
           {
             "name": "name",
             "type": {
-              "array": ["u8", 10]
+              "array": [
+                "u8",
+                10
+              ]
             }
           }
         ]
@@ -7903,7 +8085,10 @@
           {
             "name": "spotPrices",
             "type": {
-              "array": ["u64", 6]
+              "array": [
+                "u64",
+                7
+              ]
             }
           },
           {
@@ -7925,7 +8110,10 @@
           {
             "name": "volatility",
             "type": {
-              "array": ["u64", 5]
+              "array": [
+                "u64",
+                5
+              ]
             }
           }
         ]
@@ -8369,7 +8557,10 @@
           {
             "name": "volatility",
             "type": {
-              "array": ["u64", 5]
+              "array": [
+                "u64",
+                5
+              ]
             }
           },
           {
@@ -8694,6 +8885,9 @@
           },
           {
             "name": "BNB"
+          },
+          {
+            "name": "PYTH"
           },
           {
             "name": "UNDEFINED"
