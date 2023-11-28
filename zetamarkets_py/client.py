@@ -1084,7 +1084,6 @@ class Client:
         if post_instructions is not None:
             ixs.extend(post_instructions)
         self._logger.info(f"Placing {len(orders)} orders for {asset}")
-
         return await self._send_versioned_transaction(ixs)
 
     async def replace_orders_for_market(
@@ -1147,9 +1146,12 @@ class Client:
             self.provider.wallet.public_key, ixs, [constants.ZETA_LUT[self.network]], recent_blockhash
         )
         tx = VersionedTransaction(msg, [self.provider.wallet.payer])
+        self._logger.critical(f"TEMP TX SEND: {tx}")
+
         try:
             opts = self.provider.opts._replace(last_valid_block_height=last_valid_block_height)
             signature = await self.provider.send(tx, opts)
+            self._logger.critical(f"TEMP SIG: {signature}")
         except RPCException as exc:
             # This won't work on zDEX errors
             # TODO: add ZDEX error parsing
