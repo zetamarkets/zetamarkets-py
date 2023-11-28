@@ -102,7 +102,7 @@ class Orderbook:
 
     @staticmethod
     def _is_order_expired(
-        clock_ts: int, tif_offset: int, epoch_start_ts: int, seq_num: int, epoch_start_seq_num: int
+        clock_ts: int, tif_offset: int, epoch_length: int, seq_num: int, epoch_start_seq_num: int
     ) -> int:
         """Checks if the order is expired.
 
@@ -117,7 +117,7 @@ class Orderbook:
             int: 1 if the order is expired, 0 otherwise.
         """
         if tif_offset > 0:
-            if epoch_start_ts + tif_offset < clock_ts or seq_num <= epoch_start_seq_num:
+            if tif_offset < clock_ts - clock_ts % epoch_length or seq_num <= epoch_start_seq_num:
                 return True
         return False
 
@@ -140,7 +140,7 @@ class Orderbook:
             order_expired = self._is_order_expired(
                 clock_ts,
                 node.tif_offset,
-                self._market_state.epoch_start_ts,
+                self._market_state.epoch_length,
                 seq_num,
                 self._market_state.start_epoch_seq_num,
             )
