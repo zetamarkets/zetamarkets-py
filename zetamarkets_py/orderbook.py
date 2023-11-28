@@ -117,7 +117,7 @@ class Orderbook:
             int: 1 if the order is expired, 0 otherwise.
         """
         if tif_offset > 0:
-            if tif_offset < clock_ts - clock_ts % epoch_length or seq_num <= epoch_start_seq_num:
+            if tif_offset < clock_ts % epoch_length or seq_num <= epoch_start_seq_num:
                 return True
         return False
 
