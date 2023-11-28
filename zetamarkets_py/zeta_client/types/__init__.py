@@ -20,7 +20,6 @@ from . import (
     order_complete_type,
     order_state,
     order_type,
-    override_expiry_args,
     perp_parameters,
     place_order_type,
     position,
