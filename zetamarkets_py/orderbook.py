@@ -118,9 +118,7 @@ class Orderbook:
         """
         if tif_offset > 0:
             if epoch_start_ts + tif_offset < clock_ts or seq_num <= epoch_start_seq_num:
-                print("order expired")
                 return True
-        print("order not expired")
         return False
 
     # using local time as a hack as opposed to self.exchange.clock.account.unix_timestamp
