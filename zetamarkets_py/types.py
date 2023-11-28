@@ -17,6 +17,7 @@ class Asset(Enum):
     APT = "APT"
     ARB = "ARB"
     BNB = "BNB"
+    PYTH = "PYTH"
 
     def to_index(self):
         """Converts the asset to its corresponding index."""

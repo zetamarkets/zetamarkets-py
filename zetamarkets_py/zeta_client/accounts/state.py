@@ -86,8 +86,8 @@ class State:
         "native_withdraw_limit" / borsh.U64,
         "withdraw_limit_epoch_seconds" / borsh.U32,
         "native_open_interest_limit" / borsh.U64,
-        "halt_states" / types.halt_state_v2.HaltStateV2.layout[5],
-        "halt_states_padding" / types.halt_state_v2.HaltStateV2.layout[20],
+        "halt_states" / types.halt_state_v2.HaltStateV2.layout[7],
+        "halt_states_padding" / types.halt_state_v2.HaltStateV2.layout[18],
         "padding" / borsh.U8[338],
     )
     admin: Pubkey

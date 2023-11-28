@@ -31,6 +31,10 @@ class BNBJSON(typing.TypedDict):
     kind: typing.Literal["BNB"]
 
 
+class PYTHJSON(typing.TypedDict):
+    kind: typing.Literal["PYTH"]
+
+
 class UNDEFINEDJSON(typing.TypedDict):
     kind: typing.Literal["UNDEFINED"]
 
@@ -144,8 +148,26 @@ class BNB:
 
 
 @dataclass
+class PYTH:
+    discriminator: typing.ClassVar = 6
+    kind: typing.ClassVar = "PYTH"
+
+    @classmethod
+    def to_json(cls) -> PYTHJSON:
+        return PYTHJSON(
+            kind="PYTH",
+        )
+
+    @classmethod
+    def to_encodable(cls) -> dict:
+        return {
+            "PYTH": {},
+        }
+
+
+@dataclass
 class UNDEFINED:
-    discriminator: typing.ClassVar = 5
+    discriminator: typing.ClassVar = 7
     kind: typing.ClassVar = "UNDEFINED"
 
     @classmethod
@@ -161,8 +183,8 @@ class UNDEFINED:
         }
 
 
-AssetKind = typing.Union[SOL, BTC, ETH, APT, ARB, BNB, UNDEFINED]
-AssetJSON = typing.Union[SOLJSON, BTCJSON, ETHJSON, APTJSON, ARBJSON, BNBJSON, UNDEFINEDJSON]
+AssetKind = typing.Union[SOL, BTC, ETH, APT, ARB, BNB, PYTH, UNDEFINED]
+AssetJSON = typing.Union[SOLJSON, BTCJSON, ETHJSON, APTJSON, ARBJSON, BNBJSON, PYTHJSON, UNDEFINEDJSON]
 
 
 def from_decoded(obj: dict) -> AssetKind:
@@ -180,6 +202,8 @@ def from_decoded(obj: dict) -> AssetKind:
         return ARB()
     if "BNB" in obj:
         return BNB()
+    if "PYTH" in obj:
+        return PYTH()
     if "UNDEFINED" in obj:
         return UNDEFINED()
     raise ValueError("Invalid enum object")
@@ -198,6 +222,8 @@ def from_json(obj: AssetJSON) -> AssetKind:
         return ARB()
     if obj["kind"] == "BNB":
         return BNB()
+    if obj["kind"] == "PYTH":
+        return PYTH()
     if obj["kind"] == "UNDEFINED":
         return UNDEFINED()
     kind = obj["kind"]
@@ -211,5 +237,6 @@ layout = EnumForCodegen(
     "APT" / borsh.CStruct(),
     "ARB" / borsh.CStruct(),
     "BNB" / borsh.CStruct(),
+    "PYTH" / borsh.CStruct(),
     "UNDEFINED" / borsh.CStruct(),
 )
