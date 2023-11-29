@@ -1058,6 +1058,7 @@ class Client:
         orders: list[OrderArgs],
         pre_instructions: Optional[list[Instruction]] = None,
         post_instructions: Optional[list[Instruction]] = None,
+        tif_buffer: int = 0,
     ):
         """
         Place orders for a market.
@@ -1082,7 +1083,7 @@ class Client:
         if pre_instructions is not None:
             ixs.extend(pre_instructions)
         for order in orders:
-            ixs.append(self._place_order_ix(asset, order.price, order.size, order.side, order.order_opts))
+            ixs.append(self._place_order_ix(asset, order.price, order.size, order.side, order.order_opts, tif_buffer))
         if post_instructions is not None:
             ixs.extend(post_instructions)
         self._logger.info(f"Placing {len(orders)} orders for {asset}")
