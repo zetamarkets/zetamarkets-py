@@ -860,6 +860,7 @@ class Client:
         size: float,
         side: Side,
         order_opts: Optional[OrderOptions] = None,
+        tif_buffer: int = 0,
     ) -> Instruction:
         """
         Build a PlaceOrder instruction.
@@ -887,6 +888,7 @@ class Client:
                 order_opts.expiry_ts,
                 self.exchange.markets[asset]._market_state.epoch_length,
                 unix_timestamp,  # self.exchange.clock.account.unix_timestamp,
+                tif_buffer,
             )
             if order_opts.expiry_ts
             else None

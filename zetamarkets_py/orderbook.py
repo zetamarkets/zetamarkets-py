@@ -102,7 +102,7 @@ class Orderbook:
 
     @staticmethod
     def _is_order_expired(
-        clock_ts: int, tif_offset: int, epoch_length: int, seq_num: int, epoch_start_seq_num: int
+        clock_ts: int, tif_offset: int, epoch_length: int, seq_num: int, epoch_start_seq_num: int, tif_buffer: int
     ) -> int:
         """Checks if the order is expired.
 
@@ -116,18 +116,17 @@ class Orderbook:
         Returns:
             int: 1 if the order is expired, 0 otherwise.
         """
-        print(
-            f"TEMP DEBUG: tif_offset={tif_offset}, clock_ts={clock_ts}, epoch_length={epoch_length}, seq_num={seq_num}, epoch_start_seq_num={epoch_start_seq_num}"
-        )
         if tif_offset > 0:
-            if tif_offset < clock_ts % epoch_length or seq_num <= epoch_start_seq_num:
-                print(f"TEMP DEBUG: order expired")
+            # Add TIF buffer here to get into the next epoch earlier
+            epoch_start_ts = (clock_ts + tif_buffer) - (clock_ts + tif_buffer) % epoch_length
+
+            # Add TIF buffer here to account for clock drift when not around the epoch crossover
+            if epoch_start_ts + tif_offset + tif_buffer < clock_ts or seq_num <= epoch_start_seq_num:
                 return True
-        print(f"TEMP DEBUG: order not expired")
         return False
 
     # using local time as a hack as opposed to self.exchange.clock.account.unix_timestamp
-    def _get_l2(self, depth: int, clock_ts: int = int(time.time())) -> list[OrderInfo]:
+    def _get_l2(self, depth: int, clock_ts: int = int(time.time()), tif_buffer: int = 10) -> list[OrderInfo]:
         """Gets the Level 2 market information.
 
         Args:
@@ -148,6 +147,7 @@ class Orderbook:
                 self._market_state.epoch_length,
                 seq_num,
                 self._market_state.start_epoch_seq_num,
+                tif_buffer,
             )
             if order_expired:
                 continue

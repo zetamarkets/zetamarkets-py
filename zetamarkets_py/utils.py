@@ -94,7 +94,7 @@ def cluster_endpoint(network: Network, tls: bool = True, ws: bool = False) -> st
         return endpoint
 
 
-def get_tif_offset(expiry_ts: int, epoch_length: int, current_ts: int) -> int:
+def get_tif_offset(expiry_ts: int, epoch_length: int, current_ts: int, tif_buffer: int = 0) -> int:
     """
     Get the Time in Force (TIF) offset.
 
@@ -111,7 +111,10 @@ def get_tif_offset(expiry_ts: int, epoch_length: int, current_ts: int) -> int:
     """
     if expiry_ts < current_ts:
         raise Exception(f"Cannot place expired order, current_ts: {current_ts}, expiry_ts: {expiry_ts}")
-    epoch_start = current_ts - (current_ts % epoch_length)
+
+    # Add tif_buffer here to slow down going into the next epoch to prevent 0x42 errors around epoch
+    # The consequence is that you'll send really long expiry orders around the epoch because the tif_offset will be large even though onchain we've gone to a new epoch
+    epoch_start = (current_ts - tif_buffer) - ((current_ts - tif_buffer) % epoch_length)
 
     tif_offset = expiry_ts - epoch_start
     return min(tif_offset, epoch_length)
