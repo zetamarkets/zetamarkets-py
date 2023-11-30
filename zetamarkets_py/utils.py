@@ -7,51 +7,6 @@ from solana.utils.cluster import cluster_api_url
 
 from zetamarkets_py import constants
 from zetamarkets_py.types import Network
-from solders.hash import Hash
-from collections import OrderedDict
-
-
-class BlockhashCache:
-    """A recent blockhash cache that expires after a given number of slots.
-
-    Args:
-        max_slots: slots until cached blockhash expires.
-    """
-
-    def __init__(self, max_slots: int = 30) -> None:
-        """Instantiate the cache (you only need to do this once)."""
-        self.blockhashes: OrderedDict = OrderedDict()
-        self.max_slots = max_slots
-
-    def set(self, blockhash: Hash, slot: int) -> None:
-        """Update the cache.
-
-        Args:
-            blockhash: new blockhash value.
-            slot: the slot which the blockhash came from.
-        """
-        if slot not in self.blockhashes:
-            self.blockhashes[slot] = blockhash
-
-        # Keep only N slots
-        pops = 0
-        for s in self.blockhashes:
-            if s < slot - self.max_slots:
-                pops += 1
-            else:
-                break
-
-        for i in range(pops):
-            self.blockhashes.pop()
-
-    def get(self) -> Hash:
-        """Get the oldest cached blockhash (first element in the OrderedDict)
-
-        Returns:
-            cached blockhash.
-
-        """
-        return next(iter(self.blockhashes))
 
 
 def convert_fixed_int_to_decimal(amount: int) -> float:
