@@ -35,6 +35,7 @@ class Orderbook:
         self.side = side
         self._slab = orderbook.slab
         self._market_state = market_state
+        self.logger = utils.create_logger(f"ORDERBOOK", "DEBUG")
 
     @classmethod
     async def load(
@@ -102,7 +103,7 @@ class Orderbook:
 
     @staticmethod
     def _is_order_expired(
-        clock_ts: int, tif_offset: int, epoch_length: int, seq_num: int, epoch_start_seq_num: int, tif_buffer: int
+        self, clock_ts: int, tif_offset: int, epoch_length: int, seq_num: int, epoch_start_seq_num: int, tif_buffer: int
     ) -> int:
         """Checks if the order is expired.
 
@@ -119,10 +120,16 @@ class Orderbook:
         if tif_offset > 0:
             # Add TIF buffer here to get into the next epoch earlier
             epoch_start_ts = (clock_ts + tif_buffer) - (clock_ts + tif_buffer) % epoch_length
+            self.logger.debug(
+                f"clock_ts={clock_ts} epoch_start_ts={epoch_start_ts} tif_offset={tif_offset} tif_buffer={tif_buffer} seq_num={seq_num} epoch_start_seq_num={epoch_start_seq_num}"
+            )
 
             # Add TIF buffer here to account for clock drift when not around the epoch crossover
             if epoch_start_ts + tif_offset + tif_buffer < clock_ts or seq_num <= epoch_start_seq_num:
+                self.logger.debug(f"Expired")
                 return True
+
+        self.logger.debug(f"Not expired")
         return False
 
     # using local time as a hack as opposed to self.exchange.clock.account.unix_timestamp
