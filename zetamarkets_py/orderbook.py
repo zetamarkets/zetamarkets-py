@@ -120,15 +120,13 @@ class Orderbook:
             # Add TIF buffer here to get into the next epoch earlier
             epoch_start_ts = (clock_ts + tif_buffer) - (clock_ts + tif_buffer) % epoch_length
             self.logger.debug(
-                f"clock_ts={clock_ts} epoch_start_ts={epoch_start_ts} tif_offset={tif_offset} tif_buffer={tif_buffer} seq_num={seq_num} epoch_start_seq_num={epoch_start_seq_num}"
+                f"expired = {epoch_start_ts + tif_offset + tif_buffer < clock_ts or seq_num <= epoch_start_seq_num} clock_ts={clock_ts} epoch_start_ts={epoch_start_ts} tif_offset={tif_offset} tif_buffer={tif_buffer} seq_num={seq_num} epoch_start_seq_num={epoch_start_seq_num}"
             )
 
             # Add TIF buffer here to account for clock drift when not around the epoch crossover
             if epoch_start_ts + tif_offset + tif_buffer < clock_ts or seq_num <= epoch_start_seq_num:
-                self.logger.debug(f"Expired")
                 return True
 
-        self.logger.debug(f"Not expired")
         return False
 
     # using local time as a hack as opposed to self.exchange.clock.account.unix_timestamp
