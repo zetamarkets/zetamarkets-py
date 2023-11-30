@@ -15,7 +15,6 @@ from anchorpy import Event, Provider, Wallet
 from anchorpy.provider import DEFAULT_OPTIONS
 from construct import Container
 from jsonrpcclient import request
-from solana.blockhash import BlockhashCache
 from solana.rpc.async_api import AsyncClient
 from solana.rpc.commitment import Commitment, Confirmed
 from solana.rpc.core import RPCException
@@ -118,7 +117,7 @@ class Client:
         tx_opts: TxOpts = DEFAULT_OPTIONS,
         network: Network = Network.MAINNET,
         log_level: int = logging.WARNING,
-        blockhash_cache: Union[BlockhashCache, bool] = False,
+        blockhash_cache: Union[utils.BlockhashCache, bool] = False,
     ):
         """
         Asynchronously load the Zeta Client.
