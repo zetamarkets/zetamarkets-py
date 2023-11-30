@@ -101,7 +101,6 @@ class Orderbook:
         else:
             return lower
 
-    @staticmethod
     def _is_order_expired(
         self, clock_ts: int, tif_offset: int, epoch_length: int, seq_num: int, epoch_start_seq_num: int, tif_buffer: int
     ) -> int:
