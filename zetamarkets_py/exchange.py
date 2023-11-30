@@ -140,38 +140,3 @@ class Exchange:
             list[Asset]: A list of Asset objects.
         """
         return list(self.markets.keys())
-
-    # TODO: add auto priority fee
-    # TODO: add to solders
-    # def update_auto_fee(self):
-    #     account_list = []
-
-    #     # Query the most written-to accounts
-    #     # Note: getRecentPrioritizationFees() will account for global fees too if no one is writing to our accs
-    #     for market in self.markets.values():
-    #         account_list.append(market.address.perp_sync_queue_address)
-
-    #     try:
-    #         data = requests.post(
-    #             self.endpoint,
-    #             json={
-    #                 "jsonrpc": "2.0",
-    #                 "id": 1,
-    #                 "method": "getRecentPrioritizationFees",
-    #                 "params": [[account_list]],
-    #             },
-    #         )
-
-    #         fees = sorted(
-    #             [obj["prioritizationFee"] for obj in data.json()["result"]],
-    #             key=lambda x: x["slot"],
-    #             reverse=True,
-    #         )[
-    #             :20
-    #         ]  # Grab the latest 20
-
-    #         median = statistics.median(fees)
-    #         self.priority_fee = min(median, self._auto_priority_fee_upper_limit)
-    #         print(f"AutoUpdate priority fee. New fee = {self.priority_fee} microlamports per compute unit")
-    #     except Exception as e:
-    #         print(f"updateAutoFee failed {e}")
