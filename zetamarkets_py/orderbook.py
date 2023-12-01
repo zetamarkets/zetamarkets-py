@@ -35,7 +35,6 @@ class Orderbook:
         self.side = side
         self._slab = orderbook.slab
         self._market_state = market_state
-        self.logger = utils.create_logger(f"ORDERBOOK", "DEBUG")
 
     @classmethod
     async def load(
@@ -119,8 +118,8 @@ class Orderbook:
         if tif_offset > 0:
             # Add TIF buffer here to get into the next epoch earlier
             epoch_start_ts = (clock_ts + tif_buffer) - (clock_ts + tif_buffer) % epoch_length
-            self.logger.debug(
-                f"expired = {epoch_start_ts + tif_offset + tif_buffer < clock_ts or seq_num <= epoch_start_seq_num} clock_ts={clock_ts} epoch_start_ts={epoch_start_ts} tif_offset={tif_offset} tif_buffer={tif_buffer} seq_num={seq_num} epoch_start_seq_num={epoch_start_seq_num}"
+            print(
+                f"TEMP DEBUG expired = {epoch_start_ts + tif_offset + tif_buffer < clock_ts or seq_num <= epoch_start_seq_num} clock_ts={clock_ts} epoch_start_ts={epoch_start_ts} tif_offset={tif_offset} tif_buffer={tif_buffer} seq_num={seq_num} epoch_start_seq_num={epoch_start_seq_num}"
             )
 
             # Add TIF buffer here to account for clock drift when not around the epoch crossover
