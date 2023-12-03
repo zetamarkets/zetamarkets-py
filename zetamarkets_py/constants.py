@@ -86,8 +86,6 @@ DEFAULT_MICRO_LAMPORTS_PER_CU_FEE = 1000
 BASE_MINT_DECIMALS = 0
 QUOTE_MINT_DECIMALS = 6
 
-BLOCKHASH_COMMITMENT = commitment.Confirmed
-
 ZETA_LUT = {
     # Network.LOCALNET: None,
     Network.DEVNET: AddressLookupTableAccount(

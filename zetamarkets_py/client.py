@@ -1039,10 +1039,10 @@ class Client:
         )
 
     async def cancel_orders_for_market(
-        self, 
-        asset: Asset, 
+        self,
+        asset: Asset,
         pre_instructions: Optional[list[Instruction]] = None,
-        post_instructions: Optional[list[Instruction]] = None
+        post_instructions: Optional[list[Instruction]] = None,
     ):
         """
         Cancel all orders for a market.
@@ -1145,12 +1145,12 @@ class Client:
                 last_valid_block_height = None
                 self._logger.debug(f"Blockhash cache hit, using cached blockhash: {recent_blockhash}")
             except ValueError:
-                blockhash_resp = await self.connection.get_latest_blockhash(constants.BLOCKHASH_COMMITMENT)
+                blockhash_resp = await self.connection.get_latest_blockhash(self.connection.commitment)
                 recent_blockhash = self.connection._process_blockhash_resp(blockhash_resp, used_immediately=True)
                 last_valid_block_height = blockhash_resp.value.last_valid_block_height
                 self._logger.debug(f"Blockhash cache miss, fetched from RPC: {recent_blockhash}")
         else:
-            blockhash_resp = await self.connection.get_latest_blockhash(constants.BLOCKHASH_COMMITMENT)
+            blockhash_resp = await self.connection.get_latest_blockhash(self.connection.commitment)
             recent_blockhash = self.connection.parse_recent_blockhash(blockhash_resp)
             last_valid_block_height = blockhash_resp.value.last_valid_block_height
             self._logger.debug(f"Blockhash cache not enabled, fetched from RPC: {recent_blockhash}")
