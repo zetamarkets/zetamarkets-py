@@ -1038,7 +1038,12 @@ class Client:
             self.exchange.program_id,
         )
 
-    async def cancel_orders_for_market(self, asset: Asset):
+    async def cancel_orders_for_market(
+        self, 
+        asset: Asset, 
+        pre_instructions: Optional[list[Instruction]] = None,
+        post_instructions: Optional[list[Instruction]] = None
+    ):
         """
         Cancel all orders for a market.
 
@@ -1048,7 +1053,12 @@ class Client:
         Returns:
             Transaction: The transaction of the cancelled orders.
         """
-        ixs = [self._cancel_orders_for_market_ix(asset)]
+        ixs = []
+        if pre_instructions is not None:
+            ixs.extend(pre_instructions)
+        ixs.append(self._cancel_orders_for_market_ix(asset))
+        if post_instructions is not None:
+            ixs.extend(post_instructions)
         self._logger.info(f"Cancelling all orders for {asset}")
         return await self._send_versioned_transaction(ixs)
 
