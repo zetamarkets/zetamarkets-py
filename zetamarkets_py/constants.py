@@ -1,4 +1,3 @@
-from solana.rpc import commitment
 from solders.address_lookup_table_account import AddressLookupTableAccount
 from solders.pubkey import Pubkey
 
@@ -85,8 +84,6 @@ DEFAULT_MICRO_LAMPORTS_PER_CU_FEE = 1000
 # DEX
 BASE_MINT_DECIMALS = 0
 QUOTE_MINT_DECIMALS = 6
-
-BLOCKHASH_COMMITMENT = commitment.Finalized
 
 ZETA_LUT = {
     # Network.LOCALNET: None,
