@@ -1039,10 +1039,10 @@ class Client:
         )
 
     async def cancel_orders_for_market(
-        self, 
-        asset: Asset, 
+        self,
+        asset: Asset,
         pre_instructions: Optional[list[Instruction]] = None,
-        post_instructions: Optional[list[Instruction]] = None
+        post_instructions: Optional[list[Instruction]] = None,
     ):
         """
         Cancel all orders for a market.
