@@ -114,12 +114,12 @@ class Client:
         ws_endpoint: Optional[str] = None,
         commitment: Commitment = Confirmed,
         wallet: Optional[Wallet] = None,
-        delegated_wallet: Optional[Wallet] = None,
         assets: list[Asset] = Asset.all(),
         tx_opts: TxOpts = DEFAULT_OPTIONS,
         network: Network = Network.MAINNET,
         log_level: int = logging.WARNING,
         blockhash_cache: Union[BlockhashCache, bool] = False,
+        delegatee_pubkey: Optional[Pubkey] = None,
     ):
         """
         Asynchronously load the Zeta Client.
@@ -129,12 +129,12 @@ class Client:
             ws_endpoint (str, optional): The websocket RPC endpoint. Defaults to None.
             commitment (Commitment, optional): The commitment level of the Solana network. Defaults to Confirmed.
             wallet (Wallet, optional): The wallet used for transactions. Defaults to None.
-            delegated_wallet (Wallet, optional): The delegated wallet, used to sign non-critical txs on behalf of the owner
             assets (list[Asset], optional): The list of assets to be used. Defaults to all available assets.
             tx_opts (TxOpts, optional): Transaction options. Defaults to DEFAULT_OPTIONS.
             network (Network, optional): The network of the Zeta program. Defaults to Network.MAINNET.
             log_level (int, optional): The level of logging. Defaults to logging.CRITICAL.
             blockhash_cache (Union[BlockhashCache, bool], optional): The blockhash cache. Disabled by default.
+            delegatee_pubkey (Pubkey, optional): If passing in a delegated wallet in the 'wallet' param, this is the delegatee account itself so you can load positions/orders/balance/etc
 
         Returns:
             Client: An instance of the Client class.
@@ -160,11 +160,13 @@ class Client:
             margin_account = None
             _open_orders_addresses = None
         else:
+            key = wallet.public_key if delegatee_pubkey is None else delegatee_pubkey
+
             _margin_account_manager_address = pda.get_cross_margin_account_manager_address(
-                exchange.program_id, wallet.public_key
+                exchange.program_id, key
             )
-            _user_usdc_address = pda.get_associated_token_address(wallet.public_key, constants.USDC_MINT[network])
-            _margin_account_address = pda.get_margin_account_address(exchange.program_id, wallet.public_key, 0)
+            _user_usdc_address = pda.get_associated_token_address(key, constants.USDC_MINT[network])
+            _margin_account_address = pda.get_margin_account_address(exchange.program_id, key, 0)
             margin_account = await CrossMarginAccount.fetch(
                 connection, _margin_account_address, connection.commitment, exchange.program_id
             )
@@ -179,7 +181,7 @@ class Client:
                 _open_orders_addresses[asset] = open_orders_address
         provider = Provider(
             connection,
-            wallet if delegated_wallet is None else delegated_wallet,
+            wallet,
             tx_opts,
         )
 
