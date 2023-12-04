@@ -119,6 +119,7 @@ class Client:
         network: Network = Network.MAINNET,
         log_level: int = logging.WARNING,
         blockhash_cache: Union[BlockhashCache, bool] = False,
+        delegatee_pubkey: Optional[Pubkey] = None,
     ):
         """
         Asynchronously load the Zeta Client.
@@ -133,6 +134,7 @@ class Client:
             network (Network, optional): The network of the Zeta program. Defaults to Network.MAINNET.
             log_level (int, optional): The level of logging. Defaults to logging.CRITICAL.
             blockhash_cache (Union[BlockhashCache, bool], optional): The blockhash cache. Disabled by default.
+            delegatee_pubkey (Pubkey, optional): If passing in a delegated wallet in the 'wallet' param, this is the delegatee account itself so you can load positions/orders/balance/etc
 
         Returns:
             Client: An instance of the Client class.
@@ -158,11 +160,13 @@ class Client:
             margin_account = None
             _open_orders_addresses = None
         else:
+            key = wallet.public_key if delegatee_pubkey is None else delegatee_pubkey
+
             _margin_account_manager_address = pda.get_cross_margin_account_manager_address(
-                exchange.program_id, wallet.public_key
+                exchange.program_id, key
             )
-            _user_usdc_address = pda.get_associated_token_address(wallet.public_key, constants.USDC_MINT[network])
-            _margin_account_address = pda.get_margin_account_address(exchange.program_id, wallet.public_key, 0)
+            _user_usdc_address = pda.get_associated_token_address(key, constants.USDC_MINT[network])
+            _margin_account_address = pda.get_margin_account_address(exchange.program_id, key, 0)
             margin_account = await CrossMarginAccount.fetch(
                 connection, _margin_account_address, connection.commitment, exchange.program_id
             )
@@ -1145,12 +1149,12 @@ class Client:
                 last_valid_block_height = None
                 self._logger.debug(f"Blockhash cache hit, using cached blockhash: {recent_blockhash}")
             except ValueError:
-                blockhash_resp = await self.connection.get_latest_blockhash(constants.BLOCKHASH_COMMITMENT)
+                blockhash_resp = await self.connection.get_latest_blockhash(self.connection.commitment)
                 recent_blockhash = self.connection._process_blockhash_resp(blockhash_resp, used_immediately=True)
                 last_valid_block_height = blockhash_resp.value.last_valid_block_height
                 self._logger.debug(f"Blockhash cache miss, fetched from RPC: {recent_blockhash}")
         else:
-            blockhash_resp = await self.connection.get_latest_blockhash(constants.BLOCKHASH_COMMITMENT)
+            blockhash_resp = await self.connection.get_latest_blockhash(self.connection.commitment)
             recent_blockhash = self.connection.parse_recent_blockhash(blockhash_resp)
             last_valid_block_height = blockhash_resp.value.last_valid_block_height
             self._logger.debug(f"Blockhash cache not enabled, fetched from RPC: {recent_blockhash}")

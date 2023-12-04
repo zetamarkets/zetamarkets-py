@@ -117,9 +117,6 @@ def get_tif_offset(expiry_ts: int, epoch_length: int, current_ts: int, tif_buffe
     epoch_start = (current_ts - tif_buffer) - ((current_ts - tif_buffer) % epoch_length)
 
     tif_offset = expiry_ts - epoch_start
-    print(
-        f"TEMP DEBUG sending tif_offset={tif_offset}, expiry_ts={expiry_ts} epoch_start={epoch_start} current_ts={current_ts} tif_buffer={tif_buffer} epoch_length={epoch_length}"
-    )
     return min(tif_offset, epoch_length)
 
 
