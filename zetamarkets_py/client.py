@@ -114,6 +114,7 @@ class Client:
         ws_endpoint: Optional[str] = None,
         commitment: Commitment = Confirmed,
         wallet: Optional[Wallet] = None,
+        delegated_wallet: Optional[Wallet] = None,
         assets: list[Asset] = Asset.all(),
         tx_opts: TxOpts = DEFAULT_OPTIONS,
         network: Network = Network.MAINNET,
@@ -128,6 +129,7 @@ class Client:
             ws_endpoint (str, optional): The websocket RPC endpoint. Defaults to None.
             commitment (Commitment, optional): The commitment level of the Solana network. Defaults to Confirmed.
             wallet (Wallet, optional): The wallet used for transactions. Defaults to None.
+            delegated_wallet (Wallet, optional): The delegated wallet, used to sign non-critical txs on behalf of the owner
             assets (list[Asset], optional): The list of assets to be used. Defaults to all available assets.
             tx_opts (TxOpts, optional): Transaction options. Defaults to DEFAULT_OPTIONS.
             network (Network, optional): The network of the Zeta program. Defaults to Network.MAINNET.
@@ -177,7 +179,7 @@ class Client:
                 _open_orders_addresses[asset] = open_orders_address
         provider = Provider(
             connection,
-            wallet,
+            wallet if delegated_wallet is None else delegated_wallet,
             tx_opts,
         )
 
