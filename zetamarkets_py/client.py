@@ -162,9 +162,7 @@ class Client:
         else:
             key = wallet.public_key if delegatee_pubkey is None else delegatee_pubkey
 
-            _margin_account_manager_address = pda.get_cross_margin_account_manager_address(
-                exchange.program_id, key
-            )
+            _margin_account_manager_address = pda.get_cross_margin_account_manager_address(exchange.program_id, key)
             _user_usdc_address = pda.get_associated_token_address(key, constants.USDC_MINT[network])
             _margin_account_address = pda.get_margin_account_address(exchange.program_id, key, 0)
             margin_account = await CrossMarginAccount.fetch(
