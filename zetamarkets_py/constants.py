@@ -34,6 +34,7 @@ FLEXIBLE_MINTS = {
         Asset.APT: Pubkey.from_string("8z8oShLky1PauW9hxv6AsjnricLqoK9MfmNZJDQNNNPr"),
         Asset.ARB: Pubkey.from_string("Ebd7aUFu3rtsZruCzTnG4tjBoxaJdWT8S3t4yC8hVpbo"),
         Asset.PYTH: Pubkey.from_string("BjZmtqBVKY1oUSUjgq9PBQWJPyWbcWTXYbQ1oWxa9NYp"),
+        Asset.TIA: Pubkey.from_string("DmBnRoEiwGCud2C8X6h67ZLVhq6GyTm2NDRXvRz6uWYE"),
     },
 }
 
@@ -191,7 +192,7 @@ ZETA_LUT = {
         ],
     ),
     Network.MAINNET: AddressLookupTableAccount(
-        key=Pubkey.from_string("pxSHSw1dQpf3fhffWxs9KEfbbKdHpcRYf9UYrh7u8R7"),
+        key=Pubkey.from_string("FcLciqDve1gna1PkcJtEqkdFgEWKBynQSw1Ce9UeW6Tr"),
         addresses=[
             Pubkey.from_string("8eExPiLp47xbSDYkbuem4qnLUpbLTfZBeFuEJoh6EUr2"),
             Pubkey.from_string("BbKFezrmKD83PeVh74958MzgFAue1pZptipSNLz5ccpk"),
@@ -213,6 +214,8 @@ ZETA_LUT = {
             Pubkey.from_string("4CkQJBxhU8EZ2UjhigbtdaPbpTe6mqf811fipYBFbSYN"),
             Pubkey.from_string("F6rApkRBD31K6zZrwXt8aQrRKwzbZqCMH2vbMvBgftPX"),
             Pubkey.from_string("nrYkQQQur7z8rYTST3G9GqATviK5SxTDkrqd21MW6Ue"),
+            Pubkey.from_string("11111111111111111111111111111111"),
+            Pubkey.from_string("funeUsHgi2QKkLdUPASRLuYkaK8JaazCEz3HikbkhVt"),
             Pubkey.from_string("11111111111111111111111111111111"),
             Pubkey.from_string("JE6d41JRokZAMUEAznV8JP4h7i6Ain6CyJrQuweRipFU"),
             Pubkey.from_string("EaNR74nCjrYyNDsuoWmq19pH76QSd1nuTzvJSr3RDQ6x"),
@@ -291,6 +294,17 @@ ZETA_LUT = {
             Pubkey.from_string("8UxG6sugH55rMybJkVXt3Pb3pJh9ZfRQbzajHEDDezsT"),
             Pubkey.from_string("7Pnbf6WLGpsYjbjnQN4t8wMCzdDGsx9ZAyuLd4vZmN49"),
             Pubkey.from_string("5Q245C352ChdBGWmNbiYmFneAUiMjhnbPwUqmdHWJ8U6"),
+            Pubkey.from_string("EgN8rGcr2DRokxCebhkXuGBAQVkGeq7mGmzCGXsviT8r"),
+            Pubkey.from_string("6xkyhooKT2wnciP7xjipque9SDwHwPPamwsprsoVXgg9"),
+            Pubkey.from_string("FV8EEHjJvDUD8Kkp1DcomTatZBA81Z6C5AhmvyUwvEAh"),
+            Pubkey.from_string("7qPuwhidbrkuVPEKSzKTCJdTgK5sfNLRGjfNkDqiLvPi"),
+            Pubkey.from_string("3GxVoZpmiKLhDRa2cfVvDkbtVakm2f6sdW2TkDXMVsPt"),
+            Pubkey.from_string("CXWkPH6BzU8dhNy3LQkaCH54jSxQATyp11wHuhsAzT9n"),
+            Pubkey.from_string("2x1c7fXQdL5TDK9jbMvJ5VYM7wmPKUAQXrLAAFjvxSoc"),
+            Pubkey.from_string("EJ2oxzqG3uKmD8FrbBRevQpZrvcQMRFA2fYauChcihaK"),
+            Pubkey.from_string("BuDP4G7gjs4KdSQf1QenAygF8FksjH5Wu57maC9sezq7"),
+            Pubkey.from_string("JB7F3kQvRYcQj8kogwGR78CMshg857E96ef4LQYDzSu1"),
+            Pubkey.from_string("Bm6PXLobn7LBudgNdJKzUUNumAKAnEWuCoLVafsvPBda"),
         ],
     ),
 }
