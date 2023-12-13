@@ -62,7 +62,6 @@ from zetamarkets_py.zeta_client.instructions import (
     initialize_cross_margin_account,
     initialize_cross_margin_account_manager,
     initialize_open_orders_v3,
-    place_perp_order_v3,
     place_perp_order_v4,
 )
 
