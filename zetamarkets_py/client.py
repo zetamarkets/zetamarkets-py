@@ -797,7 +797,7 @@ class Client:
         if self._user_usdc_address is None or self._margin_account_address is None:
             raise Exception("User USDC address not loaded, cannot deposit")
         return deposit_v2(
-            {"amount": utils.convert_decimal_to_fixed_int(amount)},
+            {"amount": utils.convert_decimal_to_fixed_int(amount, 100)},
             {
                 "margin_account": self._margin_account_address,
                 "vault": self._combined_vault_address,
@@ -905,8 +905,12 @@ class Client:
 
         return place_perp_order_v3(
             {
-                "price": utils.convert_decimal_to_fixed_int(price),
-                "size": utils.convert_decimal_to_fixed_lot(size),
+                "price": utils.convert_decimal_to_fixed_int(
+                    price, utils.get_fixed_tick_size(self.exchange.state, asset)
+                ),
+                "size": utils.convert_decimal_to_fixed_lot(
+                    size, utils.get_fixed_min_lot_size(self.exchange.state, asset)
+                ),
                 "side": side.to_program_type(),
                 "order_type": order_opts.order_type.to_program_type(),
                 "client_order_id": order_opts.client_order_id,

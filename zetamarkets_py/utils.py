@@ -6,7 +6,34 @@ import colorlog
 from solana.utils.cluster import cluster_api_url
 
 from zetamarkets_py import constants
-from zetamarkets_py.types import Network
+from zetamarkets_py.types import Asset, Network
+from zetamarkets_py.zeta_client.accounts.state import State
+
+
+def get_fixed_min_lot_size(_state: State, asset: Asset) -> int:
+    match asset:
+        case Asset.SOL:
+            return 100
+        case Asset.BTC:
+            return 1
+        case Asset.ETH:
+            return 10
+        case Asset.APT:
+            return 100
+        case Asset.ARB:
+            return 1000
+        case Asset.BNB:
+            return 10
+        case Asset.TIA:
+            return 100
+        case Asset.JTO:
+            return 100
+        case _:
+            return 1
+
+
+def get_fixed_tick_size(_state: State, _asset: Asset) -> int:
+    return 100
 
 
 def convert_fixed_int_to_decimal(amount: int) -> float:
@@ -22,7 +49,7 @@ def convert_fixed_int_to_decimal(amount: int) -> float:
     return amount / 10**constants.PLATFORM_PRECISION
 
 
-def convert_decimal_to_fixed_int(amount: float) -> int:
+def convert_decimal_to_fixed_int(amount: float, tick_size: int) -> int:
     """
     Converts a decimal to a fixed integer number.
 
@@ -32,7 +59,7 @@ def convert_decimal_to_fixed_int(amount: float) -> int:
     Returns:
         int: The converted fixed integer.
     """
-    return int((amount * 10**constants.PLATFORM_PRECISION / constants.TICK_SIZE)) * constants.TICK_SIZE
+    return int((amount * 10**constants.PLATFORM_PRECISION / tick_size)) * tick_size
 
 
 def convert_fixed_lot_to_decimal(amount: int) -> float:
@@ -48,7 +75,7 @@ def convert_fixed_lot_to_decimal(amount: int) -> float:
     return amount / 10**constants.POSITION_PRECISION
 
 
-def convert_decimal_to_fixed_lot(amount: float) -> int:
+def convert_decimal_to_fixed_lot(amount: float, min_lot_size: int) -> int:
     """
     Converts a decimal to a fixed integer lot size.
 
@@ -58,7 +85,7 @@ def convert_decimal_to_fixed_lot(amount: float) -> int:
     Returns:
         int: The converted fixed lot.
     """
-    return int(amount * 10**constants.POSITION_PRECISION)
+    return int((amount * 10**constants.POSITION_PRECISION / min_lot_size)) * min_lot_size
 
 
 def http_to_ws(endpoint: str) -> str:
