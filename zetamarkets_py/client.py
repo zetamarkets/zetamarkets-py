@@ -797,7 +797,7 @@ class Client:
         if self._user_usdc_address is None or self._margin_account_address is None:
             raise Exception("User USDC address not loaded, cannot deposit")
         return deposit_v2(
-            {"amount": utils.convert_decimal_to_fixed_int(amount, 100)},
+            {"amount": utils.convert_decimal_to_fixed_int(amount, constants.MIN_NATIVE_TICK_SIZE)},
             {
                 "margin_account": self._margin_account_address,
                 "vault": self._combined_vault_address,
