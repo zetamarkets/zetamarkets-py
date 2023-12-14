@@ -86,5 +86,10 @@ from .place_perp_order_v3 import (
     PlacePerpOrderV3Args,
     place_perp_order_v3,
 )
+from .place_perp_order_v4 import (
+    PlacePerpOrderV4Accounts,
+    PlacePerpOrderV4Args,
+    place_perp_order_v4,
+)
 from .refer_user import ReferUserAccounts, refer_user
 from .withdraw_v2 import WithdrawV2Accounts, WithdrawV2Args, withdraw_v2

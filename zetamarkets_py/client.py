@@ -62,7 +62,7 @@ from zetamarkets_py.zeta_client.instructions import (
     initialize_cross_margin_account,
     initialize_cross_margin_account_manager,
     initialize_open_orders_v3,
-    place_perp_order_v3,
+    place_perp_order_v4,
 )
 
 # TODO: add docstrings for most methods
@@ -903,7 +903,7 @@ class Client:
         if self._open_orders_addresses is None:
             raise Exception("Open orders addresses not loaded, cannot place order")
 
-        return place_perp_order_v3(
+        return place_perp_order_v4(
             {
                 "price": utils.convert_decimal_to_fixed_int(
                     price, utils.get_fixed_tick_size(self.exchange.state, asset)
@@ -913,41 +913,44 @@ class Client:
                 ),
                 "side": side.to_program_type(),
                 "order_type": order_opts.order_type.to_program_type(),
+                "reduce_only": False,
                 "client_order_id": order_opts.client_order_id,
                 "tif_offset": tif_offset,
                 "tag": order_opts.tag,
                 "asset": asset.to_program_type(),
             },
             {
-                "state": self.exchange._state_address,
-                "pricing": self.exchange._pricing_address,
-                "margin_account": self._margin_account_address,
                 "authority": self.provider.wallet.public_key,
-                "dex_program": constants.MATCHING_ENGINE_PID[self.network],
-                "serum_authority": self.exchange._serum_authority_address,
-                "open_orders": self._open_orders_addresses[asset],
-                "market_accounts": {
-                    "market": self.exchange.markets[asset].address,
-                    "request_queue": self.exchange.markets[asset]._market_state.request_queue,
-                    "event_queue": self.exchange.markets[asset]._market_state.event_queue,
-                    "bids": self.exchange.markets[asset]._market_state.bids,
-                    "asks": self.exchange.markets[asset]._market_state.asks,
-                    "coin_vault": self.exchange.markets[asset]._market_state.base_vault,
-                    "pc_vault": self.exchange.markets[asset]._market_state.quote_vault,
-                    "order_payer_token_account": self.exchange.markets[asset]._quote_zeta_vault_address
+                "place_order_accounts": {
+                    "state": self.exchange._state_address,
+                    "pricing": self.exchange._pricing_address,
+                    "margin_account": self._margin_account_address,
+                    "dex_program": constants.MATCHING_ENGINE_PID[self.network],
+                    "serum_authority": self.exchange._serum_authority_address,
+                    "open_orders": self._open_orders_addresses[asset],
+                    "market_accounts": {
+                        "market": self.exchange.markets[asset].address,
+                        "request_queue": self.exchange.markets[asset]._market_state.request_queue,
+                        "event_queue": self.exchange.markets[asset]._market_state.event_queue,
+                        "bids": self.exchange.markets[asset]._market_state.bids,
+                        "asks": self.exchange.markets[asset]._market_state.asks,
+                        "coin_vault": self.exchange.markets[asset]._market_state.base_vault,
+                        "pc_vault": self.exchange.markets[asset]._market_state.quote_vault,
+                        "order_payer_token_account": self.exchange.markets[asset]._quote_zeta_vault_address
+                        if side == Side.Bid
+                        else self.exchange.markets[asset]._base_zeta_vault_address,
+                        "coin_wallet": self.exchange.markets[asset]._base_zeta_vault_address,
+                        "pc_wallet": self.exchange.markets[asset]._quote_zeta_vault_address,
+                    },
+                    "oracle": self.exchange.pricing.oracles[asset.to_index()],
+                    "oracle_backup_feed": self.exchange.pricing.oracle_backup_feeds[asset.to_index()],
+                    "oracle_backup_program": constants.CHAINLINK_PID,
+                    "market_mint": self.exchange.markets[asset]._market_state.quote_mint
                     if side == Side.Bid
-                    else self.exchange.markets[asset]._base_zeta_vault_address,
-                    "coin_wallet": self.exchange.markets[asset]._base_zeta_vault_address,
-                    "pc_wallet": self.exchange.markets[asset]._quote_zeta_vault_address,
+                    else self.exchange.markets[asset]._market_state.base_mint,
+                    "mint_authority": self.exchange._mint_authority_address,
+                    "perp_sync_queue": self.exchange.pricing.perp_sync_queues[asset.to_index()],
                 },
-                "oracle": self.exchange.pricing.oracles[asset.to_index()],
-                "oracle_backup_feed": self.exchange.pricing.oracle_backup_feeds[asset.to_index()],
-                "oracle_backup_program": constants.CHAINLINK_PID,
-                "market_mint": self.exchange.markets[asset]._market_state.quote_mint
-                if side == Side.Bid
-                else self.exchange.markets[asset]._market_state.base_mint,
-                "mint_authority": self.exchange._mint_authority_address,
-                "perp_sync_queue": self.exchange.pricing.perp_sync_queues[asset.to_index()],
             },
             self.exchange.program_id,
         )
