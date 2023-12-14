@@ -11,29 +11,27 @@ from zetamarkets_py.zeta_client.accounts.state import State
 
 
 def get_fixed_min_lot_size(_state: State, asset: Asset) -> int:
-    match asset:
-        case Asset.SOL:
-            return 100
-        case Asset.BTC:
-            return 1
-        case Asset.ETH:
-            return 10
-        case Asset.APT:
-            return 100
-        case Asset.ARB:
-            return 1000
-        case Asset.BNB:
-            return 10
-        case Asset.TIA:
-            return 100
-        case Asset.JTO:
-            return 100
-        case _:
-            return 1
+    if asset == Asset.SOL:
+        return 100
+    if asset == Asset.BTC:
+        return 1
+    if asset == Asset.ETH:
+        return 10
+    if asset == Asset.APT:
+        return 100
+    if asset == Asset.ARB:
+        return 1000
+    if asset == Asset.BNB:
+        return 10
+    if asset == Asset.TIA:
+        return 100
+    if asset == Asset.JTO:
+        return 100
+    return 1
 
 
-def get_fixed_tick_size(_state: State, _asset: Asset) -> int:
-    return 100
+def get_fixed_tick_size(state: State, asset: Asset) -> int:
+    return state.tick_sizes[asset.to_index()]
 
 
 def convert_fixed_int_to_decimal(amount: int) -> float:
