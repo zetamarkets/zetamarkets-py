@@ -23,11 +23,13 @@ def get_fixed_min_lot_size(_state: State, asset: Asset) -> int:
         return 1000
     if asset == Asset.BNB:
         return 10
+    if asset == Asset.PYTH:
+        return 1000
     if asset == Asset.TIA:
         return 100
     if asset == Asset.JTO:
         return 100
-    return 1
+    raise Exception("Invalid asset argument")
 
 
 def get_fixed_tick_size(state: State, asset: Asset) -> int:
