@@ -30,7 +30,7 @@ async def main():
 
     # place order
     side = Side.Bid
-    order = OrderArgs(price=0.1, size=0.001, side=side, order_opts=order_opts)
+    order = OrderArgs(price=0.1, size=0.1, side=side, order_opts=order_opts)
     print(f"Placing {order.side} order: {order.size}x {str(asset)}-PERP @ ${order.price}")
     await client.place_orders_for_market(asset=asset, orders=[order])
 

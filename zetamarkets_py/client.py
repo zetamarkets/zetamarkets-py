@@ -134,7 +134,8 @@ class Client:
             network (Network, optional): The network of the Zeta program. Defaults to Network.MAINNET.
             log_level (int, optional): The level of logging. Defaults to logging.CRITICAL.
             blockhash_cache (Union[BlockhashCache, bool], optional): The blockhash cache. Disabled by default.
-            delegatee_pubkey (Pubkey, optional): If passing in a delegated wallet in the 'wallet' param, this is the delegatee account itself so you can load positions/orders/balance/etc
+            delegatee_pubkey (Pubkey, optional): If passing in a delegated wallet in the 'wallet' param, this
+            is the delegatee account itself so you can load positions/orders/balance/etc
 
         Returns:
             Client: An instance of the Client class.
@@ -537,12 +538,14 @@ class Client:
 
         if "rpcpool.com" not in self.ws_endpoint:
             self._logger.warning(
-                'Provided ws_endpoint does not contain "rpcpool.com". This method is experimental and requires a Triton RPC node for transactionSubscribe'
+                'Provided ws_endpoint does not contain "rpcpool.com". This method is experimental and\
+                requires a Triton RPC node for transactionSubscribe'
             )
 
         commitment = commitment or self.connection.commitment
         # TODO: upgrade to websockets 12.0
-        # TODO: modify solanapy websocket stuff and make it support txs + types and subclassing (so we dont have to handle json)
+        # TODO: modify solanapy websocket stuff and make it support txs + types and subclassing
+        # (so we dont have to handle json)
         async for ws in websockets.legacy.client.connect(self.ws_endpoint + "/whirligig"):
             try:
                 transaction_subscribe = request(
@@ -797,7 +800,7 @@ class Client:
         if self._user_usdc_address is None or self._margin_account_address is None:
             raise Exception("User USDC address not loaded, cannot deposit")
         return deposit_v2(
-            {"amount": utils.convert_decimal_to_fixed_int(amount)},
+            {"amount": utils.convert_decimal_to_fixed_int(amount, constants.MIN_NATIVE_TICK_SIZE)},
             {
                 "margin_account": self._margin_account_address,
                 "vault": self._combined_vault_address,
@@ -905,8 +908,12 @@ class Client:
 
         return place_perp_order_v4(
             {
-                "price": utils.convert_decimal_to_fixed_int(price),
-                "size": utils.convert_decimal_to_fixed_lot(size),
+                "price": utils.convert_decimal_to_fixed_int(
+                    price, utils.get_fixed_tick_size(self.exchange.state, asset)
+                ),
+                "size": utils.convert_decimal_to_fixed_lot(
+                    size, utils.get_fixed_min_lot_size(self.exchange.state, asset)
+                ),
                 "side": side.to_program_type(),
                 "order_type": order_opts.order_type.to_program_type(),
                 "reduce_only": False,

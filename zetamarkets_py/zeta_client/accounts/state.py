@@ -48,6 +48,11 @@ class StateJSON(typing.TypedDict):
     native_open_interest_limit: int
     halt_states: list[types.halt_state_v2.HaltStateV2JSON]
     halt_states_padding: list[types.halt_state_v2.HaltStateV2JSON]
+    trigger_admin: str
+    min_lot_sizes: list[int]
+    min_lot_sizes_padding: list[int]
+    tick_sizes: list[int]
+    tick_sizes_padding: list[int]
     padding: list[int]
 
 
@@ -88,7 +93,12 @@ class State:
         "native_open_interest_limit" / borsh.U64,
         "halt_states" / types.halt_state_v2.HaltStateV2.layout[9],
         "halt_states_padding" / types.halt_state_v2.HaltStateV2.layout[16],
-        "padding" / borsh.U8[338],
+        "trigger_admin" / BorshPubkey,
+        "min_lot_sizes" / borsh.U32[9],
+        "min_lot_sizes_padding" / borsh.U32[16],
+        "tick_sizes" / borsh.U32[9],
+        "tick_sizes_padding" / borsh.U32[16],
+        "padding" / borsh.U8[106],
     )
     admin: Pubkey
     state_nonce: int
@@ -123,6 +133,11 @@ class State:
     native_open_interest_limit: int
     halt_states: list[types.halt_state_v2.HaltStateV2]
     halt_states_padding: list[types.halt_state_v2.HaltStateV2]
+    trigger_admin: Pubkey
+    min_lot_sizes: list[int]
+    min_lot_sizes_padding: list[int]
+    tick_sizes: list[int]
+    tick_sizes_padding: list[int]
     padding: list[int]
 
     @classmethod
@@ -210,6 +225,11 @@ class State:
                     dec.halt_states_padding,
                 )
             ),
+            trigger_admin=dec.trigger_admin,
+            min_lot_sizes=dec.min_lot_sizes,
+            min_lot_sizes_padding=dec.min_lot_sizes_padding,
+            tick_sizes=dec.tick_sizes,
+            tick_sizes_padding=dec.tick_sizes_padding,
             padding=dec.padding,
         )
 
@@ -248,6 +268,11 @@ class State:
             "native_open_interest_limit": self.native_open_interest_limit,
             "halt_states": list(map(lambda item: item.to_json(), self.halt_states)),
             "halt_states_padding": list(map(lambda item: item.to_json(), self.halt_states_padding)),
+            "trigger_admin": str(self.trigger_admin),
+            "min_lot_sizes": self.min_lot_sizes,
+            "min_lot_sizes_padding": self.min_lot_sizes_padding,
+            "tick_sizes": self.tick_sizes,
+            "tick_sizes_padding": self.tick_sizes_padding,
             "padding": self.padding,
         }
 
@@ -297,5 +322,10 @@ class State:
                     obj["halt_states_padding"],
                 )
             ),
+            trigger_admin=Pubkey.from_string(obj["trigger_admin"]),
+            min_lot_sizes=obj["min_lot_sizes"],
+            min_lot_sizes_padding=obj["min_lot_sizes_padding"],
+            tick_sizes=obj["tick_sizes"],
+            tick_sizes_padding=obj["tick_sizes_padding"],
             padding=obj["padding"],
         )

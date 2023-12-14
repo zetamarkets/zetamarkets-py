@@ -6,7 +6,34 @@ import colorlog
 from solana.utils.cluster import cluster_api_url
 
 from zetamarkets_py import constants
-from zetamarkets_py.types import Network
+from zetamarkets_py.types import Asset, Network
+from zetamarkets_py.zeta_client.accounts.state import State
+
+
+def get_fixed_min_lot_size(_state: State, asset: Asset) -> int:
+    if asset == Asset.SOL:
+        return 100
+    if asset == Asset.BTC:
+        return 1
+    if asset == Asset.ETH:
+        return 10
+    if asset == Asset.APT:
+        return 100
+    if asset == Asset.ARB:
+        return 1000
+    if asset == Asset.BNB:
+        return 10
+    if asset == Asset.PYTH:
+        return 1000
+    if asset == Asset.TIA:
+        return 100
+    if asset == Asset.JTO:
+        return 100
+    raise Exception("Invalid asset argument")
+
+
+def get_fixed_tick_size(state: State, asset: Asset) -> int:
+    return state.tick_sizes[asset.to_index()]
 
 
 def convert_fixed_int_to_decimal(amount: int) -> float:
@@ -22,7 +49,7 @@ def convert_fixed_int_to_decimal(amount: int) -> float:
     return amount / 10**constants.PLATFORM_PRECISION
 
 
-def convert_decimal_to_fixed_int(amount: float) -> int:
+def convert_decimal_to_fixed_int(amount: float, tick_size: int) -> int:
     """
     Converts a decimal to a fixed integer number.
 
@@ -32,7 +59,7 @@ def convert_decimal_to_fixed_int(amount: float) -> int:
     Returns:
         int: The converted fixed integer.
     """
-    return int((amount * 10**constants.PLATFORM_PRECISION / constants.TICK_SIZE)) * constants.TICK_SIZE
+    return int((amount * 10**constants.PLATFORM_PRECISION / tick_size)) * tick_size
 
 
 def convert_fixed_lot_to_decimal(amount: int) -> float:
@@ -48,7 +75,7 @@ def convert_fixed_lot_to_decimal(amount: int) -> float:
     return amount / 10**constants.POSITION_PRECISION
 
 
-def convert_decimal_to_fixed_lot(amount: float) -> int:
+def convert_decimal_to_fixed_lot(amount: float, min_lot_size: int) -> int:
     """
     Converts a decimal to a fixed integer lot size.
 
@@ -58,7 +85,7 @@ def convert_decimal_to_fixed_lot(amount: float) -> int:
     Returns:
         int: The converted fixed lot.
     """
-    return int(amount * 10**constants.POSITION_PRECISION)
+    return int((amount * 10**constants.POSITION_PRECISION / min_lot_size)) * min_lot_size
 
 
 def http_to_ws(endpoint: str) -> str:
@@ -113,7 +140,8 @@ def get_tif_offset(expiry_ts: int, epoch_length: int, current_ts: int, tif_buffe
         raise Exception(f"Cannot place expired order, current_ts: {current_ts}, expiry_ts: {expiry_ts}")
 
     # Add tif_buffer here to slow down going into the next epoch to prevent 0x42 errors around epoch
-    # The consequence is that you'll send really long expiry orders around the epoch because the tif_offset will be large even though onchain we've gone to a new epoch
+    # The consequence is that you'll send really long expiry orders around the epoch because the tif_offset
+    #  will be large even though onchain we've gone to a new epoch
     epoch_start = (current_ts - tif_buffer) - ((current_ts - tif_buffer) % epoch_length)
 
     tif_offset = expiry_ts - epoch_start
