@@ -191,8 +191,8 @@ This method grabs the minimum fee required to place a tx using a given set of ac
 Args:
     connection (AsyncClient): Connection object to use for the RPC request
     accounts ([str]): List of pubkeys to observe. Zeta market accounts are good for this.
-    lookback_slots (int, optional): How many slots to grab the median/max of. Defaults to 20.
-    use_max (bool, optional): Whether to use the max fee over the last slots (aggressive). If set to false, the median will be used.
+    lookback_slots (int): How many slots to grab the median/max of. Defaults to 20.
+    use_max (bool): Whether to use the max fee over the last slots (aggressive). If set to false, the median will be used.
 """
 
 
