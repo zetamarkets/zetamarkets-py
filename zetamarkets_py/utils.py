@@ -2,8 +2,7 @@ import logging
 import re
 import json
 from statistics import median
-from httpx import AsyncClient
-import requests
+from httpx import AsyncClient, post
 from typing import Optional
 
 import colorlog
@@ -203,7 +202,7 @@ def get_recent_prio_fees(
     headers = {"Content-Type": "application/json"}
 
     # List of {prioritizationFee, slot}
-    response = requests.post(connection, data=json.dumps(data), headers=headers).json()
+    response = post(connection, data=json.dumps(data), headers=headers).json()
 
     # Sort by slot, descending. Grab the first 20 slots only
     response_sorted = sorted(response["result"], key=lambda x: x["slot"], reverse=True)[:20]

@@ -17,7 +17,6 @@ solders = "^0.18.1"
 anchorpy = "^0.18.0"
 colorlog = "^6.7.0"
 deprecated = "^1.2.14"
-requests = "2.31.0"
 
 [tool.poetry.group.dev]
 optional = true
