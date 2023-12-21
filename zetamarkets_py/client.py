@@ -1074,7 +1074,7 @@ class Client:
         """
         ixs = []
         if priority_fee > 0:
-            ixs.extend(set_compute_unit_price(priority_fee))
+            ixs.extend([set_compute_unit_price(priority_fee)])
         if pre_instructions is not None:
             ixs.extend(pre_instructions)
         ixs.append(self._cancel_orders_for_market_ix(asset))
@@ -1115,7 +1115,7 @@ class Client:
             ixs.append(self._init_open_orders_ix(asset))
 
         if priority_fee > 0:
-            ixs.extend(set_compute_unit_price(priority_fee))
+            ixs.extend([set_compute_unit_price(priority_fee)])
 
         if pre_instructions is not None:
             ixs.extend(pre_instructions)
@@ -1140,7 +1140,7 @@ class Client:
         """
         pre_ixs = []
         if priority_fee > 0:
-            pre_ixs.extend(set_compute_unit_price(priority_fee))
+            pre_ixs.extend([set_compute_unit_price(priority_fee)])
         pre_ixs.extend(self._cancel_orders_for_market_ix(asset))
         return await self.place_orders_for_market(asset, orders, pre_instructions=pre_ixs)
 
