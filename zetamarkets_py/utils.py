@@ -14,26 +14,8 @@ from zetamarkets_py.types import Asset, Network
 from zetamarkets_py.zeta_client.accounts.state import State
 
 
-def get_fixed_min_lot_size(_state: State, asset: Asset) -> int:
-    if asset == Asset.SOL:
-        return 100
-    if asset == Asset.BTC:
-        return 1
-    if asset == Asset.ETH:
-        return 10
-    if asset == Asset.APT:
-        return 100
-    if asset == Asset.ARB:
-        return 1000
-    if asset == Asset.BNB:
-        return 10
-    if asset == Asset.PYTH:
-        return 1000
-    if asset == Asset.TIA:
-        return 100
-    if asset == Asset.JTO:
-        return 100
-    raise Exception("Invalid asset argument")
+def get_fixed_min_lot_size(state: State, asset: Asset) -> int:
+    return state.min_lot_sizes[asset.to_index()]
 
 
 def get_fixed_tick_size(state: State, asset: Asset) -> int:
