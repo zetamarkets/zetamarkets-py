@@ -26,6 +26,7 @@ from solders.message import MessageV0
 from solders.pubkey import Pubkey
 from solders.rpc.config import RpcTransactionLogsFilterMentions
 from solders.transaction import VersionedTransaction
+from solders.compute_budget import set_compute_unit_price
 
 from zetamarkets_py import constants, pda, utils
 from zetamarkets_py.events import (
@@ -1055,17 +1056,25 @@ class Client:
         asset: Asset,
         pre_instructions: Optional[list[Instruction]] = None,
         post_instructions: Optional[list[Instruction]] = None,
+        priority_fee: int = 0,
     ):
         """
         Cancel all orders for a market.
 
         Args:
             asset (Asset): The asset for which to cancel all orders.
+            pre_instructions (Optional[list[Instruction]], optional): The list of instructions to execute before
+                cancelling the orders. Defaults to None.
+            post_instructions (Optional[list[Instruction]], optional): The list of instructions to execute after
+                cancelling the orders. Defaults to None.
+            priority_fee (int): Additional priority fee, in microlamports per CU. Defaults to 0.
 
         Returns:
             Transaction: The transaction of the cancelled orders.
         """
         ixs = []
+        if priority_fee > 0:
+            ixs.extend(set_compute_unit_price(priority_fee))
         if pre_instructions is not None:
             ixs.extend(pre_instructions)
         ixs.append(self._cancel_orders_for_market_ix(asset))
@@ -1081,6 +1090,7 @@ class Client:
         pre_instructions: Optional[list[Instruction]] = None,
         post_instructions: Optional[list[Instruction]] = None,
         tif_buffer: int = 0,
+        priority_fee: int = 0,
     ):
         """
         Place orders for a market.
@@ -1092,6 +1102,8 @@ class Client:
                 placing the orders. Defaults to None.
             post_instructions (Optional[list[Instruction]], optional): The list of instructions to execute after
                 placing the orders. Defaults to None.
+            tif_buffer (int): Extra value to add to tif_expiry at epoch rollover to aid a smooth transition. Defaults to 0.
+            priority_fee (int): Additional priority fee, in microlamports per CU. Defaults to 0.
 
         Returns:
             Transaction: The transaction of the placed orders.
@@ -1102,6 +1114,9 @@ class Client:
             self._logger.info("User has no open orders account, creating one...")
             ixs.append(self._init_open_orders_ix(asset))
 
+        if priority_fee > 0:
+            ixs.extend(set_compute_unit_price(priority_fee))
+
         if pre_instructions is not None:
             ixs.extend(pre_instructions)
         for order in orders:
@@ -1111,24 +1126,23 @@ class Client:
         self._logger.info(f"Placing {len(orders)} orders for {asset}")
         return await self._send_versioned_transaction(ixs)
 
-    async def replace_orders_for_market(
-        self,
-        asset: Asset,
-        orders: list[OrderArgs],
-    ):
+    async def replace_orders_for_market(self, asset: Asset, orders: list[OrderArgs], priority_fee: int = 0):
         """
         Replace orders for a market (atomically cancel all orders and replace them).
 
         Args:
             asset (Asset): The asset for which to replace the orders.
             orders (list[OrderArgs]): The list of new orders to place.
+            priority_fee (int): Additional priority fee, in microlamports per CU. Defaults to 0.
 
         Returns:
             Transaction: The transaction of the replaced orders.
         """
-        return await self.place_orders_for_market(
-            asset, orders, pre_instructions=[self._cancel_orders_for_market_ix(asset)]
-        )
+        pre_ixs = []
+        if priority_fee > 0:
+            pre_ixs.extend(set_compute_unit_price(priority_fee))
+        pre_ixs.extend(self._cancel_orders_for_market_ix(asset))
+        return await self.place_orders_for_market(asset, orders, pre_instructions=pre_ixs)
 
     # TODO: liquidate
     async def liquidate(self):

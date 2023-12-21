@@ -1,9 +1,13 @@
 import logging
 import re
+import json
+from statistics import median
+from httpx import AsyncClient, post
 from typing import Optional
 
 import colorlog
 from solana.utils.cluster import cluster_api_url
+from solders.pubkey import Pubkey
 
 from zetamarkets_py import constants
 from zetamarkets_py.types import Asset, Network
@@ -177,3 +181,31 @@ def create_logger(name: str, log_level: int = logging.CRITICAL, file_name: Optio
         fh.setFormatter(file_formatter)
         logger.addHandler(fh)
     return logger
+
+
+"""
+Fetch the latest priority fee using the getRecentPrioritizationFees RPC method.
+This method grabs the minimum fee required to place a tx using a given set of accounts.
+
+Args:
+    connection (AsyncClient): Connection object to use for the RPC request
+    accounts ([str]): List of pubkeys to observe. Zeta market accounts are good for this.
+    lookback_slots (int): How many slots to grab the median/max of. Defaults to 20.
+    use_max (bool): Whether to use the max fee over the last slots (aggressive). If set to false, the median will be used.
+"""
+
+
+def get_recent_prio_fees(
+    connection: AsyncClient, accounts: [str], lookback_slots: int = 20, use_max: bool = False
+) -> int:
+    data = {"jsonrpc": "2.0", "id": 1, "method": "getRecentPrioritizationFees", "params": [accounts]}
+    headers = {"Content-Type": "application/json"}
+
+    # List of {prioritizationFee, slot}
+    response = post(connection, data=json.dumps(data), headers=headers).json()
+
+    # Sort by slot, descending. Grab the first 20 slots only
+    response_sorted = sorted(response["result"], key=lambda x: x["slot"], reverse=True)[:20]
+
+    fees = [value["prioritizationFee"] for value in response_sorted]
+    return int(max(fees) if use_max == True else median(fees))
