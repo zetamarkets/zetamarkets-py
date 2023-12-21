@@ -188,21 +188,19 @@ Fetch the latest priority fee using the getRecentPrioritizationFees RPC method.
 This method grabs the minimum fee required to place a tx using a given set of accounts.
 
 Args:
-    connection (AsyncClient): Connection object to use for the RPC request
+    url (str): The RPC URL to query
     accounts ([str]): List of pubkeys to observe. Zeta market accounts are good for this.
     lookback_slots (int): How many slots to grab the median/max of. Defaults to 20.
     use_max (bool): Whether to use the max fee over the last slots (aggressive). If set to false, the median will be used.
 """
 
 
-def get_recent_prio_fees(
-    connection: AsyncClient, accounts: [str], lookback_slots: int = 20, use_max: bool = False
-) -> int:
+def get_recent_prio_fees(url: str, accounts: [str], lookback_slots: int = 20, use_max: bool = False) -> int:
     data = {"jsonrpc": "2.0", "id": 1, "method": "getRecentPrioritizationFees", "params": [accounts]}
     headers = {"Content-Type": "application/json"}
 
     # List of {prioritizationFee, slot}
-    response = post(connection, data=json.dumps(data), headers=headers).json()
+    response = post(connection=url, data=json.dumps(data), headers=headers).json()
 
     # Sort by slot, descending. Grab the first 20 slots only
     response_sorted = sorted(response["result"], key=lambda x: x["slot"], reverse=True)[:20]
