@@ -208,9 +208,35 @@ class LiquidationEvent:
         )
 
 
-ZetaEvent = Union[PlaceOrderEvent, TradeEvent, CancelOrderEvent, LiquidationEvent]
+@dataclass
+class ApplyFundingEvent:
+    """Program event for a liquidation."""
 
-ZetaEnrichedEvent = Union[PlaceOrderEventWithArgs, TradeEvent, CancelOrderEvent, LiquidationEvent]
+    margin_account: Pubkey
+    authority: Pubkey
+    Asset: Asset
+    balance_change: float
+    remaining_balance: float
+    funding_rate: float
+    oracle_price: float
+
+    @classmethod
+    def from_event(cls, event: Event):
+        assert event.name == cls.__name__
+        return cls(
+            margin_account=event.data.margin_account,
+            authority=event.data.authority,
+            asset=Asset.from_index(event.data.asset.index),
+            balance_change=utils.convert_fixed_int_to_decimal(event.data.balance_change),
+            remaining_balance=utils.convert_fixed_int_to_decimal(event.data.remaining_balance),
+            funding_rate=utils.convert_fixed_int_to_decimal(event.data.funding_rate),
+            oracle_price=utils.convert_fixed_int_to_decimal(event.data.oracle_price),
+        )
+
+
+ZetaEvent = Union[PlaceOrderEvent, TradeEvent, CancelOrderEvent, LiquidationEvent, ApplyFundingEvent]
+
+ZetaEnrichedEvent = Union[PlaceOrderEventWithArgs, TradeEvent, CancelOrderEvent, LiquidationEvent, ApplyFundingEvent]
 
 
 @dataclass

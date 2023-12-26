@@ -30,6 +30,7 @@ from solders.compute_budget import set_compute_unit_price
 
 from zetamarkets_py import constants, pda, utils
 from zetamarkets_py.events import (
+    ApplyFundingEvent,
     CancelOrderEvent,
     EventMeta,
     LiquidationEvent,
@@ -513,6 +514,10 @@ class Client:
                 liquidation_event = LiquidationEvent.from_event(event)
                 if liquidation_event.liquidatee_margin_account == self._margin_account_address:
                     events.append(liquidation_event)
+            elif event.name.startswith(ApplyFundingEvent.__name__):
+                funding_event = ApplyFundingEvent.from_event(event)
+                if funding_event.margin_account == self._margin_account_address:
+                    events.append(funding_event)
             else:
                 pass
 
