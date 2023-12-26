@@ -6,6 +6,7 @@ from solana.rpc.commitment import Confirmed
 
 from zetamarkets_py.client import Client
 from zetamarkets_py.events import (
+    ApplyFundingEvent,
     CancelOrderEvent,
     LiquidationEvent,
     PlaceOrderEvent,
@@ -26,7 +27,7 @@ async def main():
     )
 
     # Subscribe to margin account events
-    print(f"Listening for events on margin account: {client._margin_account_address}")
+    print(f"Listening for events on margin account: {client._margin_account_address} (authority: {wallet.public_key})")
     async for events, _ in client.subscribe_events():
         # Loop over the events in each tx
         for event in events:
@@ -39,6 +40,8 @@ async def main():
                 print("Cancel order event: ", event)
             elif isinstance(event, LiquidationEvent):
                 print("Liquidation event: ", event)
+            elif isinstance(event, ApplyFundingEvent):
+                print("Funding event: ", event)
 
 
 asyncio.run(main())

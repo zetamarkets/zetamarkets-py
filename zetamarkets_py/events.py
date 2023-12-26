@@ -225,7 +225,7 @@ class ApplyFundingEvent:
         assert event.name == cls.__name__
         return cls(
             margin_account=event.data.margin_account,
-            authority=event.data.authority,
+            authority=event.data.user,
             asset=Asset.from_index(event.data.asset.index),
             balance_change=utils.convert_fixed_int_to_decimal(event.data.balance_change),
             remaining_balance=utils.convert_fixed_int_to_decimal(event.data.remaining_balance),
