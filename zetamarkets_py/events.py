@@ -210,7 +210,7 @@ class LiquidationEvent:
 
 @dataclass
 class ApplyFundingEvent:
-    """Program event for a liquidation."""
+    """Program event for funding being applied to a position."""
 
     margin_account: Pubkey
     authority: Pubkey
