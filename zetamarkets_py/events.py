@@ -214,7 +214,7 @@ class ApplyFundingEvent:
 
     margin_account: Pubkey
     authority: Pubkey
-    Asset: Asset
+    asset: Asset
     balance_change: float
     remaining_balance: float
     funding_rate: float
