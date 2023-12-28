@@ -996,13 +996,13 @@
         },
         {
           "name": "admin",
-          "isMut": false,
+          "isMut": true,
           "isSigner": true
         },
         {
           "name": "newAdmin",
-          "isMut": true,
-          "isSigner": true
+          "isMut": false,
+          "isSigner": false
         }
       ],
       "args": []
@@ -1017,13 +1017,13 @@
         },
         {
           "name": "admin",
-          "isMut": false,
+          "isMut": true,
           "isSigner": true
         },
         {
           "name": "newAdmin",
-          "isMut": true,
-          "isSigner": true
+          "isMut": false,
+          "isSigner": false
         }
       ],
       "args": []
@@ -1059,13 +1059,13 @@
         },
         {
           "name": "admin",
-          "isMut": false,
+          "isMut": true,
           "isSigner": true
         },
         {
           "name": "newAdmin",
-          "isMut": true,
-          "isSigner": true
+          "isMut": false,
+          "isSigner": false
         }
       ],
       "args": []
@@ -4343,6 +4343,157 @@
       ]
     },
     {
+      "name": "executeTriggerOrderV2",
+      "accounts": [
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "triggerOrder",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "placeOrderAccounts",
+          "accounts": [
+            {
+              "name": "state",
+              "isMut": false,
+              "isSigner": false
+            },
+            {
+              "name": "pricing",
+              "isMut": false,
+              "isSigner": false
+            },
+            {
+              "name": "marginAccount",
+              "isMut": true,
+              "isSigner": false
+            },
+            {
+              "name": "dexProgram",
+              "isMut": false,
+              "isSigner": false
+            },
+            {
+              "name": "tokenProgram",
+              "isMut": false,
+              "isSigner": false
+            },
+            {
+              "name": "serumAuthority",
+              "isMut": false,
+              "isSigner": false
+            },
+            {
+              "name": "openOrders",
+              "isMut": true,
+              "isSigner": false
+            },
+            {
+              "name": "rent",
+              "isMut": false,
+              "isSigner": false
+            },
+            {
+              "name": "marketAccounts",
+              "accounts": [
+                {
+                  "name": "market",
+                  "isMut": true,
+                  "isSigner": false
+                },
+                {
+                  "name": "requestQueue",
+                  "isMut": true,
+                  "isSigner": false
+                },
+                {
+                  "name": "eventQueue",
+                  "isMut": true,
+                  "isSigner": false
+                },
+                {
+                  "name": "bids",
+                  "isMut": true,
+                  "isSigner": false
+                },
+                {
+                  "name": "asks",
+                  "isMut": true,
+                  "isSigner": false
+                },
+                {
+                  "name": "orderPayerTokenAccount",
+                  "isMut": true,
+                  "isSigner": false
+                },
+                {
+                  "name": "coinVault",
+                  "isMut": true,
+                  "isSigner": false
+                },
+                {
+                  "name": "pcVault",
+                  "isMut": true,
+                  "isSigner": false
+                },
+                {
+                  "name": "coinWallet",
+                  "isMut": true,
+                  "isSigner": false
+                },
+                {
+                  "name": "pcWallet",
+                  "isMut": true,
+                  "isSigner": false
+                }
+              ]
+            },
+            {
+              "name": "oracle",
+              "isMut": false,
+              "isSigner": false
+            },
+            {
+              "name": "oracleBackupFeed",
+              "isMut": false,
+              "isSigner": false
+            },
+            {
+              "name": "oracleBackupProgram",
+              "isMut": false,
+              "isSigner": false
+            },
+            {
+              "name": "marketMint",
+              "isMut": true,
+              "isSigner": false
+            },
+            {
+              "name": "mintAuthority",
+              "isMut": false,
+              "isSigner": false
+            },
+            {
+              "name": "perpSyncQueue",
+              "isMut": true,
+              "isSigner": false
+            }
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "triggerOrderBit",
+          "type": "u8"
+        }
+      ]
+    },
+    {
       "name": "executeTriggerOrder",
       "accounts": [
         {
@@ -4484,6 +4635,63 @@
               "isSigner": false
             }
           ]
+        }
+      ],
+      "args": [
+        {
+          "name": "triggerOrderBit",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "forceCancelTriggerOrder",
+      "accounts": [
+        {
+          "name": "state",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "admin",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "triggerOrder",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "marginAccount",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "triggerOrderBit",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "cancelTriggerOrderV2",
+      "accounts": [
+        {
+          "name": "authority",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "triggerOrder",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "marginAccount",
+          "isMut": true,
+          "isSigner": false
         }
       ],
       "args": [
@@ -5212,6 +5420,52 @@
         }
       ],
       "args": []
+    },
+    {
+      "name": "pruneExpiredTifOrdersV2",
+      "accounts": [
+        {
+          "name": "dexProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "state",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "serumAuthority",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "market",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "bids",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "asks",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "eventQueue",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "limit",
+          "type": "u16"
+        }
+      ]
     },
     {
       "name": "forceCancelOrderByOrderIdV2",
@@ -6270,7 +6524,7 @@
             "type": {
               "array": [
                 "u64",
-                9
+                10
               ]
             }
           },
@@ -6279,7 +6533,7 @@
             "type": {
               "array": [
                 "u64",
-                16
+                15
               ]
             }
           },
@@ -6288,7 +6542,7 @@
             "type": {
               "array": [
                 "u64",
-                9
+                10
               ]
             }
           },
@@ -6297,7 +6551,7 @@
             "type": {
               "array": [
                 "u64",
-                16
+                15
               ]
             }
           },
@@ -6308,7 +6562,7 @@
                 {
                   "defined": "AnchorDecimal"
                 },
-                9
+                10
               ]
             }
           },
@@ -6319,7 +6573,7 @@
                 {
                   "defined": "AnchorDecimal"
                 },
-                16
+                15
               ]
             }
           },
@@ -6330,7 +6584,7 @@
                 {
                   "defined": "AnchorDecimal"
                 },
-                9
+                10
               ]
             }
           },
@@ -6341,7 +6595,7 @@
                 {
                   "defined": "AnchorDecimal"
                 },
-                16
+                15
               ]
             }
           },
@@ -6350,7 +6604,7 @@
             "type": {
               "array": [
                 "u64",
-                9
+                10
               ]
             }
           },
@@ -6359,7 +6613,7 @@
             "type": {
               "array": [
                 "u64",
-                16
+                15
               ]
             }
           },
@@ -6368,7 +6622,7 @@
             "type": {
               "array": [
                 "publicKey",
-                9
+                10
               ]
             }
           },
@@ -6377,7 +6631,7 @@
             "type": {
               "array": [
                 "publicKey",
-                16
+                15
               ]
             }
           },
@@ -6386,7 +6640,7 @@
             "type": {
               "array": [
                 "publicKey",
-                9
+                10
               ]
             }
           },
@@ -6395,7 +6649,7 @@
             "type": {
               "array": [
                 "publicKey",
-                16
+                15
               ]
             }
           },
@@ -6404,7 +6658,7 @@
             "type": {
               "array": [
                 "publicKey",
-                9
+                10
               ]
             }
           },
@@ -6413,7 +6667,7 @@
             "type": {
               "array": [
                 "publicKey",
-                16
+                15
               ]
             }
           },
@@ -6422,7 +6676,7 @@
             "type": {
               "array": [
                 "publicKey",
-                9
+                10
               ]
             }
           },
@@ -6431,7 +6685,7 @@
             "type": {
               "array": [
                 "publicKey",
-                16
+                15
               ]
             }
           },
@@ -6442,7 +6696,7 @@
                 {
                   "defined": "PerpParameters"
                 },
-                9
+                10
               ]
             }
           },
@@ -6453,7 +6707,7 @@
                 {
                   "defined": "PerpParameters"
                 },
-                16
+                15
               ]
             }
           },
@@ -6464,7 +6718,7 @@
                 {
                   "defined": "MarginParameters"
                 },
-                9
+                10
               ]
             }
           },
@@ -6475,7 +6729,7 @@
                 {
                   "defined": "MarginParameters"
                 },
-                16
+                15
               ]
             }
           },
@@ -6486,7 +6740,7 @@
                 {
                   "defined": "Product"
                 },
-                9
+                10
               ]
             }
           },
@@ -6497,7 +6751,7 @@
                 {
                   "defined": "Product"
                 },
-                16
+                15
               ]
             }
           },
@@ -6506,7 +6760,7 @@
             "type": {
               "array": [
                 "publicKey",
-                9
+                10
               ]
             }
           },
@@ -6515,7 +6769,7 @@
             "type": {
               "array": [
                 "publicKey",
-                16
+                15
               ]
             }
           },
@@ -6536,7 +6790,7 @@
             "type": {
               "array": [
                 "bool",
-                9
+                10
               ]
             }
           },
@@ -6545,7 +6799,7 @@
             "type": {
               "array": [
                 "bool",
-                16
+                15
               ]
             }
           },
@@ -6939,7 +7193,7 @@
                 {
                   "defined": "HaltStateV2"
                 },
-                9
+                10
               ]
             }
           },
@@ -6950,7 +7204,7 @@
                 {
                   "defined": "HaltStateV2"
                 },
-                16
+                15
               ]
             }
           },
@@ -6963,7 +7217,7 @@
             "type": {
               "array": [
                 "u32",
-                9
+                10
               ]
             }
           },
@@ -6972,7 +7226,7 @@
             "type": {
               "array": [
                 "u32",
-                16
+                15
               ]
             }
           },
@@ -6981,7 +7235,7 @@
             "type": {
               "array": [
                 "u32",
-                9
+                10
               ]
             }
           },
@@ -6990,7 +7244,7 @@
             "type": {
               "array": [
                 "u32",
-                16
+                15
               ]
             }
           },
@@ -7404,7 +7658,7 @@
             "type": {
               "array": [
                 "u8",
-                9
+                10
               ]
             }
           },
@@ -7413,7 +7667,7 @@
             "type": {
               "array": [
                 "u8",
-                16
+                15
               ]
             }
           },
@@ -7428,7 +7682,7 @@
                 {
                   "defined": "AnchorDecimal"
                 },
-                9
+                10
               ]
             }
           },
@@ -7439,7 +7693,7 @@
                 {
                   "defined": "AnchorDecimal"
                 },
-                16
+                15
               ]
             }
           },
@@ -7450,7 +7704,7 @@
                 {
                   "defined": "ProductLedger"
                 },
-                9
+                10
               ]
             }
           },
@@ -7461,7 +7715,7 @@
                 {
                   "defined": "ProductLedger"
                 },
-                16
+                15
               ]
             }
           },
@@ -8264,7 +8518,7 @@
             "type": {
               "array": [
                 "u64",
-                9
+                10
               ]
             }
           },
@@ -9073,6 +9327,9 @@
             "name": "JTO"
           },
           {
+            "name": "ONEMBONK"
+          },
+          {
             "name": "UNDEFINED"
           }
         ]
@@ -9454,6 +9711,11 @@
         {
           "name": "clientOrderId",
           "type": "u64",
+          "index": false
+        },
+        {
+          "name": "user",
+          "type": "publicKey",
           "index": false
         }
       ]

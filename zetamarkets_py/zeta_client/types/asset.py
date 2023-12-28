@@ -42,6 +42,8 @@ class TIAJSON(typing.TypedDict):
 class JTOJSON(typing.TypedDict):
     kind: typing.Literal["JTO"]
 
+class ONEMBONKJSON(typing.TypedDict):
+    kind: typing.Literal["ONEMBONK"]
 
 class UNDEFINEDJSON(typing.TypedDict):
     kind: typing.Literal["UNDEFINED"]
@@ -208,6 +210,24 @@ class JTO:
             "JTO": {},
         }
 
+@dataclass
+class ONEMBONK:
+    discriminator: typing.ClassVar = 9
+    kind: typing.ClassVar = "ONEMBONK"
+
+    @classmethod
+    def to_json(cls) -> ONEMBONKJSON:
+        return ONEMBONKJSON(
+            kind="ONEMBONK",
+        )
+
+    @classmethod
+    def to_encodable(cls) -> dict:
+        return {
+            "ONEMBONK": {},
+        }
+
+
 
 @dataclass
 class UNDEFINED:
@@ -227,9 +247,9 @@ class UNDEFINED:
         }
 
 
-AssetKind = typing.Union[SOL, BTC, ETH, APT, ARB, BNB, PYTH, TIA, JTO, UNDEFINED]
+AssetKind = typing.Union[SOL, BTC, ETH, APT, ARB, BNB, PYTH, TIA, JTO, ONEMBONK, UNDEFINED]
 AssetJSON = typing.Union[
-    SOLJSON, BTCJSON, ETHJSON, APTJSON, ARBJSON, BNBJSON, PYTHJSON, TIAJSON, JTOJSON, UNDEFINEDJSON
+    SOLJSON, BTCJSON, ETHJSON, APTJSON, ARBJSON, BNBJSON, PYTHJSON, TIAJSON, JTOJSON, ONEMBONKJSON, UNDEFINEDJSON
 ]
 
 
@@ -254,6 +274,8 @@ def from_decoded(obj: dict) -> AssetKind:
         return TIA()
     if "JTO" in obj:
         return JTO()
+    if "ONEMBONK" in obj:
+        return ONEMBONK()
     if "UNDEFINED" in obj:
         return UNDEFINED()
     raise ValueError("Invalid enum object")
@@ -278,6 +300,8 @@ def from_json(obj: AssetJSON) -> AssetKind:
         return TIA()
     if obj["kind"] == "JTO":
         return JTO()
+    if obj["kind"] == "ONEMBONK":
+        return ONEMBONK()
     if obj["kind"] == "UNDEFINED":
         return UNDEFINED()
     kind = obj["kind"]
@@ -294,5 +318,6 @@ layout = EnumForCodegen(
     "PYTH" / borsh.CStruct(),
     "TIA" / borsh.CStruct(),
     "JTO" / borsh.CStruct(),
+    "ONEMBONK" / borsh.CStruct(),
     "UNDEFINED" / borsh.CStruct(),
 )
