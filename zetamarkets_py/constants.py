@@ -47,7 +47,8 @@ USDC_MINT = {
     Network.MAINNET: Pubkey.from_string("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"),
 }
 
-CHAINLINK_PID = Pubkey.from_string("HEvSKofvBgfaexv23kMabbYqxasxU3mQ4ibBMEmJWHny")
+CHAINLINK_PID = Pubkey.from_string(
+    "HEvSKofvBgfaexv23kMabbYqxasxU3mQ4ibBMEmJWHny")
 
 MAX_SETTLE_AND_CLOSE_PER_TX = 4
 MAX_CANCELS_PER_TX = 3
@@ -221,11 +222,9 @@ ZETA_LUT = {
             Pubkey.from_string("11111111111111111111111111111111"),
             Pubkey.from_string("funeUsHgi2QKkLdUPASRLuYkaK8JaazCEz3HikbkhVt"),
             Pubkey.from_string("11111111111111111111111111111111"),
-            Pubkey.from_string("nrYkQQQur7z8rYTST3G9GqATviK5SxTDkrqd21MW6Ue"),
+            Pubkey.from_string("D8UUgr8a3aR3yUeHLu7v8FWK7E8Y5sSU7qrYBXUJXBQ5"),
             Pubkey.from_string("11111111111111111111111111111111"),
             Pubkey.from_string("8ihFLu5FimgTQ1Unh4dVyEHUGodJ5gJQCrQf4KUVB9bN"),
-            Pubkey.from_string("11111111111111111111111111111111"),
-            Pubkey.from_string("D8UUgr8a3aR3yUeHLu7v8FWK7E8Y5sSU7qrYBXUJXBQ5"),
             Pubkey.from_string("11111111111111111111111111111111"),
             Pubkey.from_string("JE6d41JRokZAMUEAznV8JP4h7i6Ain6CyJrQuweRipFU"),
             Pubkey.from_string("EaNR74nCjrYyNDsuoWmq19pH76QSd1nuTzvJSr3RDQ6x"),
