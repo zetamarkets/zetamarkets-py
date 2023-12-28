@@ -121,7 +121,7 @@ class Client:
         network: Network = Network.MAINNET,
         log_level: int = logging.WARNING,
         blockhash_cache: Union[BlockhashCache, bool] = False,
-        delegatee_pubkey: Optional[Pubkey] = None,
+        delegator_pubkey: Optional[Pubkey] = None,
     ):
         """
         Asynchronously load the Zeta Client.
@@ -136,8 +136,8 @@ class Client:
             network (Network, optional): The network of the Zeta program. Defaults to Network.MAINNET.
             log_level (int, optional): The level of logging. Defaults to logging.CRITICAL.
             blockhash_cache (Union[BlockhashCache, bool], optional): The blockhash cache. Disabled by default.
-            delegatee_pubkey (Pubkey, optional): If passing in a delegated wallet in the 'wallet' param, this
-            is the delegatee account itself so you can load positions/orders/balance/etc
+            delegator_pubkey (Pubkey, optional): If passing in a delegated wallet in the 'wallet' param, this
+            is the delegator account itself so you can load positions/orders/balance/etc
 
         Returns:
             Client: An instance of the Client class.
@@ -163,7 +163,7 @@ class Client:
             margin_account = None
             _open_orders_addresses = None
         else:
-            key = wallet.public_key if delegatee_pubkey is None else delegatee_pubkey
+            key = wallet.public_key if delegator_pubkey is None else delegator_pubkey
 
             _margin_account_manager_address = pda.get_cross_margin_account_manager_address(exchange.program_id, key)
             _user_usdc_address = pda.get_associated_token_address(key, constants.USDC_MINT[network])
