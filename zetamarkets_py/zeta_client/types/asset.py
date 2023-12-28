@@ -231,7 +231,7 @@ class ONEMBONK:
 
 @dataclass
 class UNDEFINED:
-    discriminator: typing.ClassVar = 9
+    discriminator: typing.ClassVar = 10
     kind: typing.ClassVar = "UNDEFINED"
 
     @classmethod
