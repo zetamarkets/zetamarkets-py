@@ -185,7 +185,7 @@ def get_recent_prio_fees(url: str, accounts: [str], lookback_slots: int = 20, us
     response = post(url=url, data=json.dumps(data), headers=headers).json()
 
     # Sort by slot, descending. Grab the first 20 slots only
-    response_sorted = sorted(response["result"], key=lambda x: x["slot"], reverse=True)[:20]
+    response_sorted = sorted(response["result"], key=lambda x: x["slot"], reverse=True)[:lookback_slots]
 
     fees = [value["prioritizationFee"] for value in response_sorted]
     return int(max(fees) if use_max == True else median(fees))
