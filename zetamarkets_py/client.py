@@ -706,6 +706,10 @@ class Client:
                         ):
                             events_to_return.append(CancelOrderEvent.from_order_complete_event(order_complete_event))
 
+                elif ix_name.startswith("apply_perp_funding"):
+                    if event.name.startswith(ApplyFundingEvent.__name__):
+                        events_to_return.append(ApplyFundingEvent.from_event(event))
+
         return events_to_return, meta
 
     # Instructions
