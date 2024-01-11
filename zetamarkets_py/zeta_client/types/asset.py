@@ -42,8 +42,14 @@ class TIAJSON(typing.TypedDict):
 class JTOJSON(typing.TypedDict):
     kind: typing.Literal["JTO"]
 
+
 class ONEMBONKJSON(typing.TypedDict):
     kind: typing.Literal["ONEMBONK"]
+
+
+class SEIJSON(typing.TypedDict):
+    kind: typing.Literal["SEI"]
+
 
 class UNDEFINEDJSON(typing.TypedDict):
     kind: typing.Literal["UNDEFINED"]
@@ -210,6 +216,7 @@ class JTO:
             "JTO": {},
         }
 
+
 @dataclass
 class ONEMBONK:
     discriminator: typing.ClassVar = 9
@@ -228,10 +235,27 @@ class ONEMBONK:
         }
 
 
+@dataclass
+class SEI:
+    discriminator: typing.ClassVar = 10
+    kind: typing.ClassVar = "SEI"
+
+    @classmethod
+    def to_json(cls) -> SEIJSON:
+        return SEIJSON(
+            kind="SEI",
+        )
+
+    @classmethod
+    def to_encodable(cls) -> dict:
+        return {
+            "SEI": {},
+        }
+
 
 @dataclass
 class UNDEFINED:
-    discriminator: typing.ClassVar = 10
+    discriminator: typing.ClassVar = 11
     kind: typing.ClassVar = "UNDEFINED"
 
     @classmethod
@@ -247,9 +271,20 @@ class UNDEFINED:
         }
 
 
-AssetKind = typing.Union[SOL, BTC, ETH, APT, ARB, BNB, PYTH, TIA, JTO, ONEMBONK, UNDEFINED]
+AssetKind = typing.Union[SOL, BTC, ETH, APT, ARB, BNB, PYTH, TIA, JTO, ONEMBONK, SEI, UNDEFINED]
 AssetJSON = typing.Union[
-    SOLJSON, BTCJSON, ETHJSON, APTJSON, ARBJSON, BNBJSON, PYTHJSON, TIAJSON, JTOJSON, ONEMBONKJSON, UNDEFINEDJSON
+    SOLJSON,
+    BTCJSON,
+    ETHJSON,
+    APTJSON,
+    ARBJSON,
+    BNBJSON,
+    PYTHJSON,
+    TIAJSON,
+    JTOJSON,
+    ONEMBONKJSON,
+    SEIJSON,
+    UNDEFINEDJSON,
 ]
 
 
@@ -276,6 +311,8 @@ def from_decoded(obj: dict) -> AssetKind:
         return JTO()
     if "ONEMBONK" in obj:
         return ONEMBONK()
+    if "SEI" in obj:
+        return SEI()
     if "UNDEFINED" in obj:
         return UNDEFINED()
     raise ValueError("Invalid enum object")
@@ -302,6 +339,8 @@ def from_json(obj: AssetJSON) -> AssetKind:
         return JTO()
     if obj["kind"] == "ONEMBONK":
         return ONEMBONK()
+    if obj["kind"] == "SEI":
+        return SEI()
     if obj["kind"] == "UNDEFINED":
         return UNDEFINED()
     kind = obj["kind"]
@@ -319,5 +358,6 @@ layout = EnumForCodegen(
     "TIA" / borsh.CStruct(),
     "JTO" / borsh.CStruct(),
     "ONEMBONK" / borsh.CStruct(),
+    "SEI" / borsh.CStruct(),
     "UNDEFINED" / borsh.CStruct(),
 )
