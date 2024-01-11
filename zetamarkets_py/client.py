@@ -21,12 +21,12 @@ from solana.rpc.commitment import Commitment, Confirmed
 from solana.rpc.core import RPCException
 from solana.rpc.types import TxOpts
 from solana.rpc.websocket_api import connect
+from solders.compute_budget import set_compute_unit_price
 from solders.instruction import Instruction
 from solders.message import MessageV0
 from solders.pubkey import Pubkey
 from solders.rpc.config import RpcTransactionLogsFilterMentions
 from solders.transaction import VersionedTransaction
-from solders.compute_budget import set_compute_unit_price
 
 from zetamarkets_py import constants, pda, utils
 from zetamarkets_py.events import (

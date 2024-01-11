@@ -42,11 +42,14 @@ class TIAJSON(typing.TypedDict):
 class JTOJSON(typing.TypedDict):
     kind: typing.Literal["JTO"]
 
+
 class ONEMBONKJSON(typing.TypedDict):
     kind: typing.Literal["ONEMBONK"]
 
+
 class SEIJSON(typing.TypedDict):
     kind: typing.Literal["SEI"]
+
 
 class UNDEFINEDJSON(typing.TypedDict):
     kind: typing.Literal["UNDEFINED"]
@@ -213,6 +216,7 @@ class JTO:
             "JTO": {},
         }
 
+
 @dataclass
 class ONEMBONK:
     discriminator: typing.ClassVar = 9
@@ -230,6 +234,7 @@ class ONEMBONK:
             "ONEMBONK": {},
         }
 
+
 @dataclass
 class SEI:
     discriminator: typing.ClassVar = 10
@@ -246,8 +251,6 @@ class SEI:
         return {
             "SEI": {},
         }
-
-
 
 
 @dataclass
@@ -270,7 +273,18 @@ class UNDEFINED:
 
 AssetKind = typing.Union[SOL, BTC, ETH, APT, ARB, BNB, PYTH, TIA, JTO, ONEMBONK, SEI, UNDEFINED]
 AssetJSON = typing.Union[
-    SOLJSON, BTCJSON, ETHJSON, APTJSON, ARBJSON, BNBJSON, PYTHJSON, TIAJSON, JTOJSON, ONEMBONKJSON, SEIJSON, UNDEFINEDJSON
+    SOLJSON,
+    BTCJSON,
+    ETHJSON,
+    APTJSON,
+    ARBJSON,
+    BNBJSON,
+    PYTHJSON,
+    TIAJSON,
+    JTOJSON,
+    ONEMBONKJSON,
+    SEIJSON,
+    UNDEFINEDJSON,
 ]
 
 

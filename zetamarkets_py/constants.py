@@ -48,8 +48,7 @@ USDC_MINT = {
     Network.MAINNET: Pubkey.from_string("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"),
 }
 
-CHAINLINK_PID = Pubkey.from_string(
-    "HEvSKofvBgfaexv23kMabbYqxasxU3mQ4ibBMEmJWHny")
+CHAINLINK_PID = Pubkey.from_string("HEvSKofvBgfaexv23kMabbYqxasxU3mQ4ibBMEmJWHny")
 
 MAX_SETTLE_AND_CLOSE_PER_TX = 4
 MAX_CANCELS_PER_TX = 3
