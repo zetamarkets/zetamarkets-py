@@ -21,6 +21,7 @@ class Asset(Enum):
     TIA = "TIA"
     JTO = "JTO"
     ONEMBONK = "ONEMBONK"
+    SEI = "SEI"
 
     def to_index(self):
         """Converts the asset to its corresponding index."""
