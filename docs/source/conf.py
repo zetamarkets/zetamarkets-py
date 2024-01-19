@@ -59,7 +59,7 @@ html_context = {
     "current_version": "latest",
     "conf_py_path": "/docs/source",
     "display_github": True,
-    "github_user": "0xtristan",
+    "github_user": "zetamarkets",
     "github_repo": "zetamarkets-py",
     "github_version": "master",
     "slug": "zetamarkets_py",
