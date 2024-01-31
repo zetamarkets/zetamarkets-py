@@ -39,6 +39,7 @@ FLEXIBLE_MINTS = {
         Asset.JTO: Pubkey.from_string("71jxAnng6EMHYZzXEBoRZUnnhd8iyoAoc1soUgPDMt9e"),
         Asset.ONEMBONK: Pubkey.from_string("76x829V8cNWymEBNjUuE22bUcVnShNeRwnXnegviejyj"),
         Asset.SEI: Pubkey.from_string("CTw2xSSAfrv9hJGVpB2R2q5xYrdX79i3hXeCiQiAKf2f"),
+        Asset.JUP: Pubkey.from_string("rYFexooTE27wUDaJsjpy8UdyKqUHxroPvfB2Hgmajjt"),
     },
 }
 
