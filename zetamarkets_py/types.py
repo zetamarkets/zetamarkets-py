@@ -22,6 +22,7 @@ class Asset(Enum):
     JTO = "JTO"
     ONEMBONK = "ONEMBONK"
     SEI = "SEI"
+    JUP = "JUP"
 
     def to_index(self):
         """Converts the asset to its corresponding index."""
