@@ -1150,7 +1150,7 @@ class Client:
         pre_ixs = []
         if priority_fee > 0:
             pre_ixs.extend([set_compute_unit_price(priority_fee)])
-        pre_ixs.extend(self._cancel_orders_for_market_ix(asset))
+        pre_ixs.extend([self._cancel_orders_for_market_ix(asset)])
         return await self.place_orders_for_market(asset, orders, pre_instructions=pre_ixs)
 
     # TODO: liquidate
