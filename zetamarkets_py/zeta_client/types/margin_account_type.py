@@ -14,6 +14,9 @@ class NormalJSON(typing.TypedDict):
 class MarketMakerJSON(typing.TypedDict):
     kind: typing.Literal["MarketMaker"]
 
+class MarketMakerT1JSON(typing.TypedDict):
+    kind: typing.Literal["MarketMakerT1"]
+
 
 @dataclass
 class Normal:
@@ -49,10 +52,27 @@ class MarketMaker:
         return {
             "MarketMaker": {},
         }
+    
+@dataclass
+class MarketMakerT1:
+    discriminator: typing.ClassVar = 2
+    kind: typing.ClassVar = "MarketMakerT1"
+
+    @classmethod
+    def to_json(cls) -> MarketMakerT1JSON:
+        return MarketMakerT1JSON(
+            kind="MarketMakerT1",
+        )
+
+    @classmethod
+    def to_encodable(cls) -> dict:
+        return {
+            "MarketMakerT1": {},
+        }
 
 
-MarginAccountTypeKind = typing.Union[Normal, MarketMaker]
-MarginAccountTypeJSON = typing.Union[NormalJSON, MarketMakerJSON]
+MarginAccountTypeKind = typing.Union[Normal, MarketMaker, MarketMakerT1]
+MarginAccountTypeJSON = typing.Union[NormalJSON, MarketMakerJSON, MarketMakerT1JSON]
 
 
 def from_decoded(obj: dict) -> MarginAccountTypeKind:
@@ -62,6 +82,8 @@ def from_decoded(obj: dict) -> MarginAccountTypeKind:
         return Normal()
     if "MarketMaker" in obj:
         return MarketMaker()
+    if "MarketMakerT1" in obj:
+        return MarketMakerT1()
     raise ValueError("Invalid enum object")
 
 
@@ -70,8 +92,10 @@ def from_json(obj: MarginAccountTypeJSON) -> MarginAccountTypeKind:
         return Normal()
     if obj["kind"] == "MarketMaker":
         return MarketMaker()
+    if obj["kind"] == "MarketMakerT1":
+        return MarketMakerT1()
     kind = obj["kind"]
     raise ValueError(f"Unrecognized enum kind: {kind}")
 
 
-layout = EnumForCodegen("Normal" / borsh.CStruct(), "MarketMaker" / borsh.CStruct())
+layout = EnumForCodegen("Normal" / borsh.CStruct(), "MarketMaker" / borsh.CStruct(), "MarketMakerT1" / borsh.CStruct())
