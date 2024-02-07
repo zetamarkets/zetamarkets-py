@@ -214,11 +214,12 @@ class Client:
         Returns:
             bool: True if the account exists, False otherwise.
         """
-        if self._margin_account_manager_address in self._account_exists_cache:
-            return self._account_exists_cache[self._margin_account_manager_address]
+        if self._user_usdc_address in self._account_exists_cache:
+            return self._account_exists_cache[self._user_usdc_address]
         resp = await self.connection.get_account_info(self._user_usdc_address)
         exists = resp.value is not None
-        self._account_exists_cache[self._margin_account_manager_address] = exists
+        if exists:
+            self._account_exists_cache[self._user_usdc_address] = exists
         return exists
 
     async def _check_margin_account_manager_exists(self):
@@ -230,9 +231,10 @@ class Client:
         """
         if self._margin_account_manager_address in self._account_exists_cache:
             return self._account_exists_cache[self._margin_account_manager_address]
-        resp = await self.connection.get_account_info(self._user_usdc_address)
+        resp = await self.connection.get_account_info(self._margin_account_address)
         exists = resp.value is not None
-        self._account_exists_cache[self._margin_account_manager_address] = exists
+        if exists:
+            self._account_exists_cache[self._margin_account_manager_address] = exists
         return exists
 
     async def _check_margin_account_exists(self):
@@ -242,12 +244,13 @@ class Client:
         Returns:
             bool: True if the account exists, False otherwise.
         """
-        if self._margin_account_manager_address in self._account_exists_cache:
-            return self._account_exists_cache[self._margin_account_manager_address]
+        if self._margin_account_address in self._account_exists_cache:
+            return self._account_exists_cache[self._margin_account_address]
         account = await CrossMarginAccount.fetch(self.connection, self._margin_account_address)
         exists = account is not None
-        self._account_exists_cache[self._margin_account_manager_address] = exists
-        self.margin_account = account
+        if exists:
+            self._account_exists_cache[self._margin_account_address] = exists
+            self.margin_account = account
         return exists
 
     async def _check_open_orders_account_exists(self, asset: Asset):
@@ -270,7 +273,8 @@ class Client:
             return self._account_exists_cache[open_orders_address]
         resp = await self.connection.get_account_info(open_orders_address)
         exists = resp.value is not None
-        self._account_exists_cache[open_orders_address] = exists
+        if exists:
+            self._account_exists_cache[open_orders_address] = exists
         return exists
 
     async def fetch_margin_state(self):
@@ -949,18 +953,22 @@ class Client:
                         "asks": self.exchange.markets[asset]._market_state.asks,
                         "coin_vault": self.exchange.markets[asset]._market_state.base_vault,
                         "pc_vault": self.exchange.markets[asset]._market_state.quote_vault,
-                        "order_payer_token_account": self.exchange.markets[asset]._quote_zeta_vault_address
-                        if side == Side.Bid
-                        else self.exchange.markets[asset]._base_zeta_vault_address,
+                        "order_payer_token_account": (
+                            self.exchange.markets[asset]._quote_zeta_vault_address
+                            if side == Side.Bid
+                            else self.exchange.markets[asset]._base_zeta_vault_address
+                        ),
                         "coin_wallet": self.exchange.markets[asset]._base_zeta_vault_address,
                         "pc_wallet": self.exchange.markets[asset]._quote_zeta_vault_address,
                     },
                     "oracle": self.exchange.pricing.oracles[asset.to_index()],
                     "oracle_backup_feed": self.exchange.pricing.oracle_backup_feeds[asset.to_index()],
                     "oracle_backup_program": constants.CHAINLINK_PID,
-                    "market_mint": self.exchange.markets[asset]._market_state.quote_mint
-                    if side == Side.Bid
-                    else self.exchange.markets[asset]._market_state.base_mint,
+                    "market_mint": (
+                        self.exchange.markets[asset]._market_state.quote_mint
+                        if side == Side.Bid
+                        else self.exchange.markets[asset]._market_state.base_mint
+                    ),
                     "mint_authority": self.exchange._mint_authority_address,
                     "perp_sync_queue": self.exchange.pricing.perp_sync_queues[asset.to_index()],
                 },
