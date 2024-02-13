@@ -55,6 +55,10 @@ class JUPJSON(typing.TypedDict):
     kind: typing.Literal["JUP"]
 
 
+class DYMJSON(typing.TypedDict):
+    kind: typing.Literal["DYM"]
+
+
 class UNDEFINEDJSON(typing.TypedDict):
     kind: typing.Literal["UNDEFINED"]
 
@@ -276,8 +280,26 @@ class JUP:
 
 
 @dataclass
-class UNDEFINED:
+class DYM:
     discriminator: typing.ClassVar = 12
+    kind: typing.ClassVar = "DYM"
+
+    @classmethod
+    def to_json(cls) -> DYMJSON:
+        return DYMJSON(
+            kind="DYM",
+        )
+
+    @classmethod
+    def to_encodable(cls) -> dict:
+        return {
+            "DYM": {},
+        }
+
+
+@dataclass
+class UNDEFINED:
+    discriminator: typing.ClassVar = 13
     kind: typing.ClassVar = "UNDEFINED"
 
     @classmethod
@@ -293,7 +315,7 @@ class UNDEFINED:
         }
 
 
-AssetKind = typing.Union[SOL, BTC, ETH, APT, ARB, BNB, PYTH, TIA, JTO, ONEMBONK, SEI, JUP, UNDEFINED]
+AssetKind = typing.Union[SOL, BTC, ETH, APT, ARB, BNB, PYTH, TIA, JTO, ONEMBONK, SEI, JUP, DYM, UNDEFINED]
 AssetJSON = typing.Union[
     SOLJSON,
     BTCJSON,
@@ -307,6 +329,7 @@ AssetJSON = typing.Union[
     ONEMBONKJSON,
     SEIJSON,
     JUPJSON,
+    DYMJSON,
     UNDEFINEDJSON,
 ]
 
@@ -338,6 +361,8 @@ def from_decoded(obj: dict) -> AssetKind:
         return SEI()
     if "JUP" in obj:
         return JUP()
+    if "DYM" in obj:
+        return DYM()
     if "UNDEFINED" in obj:
         return UNDEFINED()
     raise ValueError("Invalid enum object")
@@ -368,6 +393,8 @@ def from_json(obj: AssetJSON) -> AssetKind:
         return SEI()
     if obj["kind"] == "JUP":
         return JUP()
+    if obj["kind"] == "DYM":
+        return DYM()
     if obj["kind"] == "UNDEFINED":
         return UNDEFINED()
     kind = obj["kind"]
@@ -387,5 +414,6 @@ layout = EnumForCodegen(
     "ONEMBONK" / borsh.CStruct(),
     "SEI" / borsh.CStruct(),
     "JUP" / borsh.CStruct(),
+    "DYM" / borsh.CStruct(),
     "UNDEFINED" / borsh.CStruct(),
 )
