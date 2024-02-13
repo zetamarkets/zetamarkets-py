@@ -147,6 +147,7 @@ class TradeEvent:
     is_taker: bool
     sequence_number: int
     fee: float
+    pnl: float
 
     @classmethod
     def from_event(cls, event: Event):
@@ -164,6 +165,7 @@ class TradeEvent:
             is_taker=event.data.is_taker,
             sequence_number=event.data.sequence_number,
             fee=utils.convert_fixed_int_to_decimal(event.data.fee),
+            pnl=utils.convert_fixed_int_to_decimal(event.data.pnl),
         )
 
 
@@ -219,6 +221,7 @@ class ApplyFundingEvent:
     remaining_balance: float
     funding_rate: float
     oracle_price: float
+    position_size: float
 
     @classmethod
     def from_event(cls, event: Event):
@@ -231,6 +234,7 @@ class ApplyFundingEvent:
             remaining_balance=utils.convert_fixed_int_to_decimal(event.data.remaining_balance),
             funding_rate=utils.convert_fixed_int_to_decimal(event.data.funding_rate),
             oracle_price=utils.convert_fixed_int_to_decimal(event.data.oracle_price),
+            position_size=utils.convert_fixed_lot_to_decimal(event.data.position_size),
         )
 
 
