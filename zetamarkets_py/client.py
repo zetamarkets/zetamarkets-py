@@ -548,8 +548,8 @@ class Client:
 
         if "rpcpool.com" not in self.ws_endpoint:
             self._logger.warning(
-                'Provided ws_endpoint does not contain "rpcpool.com". This method is experimental and\
-                requires a Triton RPC node for transactionSubscribe'
+                'Provided ws_endpoint does not contain "rpcpool.com". This method is experimental and'
+                " requires a Triton RPC node for transactionSubscribe"
             )
 
         commitment = commitment or self.connection.commitment
@@ -1119,7 +1119,8 @@ class Client:
                 placing the orders. Defaults to None.
             post_instructions (Optional[list[Instruction]], optional): The list of instructions to execute after
                 placing the orders. Defaults to None.
-            tif_buffer (int): Extra value to add to tif_expiry at epoch rollover to aid a smooth transition. Defaults to 0.
+            tif_buffer (int): Extra value to add to tif_expiry at epoch rollover to aid a smooth transition.
+                Defaults to 0.
             priority_fee (int): Additional priority fee, in microlamports per CU. Defaults to 0.
 
         Returns:

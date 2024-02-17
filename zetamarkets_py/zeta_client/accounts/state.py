@@ -53,6 +53,7 @@ class StateJSON(typing.TypedDict):
     min_lot_sizes_padding: list[int]
     tick_sizes: list[int]
     tick_sizes_padding: list[int]
+    native_maker_trade_fee_percentage: int
     padding: list[int]
 
 
@@ -98,7 +99,8 @@ class State:
         "min_lot_sizes_padding" / borsh.U32[12],
         "tick_sizes" / borsh.U32[13],
         "tick_sizes_padding" / borsh.U32[12],
-        "padding" / borsh.U8[106],
+        "native_maker_trade_fee_percentage" / borsh.U64,
+        "padding" / borsh.U8[98],
     )
     admin: Pubkey
     state_nonce: int
@@ -138,6 +140,7 @@ class State:
     min_lot_sizes_padding: list[int]
     tick_sizes: list[int]
     tick_sizes_padding: list[int]
+    native_maker_trade_fee_percentage: int
     padding: list[int]
 
     @classmethod
@@ -230,6 +233,7 @@ class State:
             min_lot_sizes_padding=dec.min_lot_sizes_padding,
             tick_sizes=dec.tick_sizes,
             tick_sizes_padding=dec.tick_sizes_padding,
+            native_maker_trade_fee_percentage=dec.native_maker_trade_fee_percentage,
             padding=dec.padding,
         )
 
@@ -273,6 +277,7 @@ class State:
             "min_lot_sizes_padding": self.min_lot_sizes_padding,
             "tick_sizes": self.tick_sizes,
             "tick_sizes_padding": self.tick_sizes_padding,
+            "native_maker_trade_fee_percentage": self.native_maker_trade_fee_percentage,
             "padding": self.padding,
         }
 
@@ -327,5 +332,6 @@ class State:
             min_lot_sizes_padding=obj["min_lot_sizes_padding"],
             tick_sizes=obj["tick_sizes"],
             tick_sizes_padding=obj["tick_sizes_padding"],
+            native_maker_trade_fee_percentage=obj["native_maker_trade_fee_percentage"],
             padding=obj["padding"],
         )

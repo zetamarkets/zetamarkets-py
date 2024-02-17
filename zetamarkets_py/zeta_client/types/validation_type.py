@@ -19,6 +19,10 @@ class OpenOrdersJSON(typing.TypedDict):
     kind: typing.Literal["OpenOrders"]
 
 
+class LiquidateJSON(typing.TypedDict):
+    kind: typing.Literal["Liquidate"]
+
+
 @dataclass
 class Place:
     discriminator: typing.ClassVar = 0
@@ -73,8 +77,26 @@ class OpenOrders:
         }
 
 
-ValidationTypeKind = typing.Union[Place, Cancel, OpenOrders]
-ValidationTypeJSON = typing.Union[PlaceJSON, CancelJSON, OpenOrdersJSON]
+@dataclass
+class Liquidate:
+    discriminator: typing.ClassVar = 3
+    kind: typing.ClassVar = "Liquidate"
+
+    @classmethod
+    def to_json(cls) -> LiquidateJSON:
+        return LiquidateJSON(
+            kind="Liquidate",
+        )
+
+    @classmethod
+    def to_encodable(cls) -> dict:
+        return {
+            "Liquidate": {},
+        }
+
+
+ValidationTypeKind = typing.Union[Place, Cancel, OpenOrders, Liquidate]
+ValidationTypeJSON = typing.Union[PlaceJSON, CancelJSON, OpenOrdersJSON, LiquidateJSON]
 
 
 def from_decoded(obj: dict) -> ValidationTypeKind:
@@ -86,6 +108,8 @@ def from_decoded(obj: dict) -> ValidationTypeKind:
         return Cancel()
     if "OpenOrders" in obj:
         return OpenOrders()
+    if "Liquidate" in obj:
+        return Liquidate()
     raise ValueError("Invalid enum object")
 
 
@@ -96,6 +120,8 @@ def from_json(obj: ValidationTypeJSON) -> ValidationTypeKind:
         return Cancel()
     if obj["kind"] == "OpenOrders":
         return OpenOrders()
+    if obj["kind"] == "Liquidate":
+        return Liquidate()
     kind = obj["kind"]
     raise ValueError(f"Unrecognized enum kind: {kind}")
 
@@ -104,4 +130,5 @@ layout = EnumForCodegen(
     "Place" / borsh.CStruct(),
     "Cancel" / borsh.CStruct(),
     "OpenOrders" / borsh.CStruct(),
+    "Liquidate" / borsh.CStruct(),
 )

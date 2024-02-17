@@ -5,9 +5,8 @@ from statistics import median
 from typing import Optional
 
 import colorlog
-from httpx import AsyncClient, post
+from httpx import post
 from solana.utils.cluster import cluster_api_url
-from solders.pubkey import Pubkey
 
 from zetamarkets_py import constants
 from zetamarkets_py.types import Asset, Network
@@ -173,7 +172,8 @@ Args:
     url (str): The RPC URL to query
     accounts ([str]): List of pubkeys to observe. Zeta market accounts are good for this.
     lookback_slots (int): How many slots to grab the median/max of. Defaults to 20.
-    use_max (bool): Whether to use the max fee over the last slots (aggressive). If set to false, the median will be used.
+    use_max (bool): Whether to use the max fee over the last slots (aggressive). 
+        If set to false, the median will be used.
 """
 
 
@@ -188,4 +188,4 @@ def get_recent_prio_fees(url: str, accounts: [str], lookback_slots: int = 20, us
     response_sorted = sorted(response["result"], key=lambda x: x["slot"], reverse=True)[:lookback_slots]
 
     fees = [value["prioritizationFee"] for value in response_sorted]
-    return int(max(fees) if use_max == True else median(fees))
+    return int(max(fees) if use_max is True else median(fees))

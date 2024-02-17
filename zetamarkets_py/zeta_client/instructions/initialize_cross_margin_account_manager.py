@@ -27,7 +27,7 @@ def initialize_cross_margin_account_manager(
             is_signer=False,
             is_writable=True,
         ),
-        AccountMeta(pubkey=accounts["authority"], is_signer=True, is_writable=False),
+        AccountMeta(pubkey=accounts["authority"], is_signer=False, is_writable=False),
         AccountMeta(pubkey=accounts["payer"], is_signer=True, is_writable=True),
         AccountMeta(pubkey=accounts["zeta_program"], is_signer=False, is_writable=False),
         AccountMeta(pubkey=SYS_PROGRAM_ID, is_signer=False, is_writable=False),

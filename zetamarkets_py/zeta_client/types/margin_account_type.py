@@ -14,6 +14,7 @@ class NormalJSON(typing.TypedDict):
 class MarketMakerJSON(typing.TypedDict):
     kind: typing.Literal["MarketMaker"]
 
+
 class MarketMakerT1JSON(typing.TypedDict):
     kind: typing.Literal["MarketMakerT1"]
 
@@ -52,7 +53,8 @@ class MarketMaker:
         return {
             "MarketMaker": {},
         }
-    
+
+
 @dataclass
 class MarketMakerT1:
     discriminator: typing.ClassVar = 2
@@ -98,4 +100,8 @@ def from_json(obj: MarginAccountTypeJSON) -> MarginAccountTypeKind:
     raise ValueError(f"Unrecognized enum kind: {kind}")
 
 
-layout = EnumForCodegen("Normal" / borsh.CStruct(), "MarketMaker" / borsh.CStruct(), "MarketMakerT1" / borsh.CStruct())
+layout = EnumForCodegen(
+    "Normal" / borsh.CStruct(),
+    "MarketMaker" / borsh.CStruct(),
+    "MarketMakerT1" / borsh.CStruct(),
+)

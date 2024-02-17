@@ -27,6 +27,10 @@ class PostOnlySlideJSON(typing.TypedDict):
     kind: typing.Literal["PostOnlySlide"]
 
 
+class PostOnlyFrontJSON(typing.TypedDict):
+    kind: typing.Literal["PostOnlyFront"]
+
+
 @dataclass
 class Limit:
     discriminator: typing.ClassVar = 0
@@ -117,8 +121,33 @@ class PostOnlySlide:
         }
 
 
-OrderTypeKind = typing.Union[Limit, PostOnly, FillOrKill, ImmediateOrCancel, PostOnlySlide]
-OrderTypeJSON = typing.Union[LimitJSON, PostOnlyJSON, FillOrKillJSON, ImmediateOrCancelJSON, PostOnlySlideJSON]
+@dataclass
+class PostOnlyFront:
+    discriminator: typing.ClassVar = 5
+    kind: typing.ClassVar = "PostOnlyFront"
+
+    @classmethod
+    def to_json(cls) -> PostOnlyFrontJSON:
+        return PostOnlyFrontJSON(
+            kind="PostOnlyFront",
+        )
+
+    @classmethod
+    def to_encodable(cls) -> dict:
+        return {
+            "PostOnlyFront": {},
+        }
+
+
+OrderTypeKind = typing.Union[Limit, PostOnly, FillOrKill, ImmediateOrCancel, PostOnlySlide, PostOnlyFront]
+OrderTypeJSON = typing.Union[
+    LimitJSON,
+    PostOnlyJSON,
+    FillOrKillJSON,
+    ImmediateOrCancelJSON,
+    PostOnlySlideJSON,
+    PostOnlyFrontJSON,
+]
 
 
 def from_decoded(obj: dict) -> OrderTypeKind:
@@ -134,6 +163,8 @@ def from_decoded(obj: dict) -> OrderTypeKind:
         return ImmediateOrCancel()
     if "PostOnlySlide" in obj:
         return PostOnlySlide()
+    if "PostOnlyFront" in obj:
+        return PostOnlyFront()
     raise ValueError("Invalid enum object")
 
 
@@ -148,6 +179,8 @@ def from_json(obj: OrderTypeJSON) -> OrderTypeKind:
         return ImmediateOrCancel()
     if obj["kind"] == "PostOnlySlide":
         return PostOnlySlide()
+    if obj["kind"] == "PostOnlyFront":
+        return PostOnlyFront()
     kind = obj["kind"]
     raise ValueError(f"Unrecognized enum kind: {kind}")
 
@@ -158,4 +191,5 @@ layout = EnumForCodegen(
     "FillOrKill" / borsh.CStruct(),
     "ImmediateOrCancel" / borsh.CStruct(),
     "PostOnlySlide" / borsh.CStruct(),
+    "PostOnlyFront" / borsh.CStruct(),
 )
