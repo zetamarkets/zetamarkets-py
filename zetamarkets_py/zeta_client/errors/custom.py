@@ -1329,6 +1329,135 @@ class InvalidDexAccOwner(ProgramError):
     msg = "Invalid owner for dex account"
 
 
+class TriggerOrderCannotBeRemoved(ProgramError):
+    def __init__(self) -> None:
+        super().__init__(6146, "Trigger order cannot be removed")
+
+    code = 6146
+    name = "TriggerOrderCannotBeRemoved"
+    msg = "Trigger order cannot be removed"
+
+
+class TriggerOrderCannotBeExecuted(ProgramError):
+    def __init__(self) -> None:
+        super().__init__(6147, "Trigger order cannot be executed")
+
+    code = 6147
+    name = "TriggerOrderCannotBeExecuted"
+    msg = "Trigger order cannot be executed"
+
+
+class TooManyTriggerOrders(ProgramError):
+    def __init__(self) -> None:
+        super().__init__(6148, "Too many trigger orders, close some and retry")
+
+    code = 6148
+    name = "TooManyTriggerOrders"
+    msg = "Too many trigger orders, close some and retry"
+
+
+class InvalidTriggerOrderRemainingAccounts(ProgramError):
+    def __init__(self) -> None:
+        super().__init__(6149, "Invalid trigger order remaining accounts")
+
+    code = 6149
+    name = "InvalidTriggerOrderRemainingAccounts"
+    msg = "Invalid trigger order remaining accounts"
+
+
+class InvalidTriggerOrderWhitelistFeesAccount(ProgramError):
+    def __init__(self) -> None:
+        super().__init__(6150, "Invalid trigger order whitelist fees account")
+
+    code = 6150
+    name = "InvalidTriggerOrderWhitelistFeesAccount"
+    msg = "Invalid trigger order whitelist fees account"
+
+
+class MissingTriggerOrderWhitelistFeesAccount(ProgramError):
+    def __init__(self) -> None:
+        super().__init__(6151, "Missing trigger order whitelist fees account")
+
+    code = 6151
+    name = "MissingTriggerOrderWhitelistFeesAccount"
+    msg = "Missing trigger order whitelist fees account"
+
+
+class InvalidTriggerOrderBitRange(ProgramError):
+    def __init__(self) -> None:
+        super().__init__(6152, "Invalid trigger order bit range")
+
+    code = 6152
+    name = "InvalidTriggerOrderBitRange"
+    msg = "Invalid trigger order bit range"
+
+
+class InvalidSecondaryAdmin(ProgramError):
+    def __init__(self) -> None:
+        super().__init__(6153, "Invalid secondary admin")
+
+    code = 6153
+    name = "InvalidSecondaryAdmin"
+    msg = "Invalid secondary admin"
+
+
+class OnlyOwnerCanEditTriggerOrder(ProgramError):
+    def __init__(self) -> None:
+        super().__init__(6154, "Only the owner can edit their own trigger order")
+
+    code = 6154
+    name = "OnlyOwnerCanEditTriggerOrder"
+    msg = "Only the owner can edit their own trigger order"
+
+
+class TriggerOrderNeedsTimeOrPriceAndDirection(ProgramError):
+    def __init__(self) -> None:
+        super().__init__(
+            6155,
+            "Trigger order needs either a trigger price + direction, or trigger time",
+        )
+
+    code = 6155
+    name = "TriggerOrderNeedsTimeOrPriceAndDirection"
+    msg = "Trigger order needs either a trigger price + direction, or trigger time"
+
+
+class TriggerOrderBitOccupied(ProgramError):
+    def __init__(self) -> None:
+        super().__init__(6156, "Given trigger order bit is occupied, pick another")
+
+    code = 6156
+    name = "TriggerOrderBitOccupied"
+    msg = "Given trigger order bit is occupied, pick another"
+
+
+class InvalidLiquidatorAuthority(ProgramError):
+    def __init__(self) -> None:
+        super().__init__(6157, "Invalid liquidator authority")
+
+    code = 6157
+    name = "InvalidLiquidatorAuthority"
+    msg = "Invalid liquidator authority"
+
+
+class IOCInvalidTakerFillSize(ProgramError):
+    def __init__(self) -> None:
+        super().__init__(6158, "IOC size_to_use doesn't match taker fill size")
+
+    code = 6158
+    name = "IOCInvalidTakerFillSize"
+    msg = "IOC size_to_use doesn't match taker fill size"
+
+
+class IncorrectLotSize(ProgramError):
+    def __init__(self) -> None:
+        super().__init__(6159, "Incorrect lot size")
+
+    code = 6159
+    name = "IncorrectLotSize"
+    msg = "Incorrect lot size"
+
+
 CustomError = typing.Union[
     DepositOverflow,
     Unreachable,
@@ -1476,6 +1605,20 @@ CustomError = typing.Union[
     FeatureUnavailable,
     MarginAccountCannotLiquidateCrossMarginAccount,
     InvalidDexAccOwner,
+    TriggerOrderCannotBeRemoved,
+    TriggerOrderCannotBeExecuted,
+    TooManyTriggerOrders,
+    InvalidTriggerOrderRemainingAccounts,
+    InvalidTriggerOrderWhitelistFeesAccount,
+    MissingTriggerOrderWhitelistFeesAccount,
+    InvalidTriggerOrderBitRange,
+    InvalidSecondaryAdmin,
+    OnlyOwnerCanEditTriggerOrder,
+    TriggerOrderNeedsTimeOrPriceAndDirection,
+    TriggerOrderBitOccupied,
+    InvalidLiquidatorAuthority,
+    IOCInvalidTakerFillSize,
+    IncorrectLotSize,
 ]
 CUSTOM_ERROR_MAP: dict[int, CustomError] = {
     6000: DepositOverflow(),
@@ -1624,6 +1767,20 @@ CUSTOM_ERROR_MAP: dict[int, CustomError] = {
     6143: FeatureUnavailable(),
     6144: MarginAccountCannotLiquidateCrossMarginAccount(),
     6145: InvalidDexAccOwner(),
+    6146: TriggerOrderCannotBeRemoved(),
+    6147: TriggerOrderCannotBeExecuted(),
+    6148: TooManyTriggerOrders(),
+    6149: InvalidTriggerOrderRemainingAccounts(),
+    6150: InvalidTriggerOrderWhitelistFeesAccount(),
+    6151: MissingTriggerOrderWhitelistFeesAccount(),
+    6152: InvalidTriggerOrderBitRange(),
+    6153: InvalidSecondaryAdmin(),
+    6154: OnlyOwnerCanEditTriggerOrder(),
+    6155: TriggerOrderNeedsTimeOrPriceAndDirection(),
+    6156: TriggerOrderBitOccupied(),
+    6157: InvalidLiquidatorAuthority(),
+    6158: IOCInvalidTakerFillSize(),
+    6159: IncorrectLotSize(),
 }
 
 

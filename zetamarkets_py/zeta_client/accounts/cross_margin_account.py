@@ -29,6 +29,7 @@ class CrossMarginAccountJSON(typing.TypedDict):
     last_funding_deltas_padding: list[types.anchor_decimal.AnchorDecimalJSON]
     product_ledgers: list[types.product_ledger.ProductLedgerJSON]
     product_ledgers_padding: list[types.product_ledger.ProductLedgerJSON]
+    trigger_order_bits: int
     padding: list[int]
 
 
@@ -50,7 +51,8 @@ class CrossMarginAccount:
         "last_funding_deltas_padding" / types.anchor_decimal.AnchorDecimal.layout[12],
         "product_ledgers" / types.product_ledger.ProductLedger.layout[13],
         "product_ledgers_padding" / types.product_ledger.ProductLedger.layout[12],
-        "padding" / borsh.U8[2000],
+        "trigger_order_bits" / borsh.U128,
+        "padding" / borsh.U8[1984],
     )
     authority: Pubkey
     delegated_pubkey: Pubkey
@@ -66,6 +68,7 @@ class CrossMarginAccount:
     last_funding_deltas_padding: list[types.anchor_decimal.AnchorDecimal]
     product_ledgers: list[types.product_ledger.ProductLedger]
     product_ledgers_padding: list[types.product_ledger.ProductLedger]
+    trigger_order_bits: int
     padding: list[int]
 
     @classmethod
@@ -92,9 +95,9 @@ class CrossMarginAccount:
         addresses: list[Pubkey],
         commitment: typing.Optional[Commitment] = None,
         program_id: Pubkey = PROGRAM_ID,
-    ) -> list[typing.Optional["CrossMarginAccount"]]:
+    ) -> typing.List[typing.Optional["CrossMarginAccount"]]:
         infos = await get_multiple_accounts(conn, addresses, commitment=commitment)
-        res: list[typing.Optional["CrossMarginAccount"]] = []
+        res: typing.List[typing.Optional["CrossMarginAccount"]] = []
         for info in infos:
             if info is None:
                 res.append(None)
@@ -144,6 +147,7 @@ class CrossMarginAccount:
                     dec.product_ledgers_padding,
                 )
             ),
+            trigger_order_bits=dec.trigger_order_bits,
             padding=dec.padding,
         )
 
@@ -163,6 +167,7 @@ class CrossMarginAccount:
             "last_funding_deltas_padding": list(map(lambda item: item.to_json(), self.last_funding_deltas_padding)),
             "product_ledgers": list(map(lambda item: item.to_json(), self.product_ledgers)),
             "product_ledgers_padding": list(map(lambda item: item.to_json(), self.product_ledgers_padding)),
+            "trigger_order_bits": self.trigger_order_bits,
             "padding": self.padding,
         }
 
@@ -203,5 +208,6 @@ class CrossMarginAccount:
                     obj["product_ledgers_padding"],
                 )
             ),
+            trigger_order_bits=obj["trigger_order_bits"],
             padding=obj["padding"],
         )
