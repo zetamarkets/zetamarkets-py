@@ -24,6 +24,7 @@ class Asset(Enum):
     SEI = "SEI"
     JUP = "JUP"
     DYM = "DYM"
+    STRK = "STRK"
 
     def to_index(self):
         """Converts the asset to its corresponding index."""

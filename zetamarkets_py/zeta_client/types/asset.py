@@ -58,6 +58,9 @@ class JUPJSON(typing.TypedDict):
 class DYMJSON(typing.TypedDict):
     kind: typing.Literal["DYM"]
 
+class STRKJSON(typing.TypedDict):
+    kind: typing.Literal["STRK"]
+
 
 class UNDEFINEDJSON(typing.TypedDict):
     kind: typing.Literal["UNDEFINED"]
@@ -295,11 +298,28 @@ class DYM:
         return {
             "DYM": {},
         }
+    
+@dataclass
+class STRK:
+    discriminator: typing.ClassVar = 13
+    kind: typing.ClassVar = "STRK"
+
+    @classmethod
+    def to_json(cls) -> DYMJSON:
+        return STRKJSON(
+            kind="STRK",
+        )
+
+    @classmethod
+    def to_encodable(cls) -> dict:
+        return {
+            "STRK": {},
+        }
 
 
 @dataclass
 class UNDEFINED:
-    discriminator: typing.ClassVar = 13
+    discriminator: typing.ClassVar = 14
     kind: typing.ClassVar = "UNDEFINED"
 
     @classmethod
@@ -315,7 +335,7 @@ class UNDEFINED:
         }
 
 
-AssetKind = typing.Union[SOL, BTC, ETH, APT, ARB, BNB, PYTH, TIA, JTO, ONEMBONK, SEI, JUP, DYM, UNDEFINED]
+AssetKind = typing.Union[SOL, BTC, ETH, APT, ARB, BNB, PYTH, TIA, JTO, ONEMBONK, SEI, JUP, DYM, STRK, UNDEFINED]
 AssetJSON = typing.Union[
     SOLJSON,
     BTCJSON,
@@ -330,6 +350,7 @@ AssetJSON = typing.Union[
     SEIJSON,
     JUPJSON,
     DYMJSON,
+    STRKJSON,
     UNDEFINEDJSON,
 ]
 
@@ -363,6 +384,8 @@ def from_decoded(obj: dict) -> AssetKind:
         return JUP()
     if "DYM" in obj:
         return DYM()
+    if "STRK" in obj:
+        return STRK()
     if "UNDEFINED" in obj:
         return UNDEFINED()
     raise ValueError("Invalid enum object")
@@ -395,6 +418,8 @@ def from_json(obj: AssetJSON) -> AssetKind:
         return JUP()
     if obj["kind"] == "DYM":
         return DYM()
+    if obj["kind"] == "STRK":
+        return STRK()
     if obj["kind"] == "UNDEFINED":
         return UNDEFINED()
     kind = obj["kind"]
@@ -415,5 +440,6 @@ layout = EnumForCodegen(
     "SEI" / borsh.CStruct(),
     "JUP" / borsh.CStruct(),
     "DYM" / borsh.CStruct(),
+    "STRK" / borsh.CStruct(),
     "UNDEFINED" / borsh.CStruct(),
 )
