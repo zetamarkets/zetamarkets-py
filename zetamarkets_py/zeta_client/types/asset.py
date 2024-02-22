@@ -305,7 +305,7 @@ class STRK:
     kind: typing.ClassVar = "STRK"
 
     @classmethod
-    def to_json(cls) -> DYMJSON:
+    def to_json(cls) -> STRKJSON:
         return STRKJSON(
             kind="STRK",
         )
