@@ -1,10 +1,11 @@
 from solders.pubkey import Pubkey
-from solders.token import ID as TOKEN_PROGRAM_ID
+
 from spl.token.constants import ASSOCIATED_TOKEN_PROGRAM_ID
 
 from zetamarkets_py.constants import FLEXIBLE_MINTS, MINTS, Asset
 from zetamarkets_py.types import Network
 
+TOKEN_PROGRAM_ID = Pubkey.from_string("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
 
 def get_state_address(program_id: Pubkey) -> Pubkey:
     return Pubkey.find_program_address([b"state"], program_id)[0]
