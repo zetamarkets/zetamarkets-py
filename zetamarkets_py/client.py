@@ -61,6 +61,7 @@ from zetamarkets_py.zeta_client.instructions import (
     cancel_all_market_orders,
     cancel_order,
     deposit_v2,
+    withdraw_v2,
     initialize_cross_margin_account,
     initialize_cross_margin_account_manager,
     initialize_open_orders_v3,
@@ -828,14 +829,51 @@ class Client:
         )
 
     # TODO: withdraw (and optionally close)
-    async def withdraw(self):
+    async def withdraw(self, amount: float):
         """
         Withdraw method.
 
         Raises:
             NotImplementedError: This method is not implemented yet.
         """
-        raise NotImplementedError
+        ixs = []
+        # Check they have an existing USDC account
+        if await self._check_user_usdc_account_exists():
+            ixs.append(self._withdraw_ix(amount))
+        else:
+            raise Exception("User has no USDC, cannot withdraw from margin account")
+
+        self._logger.info(f"Withdrawing {amount} USDC from margin account")
+        return await self._send_versioned_transaction(ixs)
+    
+    def _withdraw_ix(self, amount: float) -> Instruction:
+        """
+        Withdraw instruction.
+
+        Args:
+            amount (float): The amount to be withdrawn.
+
+        Raises:
+            Exception: If the user USDC address is not loaded.
+
+        Returns:
+            Instruction: The withdraw instruction.
+        """
+        if self._user_usdc_address is None or self._margin_account_address is None:
+            raise Exception("User USDC address not loaded, cannot withdraw")
+        return withdraw_v2(
+            {"amount": utils.convert_decimal_to_fixed_int(amount, constants.MIN_NATIVE_TICK_SIZE)},
+            {
+                "margin_account": self._margin_account_address,
+                "vault": self._combined_vault_address,
+                "user_token_account": self._user_usdc_address,
+                "socialized_loss_account": self._combined_socialized_loss_address,
+                "authority": self.provider.wallet.public_key,
+                "state": self.exchange._state_address,
+                "pricing": self.exchange._pricing_address,
+            },
+            self.exchange.program_id,
+        )
 
     def _init_open_orders_ix(self, asset: Asset) -> Instruction:
         """
