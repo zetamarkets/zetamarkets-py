@@ -719,13 +719,14 @@ class Client:
 
     # Instructions
 
-    async def deposit(self, amount: float, subaccount_index: int = 0):
+    async def deposit(self, amount: float, subaccount_index: int = 0, priority_fee: int = 0):
         """
         This method is used to deposit a specified amount into the user's margin account.
 
         Args:
             amount (float): The amount to be deposited.
             subaccount_index (int, optional): The index of the subaccount. Defaults to 0.
+            priority_fee (int): Additional priority fee, in microlamports per CU. Defaults to 0.
 
         Raises:
             Exception: If the user does not have a USDC account.
@@ -734,6 +735,8 @@ class Client:
             Transaction: The transaction object of the deposit operation.
         """
         ixs = []
+        if priority_fee > 0:
+            ixs.append(set_compute_unit_price(priority_fee))
         if not await self._check_margin_account_manager_exists():
             self._logger.info("User has no cross-margin account manager, creating one...")
             ixs.append(self._init_margin_account_manager_ix())
@@ -829,14 +832,23 @@ class Client:
         )
 
     # TODO: withdraw (and optionally close)
-    async def withdraw(self, amount: float):
-        """
-        Withdraw method.
+    async def withdraw(self, amount: float, priority_fee: int = 0):
+        """Initiates a withdrawal of a specified amount with an optional priority fee.
 
+        Args:
+            amount (float): The amount to withdraw.
+            priority_fee (int): Additional priority fee, in microlamports per CU. Defaults to 0.
+            
         Raises:
-            NotImplementedError: This method is not implemented yet.
+            Exception: If the user does not have a USDC account.
+        
+        Returns:
+            Transaction: The transaction object of the withdrawal operation.
+        
         """
         ixs = []
+        if priority_fee > 0:
+            ixs.append(set_compute_unit_price(priority_fee))
         # Check they have an existing USDC account
         if await self._check_user_usdc_account_exists():
             ixs.append(self._withdraw_ix(amount))
@@ -1129,7 +1141,7 @@ class Client:
         """
         ixs = []
         if priority_fee > 0:
-            ixs.extend([set_compute_unit_price(priority_fee)])
+            ixs.append(set_compute_unit_price(priority_fee))
         if pre_instructions is not None:
             ixs.extend(pre_instructions)
         ixs.append(self._cancel_orders_for_market_ix(asset))
@@ -1171,7 +1183,7 @@ class Client:
             ixs.append(self._init_open_orders_ix(asset))
 
         if priority_fee > 0:
-            ixs.extend([set_compute_unit_price(priority_fee)])
+            ixs.append(set_compute_unit_price(priority_fee))
 
         if pre_instructions is not None:
             ixs.extend(pre_instructions)
@@ -1196,7 +1208,7 @@ class Client:
         """
         pre_ixs = []
         if priority_fee > 0:
-            pre_ixs.extend([set_compute_unit_price(priority_fee)])
+            pre_ixs.append(set_compute_unit_price(priority_fee))
         pre_ixs.extend([self._cancel_orders_for_market_ix(asset)])
         return await self.place_orders_for_market(asset, orders, pre_instructions=pre_ixs)
 
