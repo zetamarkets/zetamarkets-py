@@ -1209,7 +1209,7 @@ class Client:
         if post_instructions is not None:
             ixs.extend(post_instructions)
         self._logger.info(f"Placing {len(orders)} orders for {asset}")
-        return await self._send_versioned_transaction(ixs, True)
+        return await self._send_versioned_transaction(ixs)
 
     async def replace_orders_for_market(self, asset: Asset, orders: list[OrderArgs], priority_fee: int = 0):
         """
@@ -1239,7 +1239,7 @@ class Client:
         """
         raise NotImplementedError
 
-    async def _send_versioned_transaction(self, ixs: list[Instruction], use_double_down_providers: bool = False):
+    async def _send_versioned_transaction(self, ixs: list[Instruction]):
         """
         Send a versioned transaction.
 
@@ -1273,7 +1273,7 @@ class Client:
 
         try:
             opts = self.provider.opts._replace(last_valid_block_height=last_valid_block_height)
-            if use_double_down_providers:
+            if len(self.double_down_providers) > 0:
                 tasks = [] 
                 for provider in self.double_down_providers:
                     tasks.append(provider.send(tx, opts))
