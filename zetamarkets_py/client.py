@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import time
@@ -85,7 +86,11 @@ class Client:
         initialize the client.
     """
 
+    """Main provider to use for primary tx sending and fetching"""
     provider: Provider
+    """Extra list of providers to use to 'double-down' for orders, sending the same transaction down multiple RPCs"""
+    double_down_providers: [Provider]
+
     """The network and wallet context to send transactions paid for and signed by the provider."""
     network: Network
     """The Solana network identifier (i.e. mainnet_beta, devnet etc.)."""
@@ -115,6 +120,7 @@ class Client:
         cls,
         endpoint: Optional[str] = None,
         ws_endpoint: Optional[str] = None,
+        double_down_endpoints: Optional[str] = None,
         commitment: Commitment = Confirmed,
         wallet: Optional[Wallet] = None,
         assets: list[Asset] = Asset.all(),
@@ -130,6 +136,7 @@ class Client:
         Args:
             endpoint (str, optional): The http(s) RPC endpoint. Defaults to None.
             ws_endpoint (str, optional): The websocket RPC endpoint. Defaults to None.
+            double_down_endpoints ([str], optional): The http(s) RPC endpoints to use as extra double-downs when sending critical instructions. Defaults to None.
             commitment (Commitment, optional): The commitment level of the Solana network. Defaults to Confirmed.
             wallet (Wallet, optional): The wallet used for transactions. Defaults to None.
             assets (list[Asset], optional): The list of assets to be used. Defaults to all available assets.
@@ -186,6 +193,15 @@ class Client:
             wallet,
             tx_opts,
         )
+        double_down_providers = []
+        if double_down_endpoints:
+            for endpoint in double_down_endpoints:
+                connection = AsyncClient(endpoint=endpoint, commitment=commitment, blockhash_cache=blockhash_cache)
+                double_down_providers.append(Provider(
+                    connection,
+                    wallet,
+                    tx_opts,
+                ))
 
         # additional addresses to cache
         _combined_vault_address = pda.get_combined_vault_address(exchange.program_id)
@@ -193,6 +209,7 @@ class Client:
 
         return cls(
             provider,
+            double_down_providers,
             network,
             connection,
             endpoint,
@@ -1230,7 +1247,7 @@ class Client:
             ixs (list[Instruction]): The list of instructions to include in the transaction.
 
         Returns:
-            str: The signature of the transaction.
+            str: The signature(s) of the transaction(s).
         """
         # Prefetch blockhash, using cache if available
         if self.connection.blockhash_cache:
@@ -1256,7 +1273,13 @@ class Client:
 
         try:
             opts = self.provider.opts._replace(last_valid_block_height=last_valid_block_height)
-            signature = await self.provider.send(tx, opts)
+            if len(self.double_down_providers) > 0:
+                tasks = [] 
+                for provider in self.double_down_providers:
+                    tasks.append(provider.send(tx, opts))
+                signature = await asyncio.gather(*tasks)
+            else:
+                signature = await self.provider.send(tx, opts)
         except RPCException as exc:
             # This won't work on zDEX errors
             # TODO: add ZDEX error parsing
