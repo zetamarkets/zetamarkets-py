@@ -1247,7 +1247,7 @@ class Client:
             ixs (list[Instruction]): The list of instructions to include in the transaction.
 
         Returns:
-            str: The signature(s() of the transaction(s).
+            str: The signature(s) of the transaction(s).
         """
         # Prefetch blockhash, using cache if available
         if self.connection.blockhash_cache:
