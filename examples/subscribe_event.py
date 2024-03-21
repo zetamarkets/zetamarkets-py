@@ -28,7 +28,10 @@ async def main():
 
     # Subscribe to margin account events
     print(f"Listening for events on margin account: {client._margin_account_address} (authority: {wallet.public_key})")
-    async for events, _ in client.subscribe_events():
+    async for events, _ in client.subscribe_events(
+        # Listen to all events across Zeta by setting the following argument:
+        # ignore_third_party_events=False
+    ):
         # Loop over the events in each tx
         for event in events:
             # Event can be PlaceOrder, Trade, OrderComplete or Liquidate

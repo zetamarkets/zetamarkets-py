@@ -22,9 +22,11 @@ def compute_upnl(margin_account: CrossMarginAccount, pricing_account: Pricing) -
 
     upnl = sum(
         [
-            (pos.size * mark_price - pos.cost_of_trades)
-            if pos.size > 0
-            else (pos.size * mark_price + pos.cost_of_trades)
+            (
+                (pos.size * mark_price - pos.cost_of_trades)
+                if pos.size > 0
+                else (pos.size * mark_price + pos.cost_of_trades)
+            )
             for pos, mark_price in zip(positions, mark_prices)
         ]
     )
