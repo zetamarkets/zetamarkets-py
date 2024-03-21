@@ -12,6 +12,7 @@ from spl.token.constants import TOKEN_PROGRAM_ID
 from .. import types
 from ..program_id import PROGRAM_ID
 
+
 class PlaceMultiOrdersArgs(typing.TypedDict):
     asset: types.asset.AssetKind
     bid_orders: list[types.order_args.OrderArgs]
@@ -175,7 +176,7 @@ def place_multi_orders(
             is_writable=True,
         ),
     ]
-    identifier =b"\xcc\xd7\xf3\xf3\x3b\xea\xe1\x79"
+    identifier = b"\xcc\xd7\xf3\xf3\x3b\xea\xe1\x79"
     encoded_args = layout.build(
         {
             "asset": args["asset"].to_encodable(),

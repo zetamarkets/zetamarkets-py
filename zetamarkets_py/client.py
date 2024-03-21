@@ -49,13 +49,13 @@ from zetamarkets_py.serum_client.accounts.orderbook import OrderbookAccount
 from zetamarkets_py.solana_client.accounts.clock import CLOCK, Clock
 from zetamarkets_py.types import (
     Asset,
+    MultiOrderArgs,
     Network,
     OrderArgs,
     OrderCompleteType,
     OrderOptions,
-    Side,
     OrderType,
-    MultiOrderArgs,
+    Side,
 )
 from zetamarkets_py.zeta_client.accounts.cross_margin_account import CrossMarginAccount
 from zetamarkets_py.zeta_client.accounts.pricing import Pricing
@@ -64,16 +64,14 @@ from zetamarkets_py.zeta_client.instructions import (
     cancel_all_market_orders,
     cancel_order,
     deposit_v2,
-    withdraw_v2,
     initialize_cross_margin_account,
     initialize_cross_margin_account_manager,
     initialize_open_orders_v3,
-    place_perp_order_v4,
     place_multi_orders,
+    place_perp_order_v4,
+    withdraw_v2,
 )
-from zetamarkets_py.zeta_client.types import (
-    OrderArgs as ProgramOrderArgs
-)
+from zetamarkets_py.zeta_client.types import OrderArgs as ProgramOrderArgs
 
 # TODO: add docstrings for most methods
 # TODO: implement withdraw and liquidation
@@ -203,11 +201,13 @@ class Client:
         if double_down_endpoints:
             for endpoint in double_down_endpoints:
                 connection = AsyncClient(endpoint=endpoint, commitment=commitment, blockhash_cache=blockhash_cache)
-                double_down_providers.append(Provider(
-                    connection,
-                    wallet,
-                    tx_opts,
-                ))
+                double_down_providers.append(
+                    Provider(
+                        connection,
+                        wallet,
+                        tx_opts,
+                    )
+                )
 
         # additional addresses to cache
         _combined_vault_address = pda.get_combined_vault_address(exchange.program_id)
@@ -861,13 +861,13 @@ class Client:
         Args:
             amount (float): The amount to withdraw.
             priority_fee (int): Additional priority fee, in microlamports per CU. Defaults to 0.
-            
+
         Raises:
             Exception: If the user does not have a USDC account.
-        
+
         Returns:
             Transaction: The transaction object of the withdrawal operation.
-        
+
         """
         ixs = []
         if priority_fee > 0:
@@ -880,7 +880,7 @@ class Client:
 
         self._logger.info(f"Withdrawing {amount} USDC from margin account")
         return await self._send_versioned_transaction(ixs)
-    
+
     def _withdraw_ix(self, amount: float) -> Instruction:
         """
         Withdraw instruction.
@@ -1048,7 +1048,7 @@ class Client:
             },
             self.exchange.program_id,
         )
-    
+
     def _place_multi_orders_ix(
         self,
         asset: Asset,
@@ -1080,7 +1080,7 @@ class Client:
             raise Exception("Margin account address not loaded, cannot place order")
         if self._open_orders_addresses is None:
             raise Exception("Open orders addresses not loaded, cannot place order")
-        
+
         bid_orders_program = []
         ask_orders_program = []
 
@@ -1096,19 +1096,12 @@ class Client:
                 if o.expiry_ts
                 else None
             )
-                    
-            p = utils.convert_decimal_to_fixed_int(
-                o.price, utils.get_fixed_tick_size(self.exchange.state, asset)
+
+            p = utils.convert_decimal_to_fixed_int(o.price, utils.get_fixed_tick_size(self.exchange.state, asset))
+            s = utils.convert_decimal_to_fixed_lot(o.size, utils.get_fixed_min_lot_size(self.exchange.state, asset))
+            program_order = ProgramOrderArgs.from_json(
+                {"price": p, "size": s, "client_order_id": o.client_order_id, "tif_offset": tif_offset}
             )
-            s = utils.convert_decimal_to_fixed_lot(
-                o.size, utils.get_fixed_min_lot_size(self.exchange.state, asset)
-            )
-            program_order = ProgramOrderArgs.from_json({
-                "price": p,
-                "size": s,
-                "client_order_id": o.client_order_id,
-                "tif_offset": tif_offset
-            })
             bid_orders_program.append(program_order)
 
         for o in ask_orders:
@@ -1122,21 +1115,13 @@ class Client:
                 if o.expiry_ts
                 else None
             )
-                    
-            p = utils.convert_decimal_to_fixed_int(
-                o.price, utils.get_fixed_tick_size(self.exchange.state, asset)
+
+            p = utils.convert_decimal_to_fixed_int(o.price, utils.get_fixed_tick_size(self.exchange.state, asset))
+            s = utils.convert_decimal_to_fixed_lot(o.size, utils.get_fixed_min_lot_size(self.exchange.state, asset))
+            program_order = ProgramOrderArgs.from_json(
+                {"price": p, "size": s, "client_order_id": o.client_order_id, "tif_offset": tif_offset}
             )
-            s = utils.convert_decimal_to_fixed_lot(
-                o.size, utils.get_fixed_min_lot_size(self.exchange.state, asset)
-            )
-            program_order = ProgramOrderArgs.from_json({
-                "price": p,
-                "size": s,
-                "client_order_id": o.client_order_id,
-                "tif_offset": tif_offset
-            })
             ask_orders_program.append(program_order)
-            
 
         return place_multi_orders(
             {
@@ -1161,7 +1146,7 @@ class Client:
                 "market_base_vault": self.exchange.markets[asset]._market_state.base_vault,
                 "market_quote_vault": self.exchange.markets[asset]._market_state.quote_vault,
                 "zeta_base_vault": self.exchange.markets[asset]._base_zeta_vault_address,
-                "zeta_quote_vault": self.exchange.markets[asset]._quote_zeta_vault_address,       
+                "zeta_quote_vault": self.exchange.markets[asset]._quote_zeta_vault_address,
                 "oracle": self.exchange.pricing.oracles[asset.to_index()],
                 "oracle_backup_feed": self.exchange.pricing.oracle_backup_feeds[asset.to_index()],
                 "oracle_backup_program": constants.CHAINLINK_PID,
@@ -1172,7 +1157,6 @@ class Client:
             },
             self.exchange.program_id,
         )
-
 
     async def cancel_order(self, asset: Asset, order_id: int, side: Side):
         """
@@ -1341,7 +1325,7 @@ class Client:
             ixs.extend(post_instructions)
         self._logger.info(f"Placing {len(orders)} orders for {asset}")
         return await self._send_versioned_transaction(ixs)
-    
+
     async def place_multi_orders_for_market(
         self,
         asset: Asset,
@@ -1452,7 +1436,7 @@ class Client:
         try:
             opts = self.provider.opts._replace(last_valid_block_height=last_valid_block_height)
             if len(self.double_down_providers) > 0:
-                tasks = [] 
+                tasks = []
                 for provider in self.double_down_providers:
                     tasks.append(provider.send(tx, opts))
                 signature = await asyncio.gather(*tasks)
