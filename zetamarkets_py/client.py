@@ -54,6 +54,8 @@ from zetamarkets_py.types import (
     OrderCompleteType,
     OrderOptions,
     Side,
+    OrderType,
+    MultiOrderArgs,
 )
 from zetamarkets_py.zeta_client.accounts.cross_margin_account import CrossMarginAccount
 from zetamarkets_py.zeta_client.accounts.pricing import Pricing
@@ -67,6 +69,10 @@ from zetamarkets_py.zeta_client.instructions import (
     initialize_cross_margin_account_manager,
     initialize_open_orders_v3,
     place_perp_order_v4,
+    place_multi_orders,
+)
+from zetamarkets_py.zeta_client.types import (
+    OrderArgs as ProgramOrderArgs
 )
 
 # TODO: add docstrings for most methods
@@ -1042,6 +1048,131 @@ class Client:
             },
             self.exchange.program_id,
         )
+    
+    def _place_multi_orders_ix(
+        self,
+        asset: Asset,
+        bid_orders: list[MultiOrderArgs],
+        ask_orders: list[MultiOrderArgs],
+        order_type: OrderType,
+        tif_buffer: int = 0,
+    ) -> Instruction:
+        """
+        Build a PlaceMultiOrders instruction.
+
+        Args:
+            asset (Asset): The asset for which to place the order.
+            price (float): The price of the order.
+            size (float): The size of the order.
+            side (Side): The side of the order (bid or ask).
+            order_opts (Optional[OrderOptions], optional): The options for the order. Defaults to None.
+
+        Raises:
+            Exception: If the asset is not loaded into the client, or if the margin account address or open orders
+                addresses are not loaded.
+
+        Returns:
+            Instruction: The place order instruction.
+        """
+        if asset not in self.exchange.assets:
+            raise Exception(f"Asset {asset.name} not loaded into client, cannot place order")
+        if self._margin_account_address is None:
+            raise Exception("Margin account address not loaded, cannot place order")
+        if self._open_orders_addresses is None:
+            raise Exception("Open orders addresses not loaded, cannot place order")
+        
+        bid_orders_program = []
+        ask_orders_program = []
+
+        unix_timestamp = int(time.time())
+        for o in bid_orders:
+            tif_offset = (
+                utils.get_tif_offset(
+                    o.expiry_ts,
+                    self.exchange.markets[asset]._market_state.epoch_length,
+                    unix_timestamp,  # self.exchange.clock.account.unix_timestamp,
+                    tif_buffer,
+                )
+                if o.expiry_ts
+                else None
+            )
+                    
+            p = utils.convert_decimal_to_fixed_int(
+                o.price, utils.get_fixed_tick_size(self.exchange.state, asset)
+            )
+            s = utils.convert_decimal_to_fixed_lot(
+                o.size, utils.get_fixed_min_lot_size(self.exchange.state, asset)
+            )
+            program_order = ProgramOrderArgs.from_json({
+                "price": p,
+                "size": s,
+                "client_order_id": o.client_order_id,
+                "tif_offset": tif_offset
+            })
+            bid_orders_program.append(program_order)
+
+        for o in ask_orders:
+            tif_offset = (
+                utils.get_tif_offset(
+                    o.expiry_ts,
+                    self.exchange.markets[asset]._market_state.epoch_length,
+                    unix_timestamp,  # self.exchange.clock.account.unix_timestamp,
+                    tif_buffer,
+                )
+                if o.expiry_ts
+                else None
+            )
+                    
+            p = utils.convert_decimal_to_fixed_int(
+                o.price, utils.get_fixed_tick_size(self.exchange.state, asset)
+            )
+            s = utils.convert_decimal_to_fixed_lot(
+                o.size, utils.get_fixed_min_lot_size(self.exchange.state, asset)
+            )
+            program_order = ProgramOrderArgs.from_json({
+                "price": p,
+                "size": s,
+                "client_order_id": o.client_order_id,
+                "tif_offset": tif_offset
+            })
+            ask_orders_program.append(program_order)
+            
+
+        return place_multi_orders(
+            {
+                "asset": asset.to_program_type(),
+                "bid_orders": bid_orders_program,
+                "ask_orders": ask_orders_program,
+                "order_type": order_type.to_program_type(),
+            },
+            {
+                "authority": self.provider.wallet.public_key,
+                "state": self.exchange._state_address,
+                "pricing": self.exchange._pricing_address,
+                "margin_account": self._margin_account_address,
+                "dex_program": constants.MATCHING_ENGINE_PID[self.network],
+                "serum_authority": self.exchange._serum_authority_address,
+                "open_orders": self._open_orders_addresses[asset],
+                "market": self.exchange.markets[asset].address,
+                "request_queue": self.exchange.markets[asset]._market_state.request_queue,
+                "event_queue": self.exchange.markets[asset]._market_state.event_queue,
+                "bids": self.exchange.markets[asset]._market_state.bids,
+                "asks": self.exchange.markets[asset]._market_state.asks,
+                "market_base_vault": self.exchange.markets[asset]._market_state.base_vault,
+                "market_quote_vault": self.exchange.markets[asset]._market_state.quote_vault,
+                "zeta_base_vault": self.exchange.markets[asset]._base_zeta_vault_address,
+                "zeta_quote_vault": self.exchange.markets[asset]._quote_zeta_vault_address,       
+                "oracle": self.exchange.pricing.oracles[asset.to_index()],
+                "oracle_backup_feed": self.exchange.pricing.oracle_backup_feeds[asset.to_index()],
+                "oracle_backup_program": constants.CHAINLINK_PID,
+                "market_base_mint": self.exchange.markets[asset]._market_state.base_mint,
+                "market_quote_mint": self.exchange.markets[asset]._market_state.quote_mint,
+                "mint_authority": self.exchange._mint_authority_address,
+                "perp_sync_queue": self.exchange.pricing.perp_sync_queues[asset.to_index()],
+            },
+            self.exchange.program_id,
+        )
+
 
     async def cancel_order(self, asset: Asset, order_id: int, side: Side):
         """
@@ -1209,6 +1340,53 @@ class Client:
         if post_instructions is not None:
             ixs.extend(post_instructions)
         self._logger.info(f"Placing {len(orders)} orders for {asset}")
+        return await self._send_versioned_transaction(ixs)
+    
+    async def place_multi_orders_for_market(
+        self,
+        asset: Asset,
+        bid_orders: list[MultiOrderArgs],
+        ask_orders: list[MultiOrderArgs],
+        order_type: OrderType,
+        pre_instructions: Optional[list[Instruction]] = None,
+        post_instructions: Optional[list[Instruction]] = None,
+        tif_buffer: int = 0,
+        priority_fee: int = 0,
+    ):
+        """
+        Place multi orders for a market.
+
+        Args:
+            asset (Asset): The asset for which to place the orders.
+            orders (list[OrderArgs]): The list of orders to place.
+            pre_instructions (Optional[list[Instruction]], optional): The list of instructions to execute before
+                placing the orders. Defaults to None.
+            post_instructions (Optional[list[Instruction]], optional): The list of instructions to execute after
+                placing the orders. Defaults to None.
+            tif_buffer (int): Extra value to add to tif_expiry at epoch rollover to aid a smooth transition.
+                Defaults to 0.
+            priority_fee (int): Additional priority fee, in microlamports per CU. Defaults to 0.
+
+        Returns:
+            Transaction: The transaction of the placed orders.
+        """
+        # TODO: warn about log truncation above 10 orders
+        ixs = []
+        if not await self._check_open_orders_account_exists(asset):
+            self._logger.info("User has no open orders account, creating one...")
+            ixs.append(self._init_open_orders_ix(asset))
+
+        if priority_fee > 0:
+            ixs.append(set_compute_unit_price(priority_fee))
+
+        if pre_instructions is not None:
+            ixs.extend(pre_instructions)
+
+        ixs.append(self._place_multi_orders_ix(asset, bid_orders, ask_orders, order_type, tif_buffer))
+
+        if post_instructions is not None:
+            ixs.extend(post_instructions)
+        self._logger.info(f"Placing {len(bid_orders) + len(ask_orders)} orders using place_multi_orders for {asset}")
         return await self._send_versioned_transaction(ixs)
 
     async def replace_orders_for_market(self, asset: Asset, orders: list[OrderArgs], priority_fee: int = 0):
