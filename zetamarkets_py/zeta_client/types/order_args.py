@@ -19,7 +19,6 @@ class OrderArgs:
     layout: typing.ClassVar = borsh.CStruct(
         "price" / borsh.U64,
         "size" / borsh.U64,
-        "client_order_id:",
         "client_order_id" / borsh.Option(borsh.U64),
         "tif_offset" / borsh.Option(borsh.U16),
     )

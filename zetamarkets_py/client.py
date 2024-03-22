@@ -38,6 +38,8 @@ from zetamarkets_py.events import (
     OrderCompleteEvent,
     PlaceOrderEvent,
     PlaceOrderEventWithArgs,
+    PlaceMultiOrdersEvent,
+    PlaceMultiOrdersEventWithArgs,
     TradeEvent,
     ZetaEnrichedEvent,
     ZetaEvent,
@@ -717,6 +719,10 @@ class Client:
                     elif event.name.startswith(PlaceOrderEvent.__name__):
                         events_to_return.append(PlaceOrderEventWithArgs.from_event_and_args(event, ix_arg))
 
+                elif ix_name.startswith("place_multi_orders"):
+                    if event.name.startswith(PlaceMultiOrdersEvent.__name__):
+                        events_to_return.append(PlaceMultiOrdersEventWithArgs.from_event_and_args(event, ix_arg))
+
                 elif ix_name.startswith("crank_event_queue"):
                     if event.name.startswith(TradeEvent.__name__):
                         events_to_return.append(TradeEvent.from_event(event))  # Maker fill\
@@ -1099,9 +1105,7 @@ class Client:
 
             p = utils.convert_decimal_to_fixed_int(o.price, utils.get_fixed_tick_size(self.exchange.state, asset))
             s = utils.convert_decimal_to_fixed_lot(o.size, utils.get_fixed_min_lot_size(self.exchange.state, asset))
-            program_order = ProgramOrderArgs.from_json(
-                {"price": p, "size": s, "client_order_id": o.client_order_id, "tif_offset": tif_offset}
-            )
+            program_order = ProgramOrderArgs(p, s, o.client_order_id, tif_offset)
             bid_orders_program.append(program_order)
 
         for o in ask_orders:
@@ -1118,9 +1122,7 @@ class Client:
 
             p = utils.convert_decimal_to_fixed_int(o.price, utils.get_fixed_tick_size(self.exchange.state, asset))
             s = utils.convert_decimal_to_fixed_lot(o.size, utils.get_fixed_min_lot_size(self.exchange.state, asset))
-            program_order = ProgramOrderArgs.from_json(
-                {"price": p, "size": s, "client_order_id": o.client_order_id, "tif_offset": tif_offset}
-            )
+            program_order = ProgramOrderArgs(p, s, o.client_order_id, tif_offset)
             ask_orders_program.append(program_order)
 
         return place_multi_orders(
