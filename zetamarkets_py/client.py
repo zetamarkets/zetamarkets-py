@@ -463,8 +463,7 @@ class Client:
 
     # TODO: maybe at some point support subscribing to all exchange events, not just margin account
     async def subscribe_events(
-        self,
-        commitment: Optional[Commitment] = None,
+        self, commitment: Optional[Commitment] = None, ignore_third_party_events: bool = True
     ) -> AsyncIterator[Tuple[List[ZetaEvent], EventMeta]]:
         """
         Subscribe to events and yield event data and slot.
@@ -475,7 +474,7 @@ class Client:
         Yields:
             AsyncIterator[Tuple[List[ZetaEvent], int]]: An async iterator that yields tuples of event data and slot.
         """
-        if self._margin_account_address is None:
+        if ignore_third_party_events and self._margin_account_address is None:
             raise Exception("Margin account not loaded, cannot subscribe to events")
         commitment = commitment or self.connection.commitment
         async for ws in connect(self.ws_endpoint):
@@ -483,13 +482,15 @@ class Client:
                 # Subscribe to logs that mention the margin account
                 await ws.logs_subscribe(  # type: ignore
                     commitment=commitment,
-                    filter_=RpcTransactionLogsFilterMentions(self._margin_account_address),
+                    filter_=RpcTransactionLogsFilterMentions(
+                        self._margin_account_address if ignore_third_party_events else self.exchange.program_id
+                    ),
                 )
                 first_resp = await ws.recv()
                 subscription_id = cast(int, first_resp[0].result)  # type: ignore
                 async for msg in ws:
                     try:
-                        events, meta = self._parse_event_payload(msg)
+                        events, meta = self._parse_event_payload(msg, ignore_third_party_events)
                         if len(events) > 0 or not meta.is_successful:
                             yield events, meta
 
@@ -501,7 +502,7 @@ class Client:
                 self._logger.warning("Websocket closed, reconnecting...")
                 continue
 
-    def _parse_event_payload(self, msg) -> Tuple[List[ZetaEvent], EventMeta]:
+    def _parse_event_payload(self, msg, ignore_third_party_events: bool = True) -> Tuple[List[ZetaEvent], EventMeta]:
         """
         Parse the event payload from the message.
 
@@ -524,7 +525,7 @@ class Client:
         for event in parsed:
             if event.name.startswith(PlaceOrderEvent.__name__):
                 place_order_event = PlaceOrderEvent.from_event(event)
-                if place_order_event.margin_account == self._margin_account_address:
+                if not ignore_third_party_events or place_order_event.margin_account == self._margin_account_address:
                     events.append(place_order_event)
             elif event.name.startswith(OrderCompleteEvent.__name__):
                 order_complete_event = OrderCompleteEvent.from_event(event)
@@ -534,19 +535,22 @@ class Client:
                     or order_complete_event.order_complete_type == OrderCompleteType.Booted
                 ):
                     cancel_event = CancelOrderEvent.from_order_complete_event(order_complete_event)
-                    if cancel_event.margin_account == self._margin_account_address:
+                    if not ignore_third_party_events or cancel_event.margin_account == self._margin_account_address:
                         events.append(cancel_event)
             elif event.name.startswith(TradeEvent.__name__):
                 trade_event = TradeEvent.from_event(event)
-                if trade_event.margin_account == self._margin_account_address:
+                if not ignore_third_party_events or trade_event.margin_account == self._margin_account_address:
                     events.append(trade_event)
             elif event.name.startswith(LiquidationEvent.__name__):
                 liquidation_event = LiquidationEvent.from_event(event)
-                if liquidation_event.liquidatee_margin_account == self._margin_account_address:
+                if (
+                    not ignore_third_party_events
+                    or liquidation_event.liquidatee_margin_account == self._margin_account_address
+                ):
                     events.append(liquidation_event)
             elif event.name.startswith(ApplyFundingEvent.__name__):
                 funding_event = ApplyFundingEvent.from_event(event)
-                if funding_event.margin_account == self._margin_account_address:
+                if not ignore_third_party_events or funding_event.margin_account == self._margin_account_address:
                     events.append(funding_event)
             else:
                 pass
@@ -554,7 +558,10 @@ class Client:
         return events, meta
 
     async def subscribe_transactions(
-        self, commitment: Optional[Commitment] = None, ignore_truncation: bool = False
+        self,
+        commitment: Optional[Commitment] = None,
+        ignore_truncation: bool = False,
+        ignore_third_party_transactions: bool = True,
     ) -> AsyncIterator[Tuple[List[ZetaEnrichedEvent], EventMeta]]:
         """
         This method is used to subscribe to transactions.
@@ -588,7 +595,13 @@ class Client:
                     "transactionSubscribe",
                     params=[
                         {
-                            "mentions": [str(self._margin_account_address)],
+                            "mentions": [
+                                (
+                                    str(self._margin_account_address)
+                                    if ignore_third_party_transactions
+                                    else str(self.exchange.program_id)
+                                )
+                            ],
                             # "failed": False,
                             "vote": False,
                         },
@@ -604,7 +617,9 @@ class Client:
 
                 async for msg in ws:
                     try:
-                        events, meta = self._parse_transaction_payload(msg, ignore_truncation)
+                        events, meta = self._parse_transaction_payload(
+                            msg, ignore_truncation, ignore_third_party_transactions
+                        )
                         if len(events) > 0 or not meta.is_successful:
                             yield events, meta
                     except Exception:
@@ -621,7 +636,7 @@ class Client:
                 continue
 
     def _parse_transaction_payload(
-        self, msg, ignore_truncation: bool = False
+        self, msg, ignore_truncation: bool = False, ignore_third_party_transactions: bool = True
     ) -> Tuple[List[ZetaEnrichedEvent], EventMeta]:
         """
         Parse the transaction payload from the message.
@@ -629,6 +644,7 @@ class Client:
         Args:
             msg: The message received from the websocket.
             ignore_truncation: Bool to ignore the "Logs truncated, missing event data" warning. Defaults to False.
+            ignore_third_party_transactions: Bool to ignore transactions from other users, filtering by margin account address
 
         Returns:
             Tuple[List[ZetaEvent], int]: A tuple containing a list of ZetaEnrichedEvent and the slot number.
@@ -705,13 +721,14 @@ class Client:
             for event in events:
                 # Skip event that aren't for our account but mention our account
                 # eg if we do a taker trade, we want to skip the maker crank events
-                account_check = (
-                    str(event.data.liquidatee_margin_account)
-                    if ix_name.startswith("liquidation")
-                    else str(event.data.margin_account)
-                )
-                if account_check != str(self._margin_account_address):
-                    continue
+                if ignore_third_party_transactions:
+                    account_check = (
+                        str(event.data.liquidatee_margin_account)
+                        if ix_name.startswith("liquidation")
+                        else str(event.data.margin_account)
+                    )
+                    if account_check != str(self._margin_account_address):
+                        continue
 
                 if ix_name.startswith("place_perp_order"):
                     if event.name.startswith(TradeEvent.__name__):
