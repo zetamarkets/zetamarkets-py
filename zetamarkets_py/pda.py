@@ -7,6 +7,7 @@ from zetamarkets_py.types import Network
 
 TOKEN_PROGRAM_ID = Pubkey.from_string("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
 
+
 def get_state_address(program_id: Pubkey) -> Pubkey:
     return Pubkey.find_program_address([b"state"], program_id)[0]
 
