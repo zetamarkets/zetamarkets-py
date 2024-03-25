@@ -58,6 +58,7 @@ class JUPJSON(typing.TypedDict):
 class DYMJSON(typing.TypedDict):
     kind: typing.Literal["DYM"]
 
+
 class STRKJSON(typing.TypedDict):
     kind: typing.Literal["STRK"]
 
@@ -298,7 +299,8 @@ class DYM:
         return {
             "DYM": {},
         }
-    
+
+
 @dataclass
 class STRK:
     discriminator: typing.ClassVar = 13

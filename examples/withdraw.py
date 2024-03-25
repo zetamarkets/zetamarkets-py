@@ -19,4 +19,5 @@ async def main():
     print("Withdrawing 0.1 USDC from margin account")
     await client.withdraw(0.1, priority_fee=10)
 
+
 asyncio.run(main())

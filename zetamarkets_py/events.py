@@ -6,7 +6,7 @@ from construct import Container
 from solders.pubkey import Pubkey
 
 from zetamarkets_py import utils
-from zetamarkets_py.types import Asset, OrderCompleteType, Side
+from zetamarkets_py.types import Asset, OrderCompleteType, Side, MultiOrderArgs
 
 
 # PlaceOrderEvent but we add the args from the PlaceOrder instruction itself, as well as the tx slot and signature
@@ -69,6 +69,64 @@ class PlaceOrderEvent:
             asset=Asset.from_index(event.data.asset.index),
             margin_account=event.data.margin_account,
             client_order_id=event.data.client_order_id,
+        )
+    
+@dataclass
+class PlaceMultiOrdersEvent:
+    """Program event for placing multiple orders."""
+
+    # ix args
+    bid_orders: list[MultiOrderArgs]
+    ask_orders: list[MultiOrderArgs]
+
+    oracle_price: float
+    order_ids: list[int]
+    expiry_tss: list[int]
+    asset: Asset
+    margin_account: Pubkey
+    client_order_ids: list[int]
+    user: Pubkey
+
+    @classmethod
+    def from_event(cls, event: Event, args: Container):
+        assert event.name == cls.__name__
+        return cls(
+            bid_orders=args.bid_orders,
+            ask_orders=args.ask_orders,
+            oracle_price=utils.convert_fixed_int_to_decimal(event.data.oracle_price),
+            order_id=event.data.order_ids,
+            expiry_tss=event.data.expiry_tss,
+            asset=Asset.from_index(event.data.asset.index),
+            margin_account=event.data.margin_account,
+            client_order_ids=event.data.client_order_ids,
+            user=event.data.user,
+        )
+
+
+
+@dataclass
+class PlaceMultiOrdersEvent:
+    """Program event for placing multiple orders."""
+
+    oracle_price: float
+    order_ids: list[int]
+    expiry_tss: list[int]
+    asset: Asset
+    margin_account: Pubkey
+    client_order_ids: list[int]
+    user: Pubkey
+
+    @classmethod
+    def from_event(cls, event: Event):
+        assert event.name == cls.__name__
+        return cls(
+            oracle_price=utils.convert_fixed_int_to_decimal(event.data.oracle_price),
+            order_id=event.data.order_ids,
+            expiry_tss=event.data.expiry_tss,
+            asset=Asset.from_index(event.data.asset.index),
+            margin_account=event.data.margin_account,
+            client_order_ids=event.data.client_order_ids,
+            user=event.data.user,
         )
 
 
@@ -238,7 +296,7 @@ class ApplyFundingEvent:
         )
 
 
-ZetaEvent = Union[PlaceOrderEvent, TradeEvent, CancelOrderEvent, LiquidationEvent, ApplyFundingEvent]
+ZetaEvent = Union[PlaceOrderEvent, PlaceMultiOrdersEvent, TradeEvent, CancelOrderEvent, LiquidationEvent, ApplyFundingEvent]
 
 ZetaEnrichedEvent = Union[PlaceOrderEventWithArgs, TradeEvent, CancelOrderEvent, LiquidationEvent, ApplyFundingEvent]
 

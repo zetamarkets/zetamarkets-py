@@ -306,6 +306,11 @@ from .migrate_to_new_cross_margin_account import (
     migrate_to_new_cross_margin_account,
 )
 from .override_expiry import OverrideExpiryAccounts, OverrideExpiryArgs, override_expiry
+from .place_multi_orders import (
+    PlaceMuliOrdersAccounts,
+    PlaceMultiOrdersArgs,
+    place_multi_orders,
+)
 from .place_order import PlaceOrderAccounts, PlaceOrderArgs, place_order
 from .place_order_v2 import PlaceOrderV2Accounts, PlaceOrderV2Args, place_order_v2
 from .place_order_v3 import PlaceOrderV3Accounts, PlaceOrderV3Args, place_order_v3
