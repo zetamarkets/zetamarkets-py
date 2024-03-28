@@ -18,7 +18,7 @@ async def main():
 
     # deposit 0.1 USDC into margin account
     print("Depositing 0.1 USDC into margin account")
-    await client.deposit(0.1)
+    # await client.deposit(0.1)
 
     # check balance on-chain
     balance, positions = await client.fetch_margin_state()
@@ -32,7 +32,7 @@ async def main():
     side = Side.Bid
     order = OrderArgs(price=0.1, size=0.1, side=side, order_opts=order_opts)
     print(f"Placing {order.side} order: {order.size}x {str(asset)}-PERP @ ${order.price}")
-    await client.place_orders_for_market(asset=asset, orders=[order])
+    await client.place_orders_for_market(asset=asset, orders=[order], priority_fee=10)
 
     # check open orders
     open_orders = await client.fetch_open_orders(Asset.SOL)
@@ -42,7 +42,8 @@ async def main():
 
     # cancel order
     print(f"Cancelling order with id: {open_orders[0].order_id}")
-    await client.cancel_order(Asset.SOL, order_id=open_orders[0].order_id, side=side)
+    # await client.cancel_order(Asset.SOL, order_id=open_orders[0].order_id, side=side)
+    await client.cancel_order_by_client_order_id(Asset.SOL, client_order_id=1337, priority_fee=10)
 
 
 asyncio.run(main())
