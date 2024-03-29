@@ -38,6 +38,8 @@ from zetamarkets_py.events import (
     OrderCompleteEvent,
     PlaceOrderEvent,
     PlaceOrderEventWithArgs,
+    PlaceMultiOrdersEvent,
+    PlaceMultiOrdersEventWithArgs,
     TradeEvent,
     ZetaEnrichedEvent,
     ZetaEvent,
@@ -49,10 +51,12 @@ from zetamarkets_py.serum_client.accounts.orderbook import OrderbookAccount
 from zetamarkets_py.solana_client.accounts.clock import CLOCK, Clock
 from zetamarkets_py.types import (
     Asset,
+    MultiOrderArgs,
     Network,
     OrderArgs,
     OrderCompleteType,
     OrderOptions,
+    OrderType,
     Side,
 )
 from zetamarkets_py.zeta_client.accounts.cross_margin_account import CrossMarginAccount
@@ -63,12 +67,14 @@ from zetamarkets_py.zeta_client.instructions import (
     cancel_order,
     cancel_order_by_client_order_id,
     deposit_v2,
-    withdraw_v2,
     initialize_cross_margin_account,
     initialize_cross_margin_account_manager,
     initialize_open_orders_v3,
+    place_multi_orders,
     place_perp_order_v4,
+    withdraw_v2,
 )
+from zetamarkets_py.zeta_client.types import OrderArgs as ProgramOrderArgs
 
 # TODO: add docstrings for most methods
 # TODO: implement withdraw and liquidation
@@ -458,8 +464,7 @@ class Client:
 
     # TODO: maybe at some point support subscribing to all exchange events, not just margin account
     async def subscribe_events(
-        self,
-        commitment: Optional[Commitment] = None,
+        self, commitment: Optional[Commitment] = None, ignore_third_party_events: bool = True
     ) -> AsyncIterator[Tuple[List[ZetaEvent], EventMeta]]:
         """
         Subscribe to events and yield event data and slot.
@@ -470,7 +475,7 @@ class Client:
         Yields:
             AsyncIterator[Tuple[List[ZetaEvent], int]]: An async iterator that yields tuples of event data and slot.
         """
-        if self._margin_account_address is None:
+        if ignore_third_party_events and self._margin_account_address is None:
             raise Exception("Margin account not loaded, cannot subscribe to events")
         commitment = commitment or self.connection.commitment
         async for ws in connect(self.ws_endpoint):
@@ -478,13 +483,15 @@ class Client:
                 # Subscribe to logs that mention the margin account
                 await ws.logs_subscribe(  # type: ignore
                     commitment=commitment,
-                    filter_=RpcTransactionLogsFilterMentions(self._margin_account_address),
+                    filter_=RpcTransactionLogsFilterMentions(
+                        self._margin_account_address if ignore_third_party_events else self.exchange.program_id
+                    ),
                 )
                 first_resp = await ws.recv()
                 subscription_id = cast(int, first_resp[0].result)  # type: ignore
                 async for msg in ws:
                     try:
-                        events, meta = self._parse_event_payload(msg)
+                        events, meta = self._parse_event_payload(msg, ignore_third_party_events)
                         if len(events) > 0 or not meta.is_successful:
                             yield events, meta
 
@@ -496,7 +503,7 @@ class Client:
                 self._logger.warning("Websocket closed, reconnecting...")
                 continue
 
-    def _parse_event_payload(self, msg) -> Tuple[List[ZetaEvent], EventMeta]:
+    def _parse_event_payload(self, msg, ignore_third_party_events: bool = True) -> Tuple[List[ZetaEvent], EventMeta]:
         """
         Parse the event payload from the message.
 
@@ -519,7 +526,7 @@ class Client:
         for event in parsed:
             if event.name.startswith(PlaceOrderEvent.__name__):
                 place_order_event = PlaceOrderEvent.from_event(event)
-                if place_order_event.margin_account == self._margin_account_address:
+                if not ignore_third_party_events or place_order_event.margin_account == self._margin_account_address:
                     events.append(place_order_event)
             elif event.name.startswith(OrderCompleteEvent.__name__):
                 order_complete_event = OrderCompleteEvent.from_event(event)
@@ -529,19 +536,22 @@ class Client:
                     or order_complete_event.order_complete_type == OrderCompleteType.Booted
                 ):
                     cancel_event = CancelOrderEvent.from_order_complete_event(order_complete_event)
-                    if cancel_event.margin_account == self._margin_account_address:
+                    if not ignore_third_party_events or cancel_event.margin_account == self._margin_account_address:
                         events.append(cancel_event)
             elif event.name.startswith(TradeEvent.__name__):
                 trade_event = TradeEvent.from_event(event)
-                if trade_event.margin_account == self._margin_account_address:
+                if not ignore_third_party_events or trade_event.margin_account == self._margin_account_address:
                     events.append(trade_event)
             elif event.name.startswith(LiquidationEvent.__name__):
                 liquidation_event = LiquidationEvent.from_event(event)
-                if liquidation_event.liquidatee_margin_account == self._margin_account_address:
+                if (
+                    not ignore_third_party_events
+                    or liquidation_event.liquidatee_margin_account == self._margin_account_address
+                ):
                     events.append(liquidation_event)
             elif event.name.startswith(ApplyFundingEvent.__name__):
                 funding_event = ApplyFundingEvent.from_event(event)
-                if funding_event.margin_account == self._margin_account_address:
+                if not ignore_third_party_events or funding_event.margin_account == self._margin_account_address:
                     events.append(funding_event)
             else:
                 pass
@@ -549,7 +559,10 @@ class Client:
         return events, meta
 
     async def subscribe_transactions(
-        self, commitment: Optional[Commitment] = None, ignore_truncation: bool = False
+        self,
+        commitment: Optional[Commitment] = None,
+        ignore_truncation: bool = False,
+        ignore_third_party_transactions: bool = True,
     ) -> AsyncIterator[Tuple[List[ZetaEnrichedEvent], EventMeta]]:
         """
         This method is used to subscribe to transactions.
@@ -583,7 +596,13 @@ class Client:
                     "transactionSubscribe",
                     params=[
                         {
-                            "mentions": [str(self._margin_account_address)],
+                            "mentions": [
+                                (
+                                    str(self._margin_account_address)
+                                    if ignore_third_party_transactions
+                                    else str(self.exchange.program_id)
+                                )
+                            ],
                             # "failed": False,
                             "vote": False,
                         },
@@ -599,7 +618,9 @@ class Client:
 
                 async for msg in ws:
                     try:
-                        events, meta = self._parse_transaction_payload(msg, ignore_truncation)
+                        events, meta = self._parse_transaction_payload(
+                            msg, ignore_truncation, ignore_third_party_transactions
+                        )
                         if len(events) > 0 or not meta.is_successful:
                             yield events, meta
                     except Exception:
@@ -616,7 +637,7 @@ class Client:
                 continue
 
     def _parse_transaction_payload(
-        self, msg, ignore_truncation: bool = False
+        self, msg, ignore_truncation: bool = False, ignore_third_party_transactions: bool = True
     ) -> Tuple[List[ZetaEnrichedEvent], EventMeta]:
         """
         Parse the transaction payload from the message.
@@ -624,6 +645,7 @@ class Client:
         Args:
             msg: The message received from the websocket.
             ignore_truncation: Bool to ignore the "Logs truncated, missing event data" warning. Defaults to False.
+            ignore_third_party_transactions: Bool to ignore transactions from other users, filtering by margin account address
 
         Returns:
             Tuple[List[ZetaEvent], int]: A tuple containing a list of ZetaEnrichedEvent and the slot number.
@@ -700,19 +722,24 @@ class Client:
             for event in events:
                 # Skip event that aren't for our account but mention our account
                 # eg if we do a taker trade, we want to skip the maker crank events
-                account_check = (
-                    str(event.data.liquidatee_margin_account)
-                    if ix_name.startswith("liquidation")
-                    else str(event.data.margin_account)
-                )
-                if account_check != str(self._margin_account_address):
-                    continue
+                if ignore_third_party_transactions:
+                    account_check = (
+                        str(event.data.liquidatee_margin_account)
+                        if ix_name.startswith("liquidation")
+                        else str(event.data.margin_account)
+                    )
+                    if account_check != str(self._margin_account_address):
+                        continue
 
                 if ix_name.startswith("place_perp_order"):
                     if event.name.startswith(TradeEvent.__name__):
                         events_to_return.append(TradeEvent.from_event(event))  # Taker fill
                     elif event.name.startswith(PlaceOrderEvent.__name__):
                         events_to_return.append(PlaceOrderEventWithArgs.from_event_and_args(event, ix_arg))
+
+                elif ix_name.startswith("place_multi_orders"):
+                    if event.name.startswith(PlaceMultiOrdersEvent.__name__):
+                        events_to_return.append(PlaceMultiOrdersEventWithArgs.from_event_and_args(event, ix_arg))
 
                 elif ix_name.startswith("crank_event_queue"):
                     if event.name.startswith(TradeEvent.__name__):
@@ -1046,6 +1073,111 @@ class Client:
             self.exchange.program_id,
         )
 
+    def _place_multi_orders_ix(
+        self,
+        asset: Asset,
+        bid_orders: list[MultiOrderArgs],
+        ask_orders: list[MultiOrderArgs],
+        order_type: OrderType,
+        tif_buffer: int = 0,
+    ) -> Instruction:
+        """
+        Build a PlaceMultiOrders instruction.
+
+        Args:
+            asset (Asset): The asset for which to place the order.
+            price (float): The price of the order.
+            size (float): The size of the order.
+            side (Side): The side of the order (bid or ask).
+            order_opts (Optional[OrderOptions], optional): The options for the order. Defaults to None.
+
+        Raises:
+            Exception: If the asset is not loaded into the client, or if the margin account address or open orders
+                addresses are not loaded.
+
+        Returns:
+            Instruction: The place order instruction.
+        """
+        if asset not in self.exchange.assets:
+            raise Exception(f"Asset {asset.name} not loaded into client, cannot place order")
+        if self._margin_account_address is None:
+            raise Exception("Margin account address not loaded, cannot place order")
+        if self._open_orders_addresses is None:
+            raise Exception("Open orders addresses not loaded, cannot place order")
+
+        bid_orders_program = []
+        ask_orders_program = []
+
+        unix_timestamp = int(time.time())
+        for o in bid_orders:
+            tif_offset = (
+                utils.get_tif_offset(
+                    o.expiry_ts,
+                    self.exchange.markets[asset]._market_state.epoch_length,
+                    unix_timestamp,  # self.exchange.clock.account.unix_timestamp,
+                    tif_buffer,
+                )
+                if o.expiry_ts
+                else None
+            )
+
+            p = utils.convert_decimal_to_fixed_int(o.price, utils.get_fixed_tick_size(self.exchange.state, asset))
+            s = utils.convert_decimal_to_fixed_lot(o.size, utils.get_fixed_min_lot_size(self.exchange.state, asset))
+            program_order = ProgramOrderArgs(p, s, o.client_order_id, tif_offset)
+            bid_orders_program.append(program_order)
+
+        for o in ask_orders:
+            tif_offset = (
+                utils.get_tif_offset(
+                    o.expiry_ts,
+                    self.exchange.markets[asset]._market_state.epoch_length,
+                    unix_timestamp,  # self.exchange.clock.account.unix_timestamp,
+                    tif_buffer,
+                )
+                if o.expiry_ts
+                else None
+            )
+
+            p = utils.convert_decimal_to_fixed_int(o.price, utils.get_fixed_tick_size(self.exchange.state, asset))
+            s = utils.convert_decimal_to_fixed_lot(o.size, utils.get_fixed_min_lot_size(self.exchange.state, asset))
+            program_order = ProgramOrderArgs(p, s, o.client_order_id, tif_offset)
+            ask_orders_program.append(program_order)
+
+        return place_multi_orders(
+            {
+                "asset": asset.to_program_type(),
+                "bid_orders": bid_orders_program,
+                "ask_orders": ask_orders_program,
+                "order_type": order_type.to_program_type(),
+            },
+            {
+                "authority": self.provider.wallet.public_key,
+                "state": self.exchange._state_address,
+                "pricing": self.exchange._pricing_address,
+                "margin_account": self._margin_account_address,
+                "dex_program": constants.MATCHING_ENGINE_PID[self.network],
+                "serum_authority": self.exchange._serum_authority_address,
+                "open_orders": self._open_orders_addresses[asset],
+                "market": self.exchange.markets[asset].address,
+                "request_queue": self.exchange.markets[asset]._market_state.request_queue,
+                "event_queue": self.exchange.markets[asset]._market_state.event_queue,
+                "bids": self.exchange.markets[asset]._market_state.bids,
+                "asks": self.exchange.markets[asset]._market_state.asks,
+                "market_base_vault": self.exchange.markets[asset]._market_state.base_vault,
+                "market_quote_vault": self.exchange.markets[asset]._market_state.quote_vault,
+                "zeta_base_vault": self.exchange.markets[asset]._base_zeta_vault_address,
+                "zeta_quote_vault": self.exchange.markets[asset]._quote_zeta_vault_address,
+                "oracle": self.exchange.pricing.oracles[asset.to_index()],
+                "oracle_backup_feed": self.exchange.pricing.oracle_backup_feeds[asset.to_index()],
+                "oracle_backup_program": constants.CHAINLINK_PID,
+                "market_base_mint": self.exchange.markets[asset]._market_state.base_mint,
+                "market_quote_mint": self.exchange.markets[asset]._market_state.quote_mint,
+                "mint_authority": self.exchange._mint_authority_address,
+                "perp_sync_queue": self.exchange.pricing.perp_sync_queues[asset.to_index()],
+            },
+            self.exchange.program_id,
+        )
+
     async def cancel_order(self, asset: Asset, order_id: int, side: Side, priority_fee: int = 0):
         """
         Cancel an order.
@@ -1245,6 +1377,53 @@ class Client:
         if post_instructions is not None:
             ixs.extend(post_instructions)
         self._logger.info(f"Placing {len(orders)} orders for {asset}")
+        return await self._send_versioned_transaction(ixs)
+
+    async def place_multi_orders_for_market(
+        self,
+        asset: Asset,
+        bid_orders: list[MultiOrderArgs],
+        ask_orders: list[MultiOrderArgs],
+        order_type: OrderType,
+        pre_instructions: Optional[list[Instruction]] = None,
+        post_instructions: Optional[list[Instruction]] = None,
+        tif_buffer: int = 0,
+        priority_fee: int = 0,
+    ):
+        """
+        Place multi orders for a market.
+
+        Args:
+            asset (Asset): The asset for which to place the orders.
+            orders (list[OrderArgs]): The list of orders to place.
+            pre_instructions (Optional[list[Instruction]], optional): The list of instructions to execute before
+                placing the orders. Defaults to None.
+            post_instructions (Optional[list[Instruction]], optional): The list of instructions to execute after
+                placing the orders. Defaults to None.
+            tif_buffer (int): Extra value to add to tif_expiry at epoch rollover to aid a smooth transition.
+                Defaults to 0.
+            priority_fee (int): Additional priority fee, in microlamports per CU. Defaults to 0.
+
+        Returns:
+            Transaction: The transaction of the placed orders.
+        """
+        # TODO: warn about log truncation above 10 orders
+        ixs = []
+        if not await self._check_open_orders_account_exists(asset):
+            self._logger.info("User has no open orders account, creating one...")
+            ixs.append(self._init_open_orders_ix(asset))
+
+        if priority_fee > 0:
+            ixs.append(set_compute_unit_price(priority_fee))
+
+        if pre_instructions is not None:
+            ixs.extend(pre_instructions)
+
+        ixs.append(self._place_multi_orders_ix(asset, bid_orders, ask_orders, order_type, tif_buffer))
+
+        if post_instructions is not None:
+            ixs.extend(post_instructions)
+        self._logger.info(f"Placing {len(bid_orders) + len(ask_orders)} orders using place_multi_orders for {asset}")
         return await self._send_versioned_transaction(ixs)
 
     async def replace_orders_for_market(self, asset: Asset, orders: list[OrderArgs], priority_fee: int = 0):

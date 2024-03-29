@@ -199,3 +199,13 @@ class OrderArgs:
     size: float
     side: Side
     order_opts: OrderOptions = field(default_factory=OrderOptions)
+
+
+@dataclass
+class MultiOrderArgs:
+    """Data class for multi order arguments."""
+
+    price: float
+    size: float
+    client_order_id: Optional[int] = None
+    expiry_ts: Optional[int] = None
