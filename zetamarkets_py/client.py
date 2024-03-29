@@ -65,6 +65,7 @@ from zetamarkets_py.zeta_client.errors import from_tx_error
 from zetamarkets_py.zeta_client.instructions import (
     cancel_all_market_orders,
     cancel_order,
+    cancel_order_by_client_order_id,
     deposit_v2,
     initialize_cross_margin_account,
     initialize_cross_margin_account_manager,
@@ -1177,7 +1178,7 @@ class Client:
             self.exchange.program_id,
         )
 
-    async def cancel_order(self, asset: Asset, order_id: int, side: Side):
+    async def cancel_order(self, asset: Asset, order_id: int, side: Side, priority_fee: int = 0):
         """
         Cancel an order.
 
@@ -1189,8 +1190,11 @@ class Client:
         Returns:
             Transaction: The transaction of the cancelled order.
         """
-        ixs = [self._cancel_order_ix(asset, order_id, side)]
-        self._logger.info(f"Cancelling order {order_id} for {asset}")
+        ixs = []
+        if priority_fee > 0:
+            ixs.append(set_compute_unit_price(priority_fee))
+        ixs.append(self._cancel_order_ix(asset, order_id, side))
+        self._logger.info(f"Cancelling order with order id {order_id} for {asset}")
         return await self._send_versioned_transaction(ixs)
 
     def _cancel_order_ix(self, asset: Asset, order_id: int, side: Side) -> Instruction:
@@ -1231,7 +1235,37 @@ class Client:
             self.exchange.program_id,
         )
 
-    # TODO: cancelorderbyclientorderid
+    def _cancel_order_by_client_order_id_ix(self, asset: Asset, client_order_id: int) -> Instruction:
+        if self._margin_account_address is None:
+            raise Exception("Margin account address not loaded, cannot cancel order")
+        if self._open_orders_addresses is None:
+            raise Exception("Open orders addresses not loaded, cannot cancel order")
+        return cancel_order_by_client_order_id(
+            {"client_order_id": client_order_id, "asset": asset.to_program_type()},
+            {
+                "authority": self.provider.wallet.public_key,
+                "cancel_accounts": {
+                    "state": self.exchange._state_address,
+                    "margin_account": self._margin_account_address,
+                    "dex_program": constants.MATCHING_ENGINE_PID[self.network],
+                    "serum_authority": self.exchange._serum_authority_address,
+                    "open_orders": self._open_orders_addresses[asset],
+                    "market": self.exchange.markets[asset].address,
+                    "bids": self.exchange.markets[asset]._market_state.bids,
+                    "asks": self.exchange.markets[asset]._market_state.asks,
+                    "event_queue": self.exchange.markets[asset]._market_state.event_queue,
+                },
+            },
+            self.exchange.program_id,
+        )
+
+    async def cancel_order_by_client_order_id(self, asset: Asset, client_order_id: int, priority_fee: int = 0):
+        ixs = []
+        if priority_fee > 0:
+            ixs.append(set_compute_unit_price(priority_fee))
+        ixs.append(self._cancel_order_by_client_order_id_ix(asset, client_order_id))
+        self._logger.info(f"Cancelling order with client order id {client_order_id} for {asset}")
+        return await self._send_versioned_transaction(ixs)
 
     def _cancel_orders_for_market_ix(self, asset: Asset) -> Instruction:
         """
