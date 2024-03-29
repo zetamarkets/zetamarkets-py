@@ -21,6 +21,7 @@ from . import (
     margin_parameters,
     margin_requirement,
     movement_type,
+    order_args,
     order_complete_type,
     order_state,
     order_type,
@@ -85,6 +86,7 @@ from .margin_account_type import MarginAccountTypeJSON, MarginAccountTypeKind
 from .margin_parameters import MarginParameters, MarginParametersJSON
 from .margin_requirement import MarginRequirementJSON, MarginRequirementKind
 from .movement_type import MovementTypeJSON, MovementTypeKind
+from .order_args import OrderArgs, OrderArgsJSON
 from .order_complete_type import OrderCompleteTypeJSON, OrderCompleteTypeKind
 from .order_state import OrderState, OrderStateJSON
 from .order_type import OrderTypeJSON, OrderTypeKind
