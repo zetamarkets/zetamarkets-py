@@ -72,8 +72,13 @@ class PlaceOrderEvent:
         )
     
 @dataclass
-class PlaceMultiOrdersEvent:
-    """Program event for placing multiple orders."""
+class PlaceMultiOrdersEventWithArgs:
+    """Program event for placing multiple orders.
+    
+    Note:
+        This class is an extension of the :class:`PlaceMultiOrdersEvent` class. It includes additional arguments from the
+        PlaceMultiOrders instruction.
+    """
 
     # ix args
     bid_orders: list[MultiOrderArgs]
