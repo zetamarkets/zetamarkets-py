@@ -95,12 +95,12 @@ class PlaceMultiOrdersEventWithArgs:
 
     @classmethod
     def from_event_and_args(cls, event: Event, args: Container):
-        assert event.name == cls.__name__
+        assert event.name.startswith("PlaceMultiOrdersEvent")
         return cls(
             bid_orders=args.bid_orders,
             ask_orders=args.ask_orders,
             oracle_price=utils.convert_fixed_int_to_decimal(event.data.oracle_price),
-            order_id=event.data.order_ids,
+            order_ids=event.data.order_ids,
             expiry_tss=event.data.expiry_tss,
             asset=Asset.from_index(event.data.asset.index),
             margin_account=event.data.margin_account,
@@ -126,7 +126,7 @@ class PlaceMultiOrdersEvent:
         assert event.name == cls.__name__
         return cls(
             oracle_price=utils.convert_fixed_int_to_decimal(event.data.oracle_price),
-            order_id=event.data.order_ids,
+            order_ids=event.data.order_ids,
             expiry_tss=event.data.expiry_tss,
             asset=Asset.from_index(event.data.asset.index),
             margin_account=event.data.margin_account,
