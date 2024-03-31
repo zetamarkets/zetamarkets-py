@@ -70,11 +70,12 @@ class PlaceOrderEvent:
             margin_account=event.data.margin_account,
             client_order_id=event.data.client_order_id,
         )
-    
+
+
 @dataclass
 class PlaceMultiOrdersEventWithArgs:
     """Program event for placing multiple orders.
-    
+
     Note:
         This class is an extension of the :class:`PlaceMultiOrdersEvent` class. It includes additional arguments from the
         PlaceMultiOrders instruction.
@@ -93,7 +94,7 @@ class PlaceMultiOrdersEventWithArgs:
     user: Pubkey
 
     @classmethod
-    def from_event(cls, event: Event, args: Container):
+    def from_event_and_args(cls, event: Event, args: Container):
         assert event.name == cls.__name__
         return cls(
             bid_orders=args.bid_orders,
@@ -106,7 +107,6 @@ class PlaceMultiOrdersEventWithArgs:
             client_order_ids=event.data.client_order_ids,
             user=event.data.user,
         )
-
 
 
 @dataclass
@@ -301,9 +301,18 @@ class ApplyFundingEvent:
         )
 
 
-ZetaEvent = Union[PlaceOrderEvent, PlaceMultiOrdersEvent, TradeEvent, CancelOrderEvent, LiquidationEvent, ApplyFundingEvent]
+ZetaEvent = Union[
+    PlaceOrderEvent, PlaceMultiOrdersEvent, TradeEvent, CancelOrderEvent, LiquidationEvent, ApplyFundingEvent
+]
 
-ZetaEnrichedEvent = Union[PlaceOrderEventWithArgs, TradeEvent, CancelOrderEvent, LiquidationEvent, ApplyFundingEvent]
+ZetaEnrichedEvent = Union[
+    PlaceOrderEventWithArgs,
+    PlaceMultiOrdersEventWithArgs,
+    TradeEvent,
+    CancelOrderEvent,
+    LiquidationEvent,
+    ApplyFundingEvent,
+]
 
 
 @dataclass
