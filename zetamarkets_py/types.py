@@ -209,3 +209,64 @@ class MultiOrderArgs:
     size: float
     client_order_id: Optional[int] = None
     expiry_ts: Optional[int] = None
+
+
+class AnchorDecimal:
+    flags: int
+    hi: int
+    lo: int
+    mid: int
+
+
+class Decimal:
+    def __init__(self, flags: int, hi: int, lo: int, mid: int):
+        self._flags = flags
+        self._hi = hi
+        self._lo = lo
+        self._mid = mid
+        self.SCALE_MASK = 0x00FF0000
+        self.SCALE_SHIFT = 16
+        self.SIGN_MASK = 0x80000000
+
+    @classmethod
+    def from_anchor_decimal(cls, decimal: AnchorDecimal):
+        return cls(decimal.flags, decimal.hi, decimal.lo, decimal.mid)
+
+    def scale(self) -> int:
+        return (self._flags & self.SCALE_MASK) >> self.SCALE_SHIFT
+
+    def is_sign_negative(self) -> bool:
+        return (self._flags & self.SIGN_MASK) != 0
+
+    def is_sign_positive(self) -> bool:
+        return (self._flags & self.SIGN_MASK) == 0
+
+    def to_float(self):
+
+        scale = self.scale()
+        if scale == 0:
+            raise ValueError("Scale 0 is not handled.")
+
+        bytes_ = bytes(
+            [
+                (self._hi >> 24) & 0xFF,
+                (self._hi >> 16) & 0xFF,
+                (self._hi >> 8) & 0xFF,
+                self._hi & 0xFF,
+                (self._mid >> 24) & 0xFF,
+                (self._mid >> 16) & 0xFF,
+                (self._mid >> 8) & 0xFF,
+                self._mid & 0xFF,
+                (self._lo >> 24) & 0xFF,
+                (self._lo >> 16) & 0xFF,
+                (self._lo >> 8) & 0xFF,
+                self._lo & 0xFF,
+            ]
+        )
+
+        return (-1 * int.from_bytes(bytes_, "big") if self.is_sign_negative() else int.from_bytes(bytes_, "big")) / (
+            10**scale
+        )
+
+    def is_unset(self) -> bool:
+        return self._hi == 0 and self._mid == 0 and self._lo == 0 and self._flags == 0
