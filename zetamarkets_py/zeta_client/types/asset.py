@@ -62,6 +62,9 @@ class DYMJSON(typing.TypedDict):
 class STRKJSON(typing.TypedDict):
     kind: typing.Literal["STRK"]
 
+class WJSON(typing.TypedDict):
+    kind: typing.Literal["W"]
+
 
 class UNDEFINEDJSON(typing.TypedDict):
     kind: typing.Literal["UNDEFINED"]
@@ -317,11 +320,28 @@ class STRK:
         return {
             "STRK": {},
         }
+    
+@dataclass
+class W:
+    discriminator: typing.ClassVar = 14
+    kind: typing.ClassVar = "W"
+
+    @classmethod
+    def to_json(cls) -> WJSON:
+        return WJSON(
+            kind="W",
+        )
+
+    @classmethod
+    def to_encodable(cls) -> dict:
+        return {
+            "W": {},
+        }
 
 
 @dataclass
 class UNDEFINED:
-    discriminator: typing.ClassVar = 14
+    discriminator: typing.ClassVar = 15
     kind: typing.ClassVar = "UNDEFINED"
 
     @classmethod
@@ -337,7 +357,7 @@ class UNDEFINED:
         }
 
 
-AssetKind = typing.Union[SOL, BTC, ETH, APT, ARB, BNB, PYTH, TIA, JTO, ONEMBONK, SEI, JUP, DYM, STRK, UNDEFINED]
+AssetKind = typing.Union[SOL, BTC, ETH, APT, ARB, BNB, PYTH, TIA, JTO, ONEMBONK, SEI, JUP, DYM, STRK, W, UNDEFINED]
 AssetJSON = typing.Union[
     SOLJSON,
     BTCJSON,
@@ -353,6 +373,7 @@ AssetJSON = typing.Union[
     JUPJSON,
     DYMJSON,
     STRKJSON,
+    WJSON,
     UNDEFINEDJSON,
 ]
 
@@ -388,6 +409,8 @@ def from_decoded(obj: dict) -> AssetKind:
         return DYM()
     if "STRK" in obj:
         return STRK()
+    if "W" in obj:
+        return W()
     if "UNDEFINED" in obj:
         return UNDEFINED()
     raise ValueError("Invalid enum object")
@@ -422,6 +445,8 @@ def from_json(obj: AssetJSON) -> AssetKind:
         return DYM()
     if obj["kind"] == "STRK":
         return STRK()
+    if obj["kind"] == "W":
+        return W()
     if obj["kind"] == "UNDEFINED":
         return UNDEFINED()
     kind = obj["kind"]
@@ -443,5 +468,6 @@ layout = EnumForCodegen(
     "JUP" / borsh.CStruct(),
     "DYM" / borsh.CStruct(),
     "STRK" / borsh.CStruct(),
+    "W" / borsh.CStruct(),
     "UNDEFINED" / borsh.CStruct(),
 )
