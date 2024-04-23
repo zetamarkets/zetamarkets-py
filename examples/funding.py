@@ -4,7 +4,7 @@ import os
 import anchorpy
 
 from zetamarkets_py.client import Client
-from zetamarkets_py.types import Asset
+from zetamarkets_py.types import Asset, Decimal
 
 
 async def main():
@@ -16,8 +16,9 @@ async def main():
     # load in client with just solana market, by default loads in all markets
     client = await Client.load(endpoint=endpoint, wallet=wallet, assets=[asset])
 
-    print("Withdrawing 0.1 USDC from margin account")
-    await client.withdraw(0.1, priority_fee=10)
+    # get the latest funding rate and convert from rust_decimal on-chain representation to float
+    funding = client.exchange.pricing.latest_funding_rates[asset.to_index()]
+    print(f"{asset} funding rate: {Decimal.from_anchor_decimal(funding).to_float()}")
 
 
 asyncio.run(main())

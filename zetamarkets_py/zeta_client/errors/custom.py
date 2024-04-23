@@ -1458,6 +1458,114 @@ class IncorrectLotSize(ProgramError):
     msg = "Incorrect lot size"
 
 
+class InvalidReferrerIDLength(ProgramError):
+    def __init__(self) -> None:
+        super().__init__(6160, "Invalid referrer ID length")
+
+    code = 6160
+    name = "InvalidReferrerIDLength"
+    msg = "Invalid referrer ID length"
+
+
+class InvalidReferrerIDOwner(ProgramError):
+    def __init__(self) -> None:
+        super().__init__(6161, "Invalid referrer ID owner")
+
+    code = 6161
+    name = "InvalidReferrerIDOwner"
+    msg = "Invalid referrer ID owner"
+
+
+class CannotReferSelf(ProgramError):
+    def __init__(self) -> None:
+        super().__init__(6162, "User cannot refer themselves")
+
+    code = 6162
+    name = "CannotReferSelf"
+    msg = "User cannot refer themselves"
+
+
+class InvalidMATypeAdminSigner(ProgramError):
+    def __init__(self) -> None:
+        super().__init__(6163, "Invalid margin account type admin signer")
+
+    code = 6163
+    name = "InvalidMATypeAdminSigner"
+    msg = "Invalid margin account type admin signer"
+
+
+class PostOnlyForMulti(ProgramError):
+    def __init__(self) -> None:
+        super().__init__(6164, "Post only order types only for multi orders")
+
+    code = 6164
+    name = "PostOnlyForMulti"
+    msg = "Post only order types only for multi orders"
+
+
+class ErrTickWide(ProgramError):
+    def __init__(self) -> None:
+        super().__init__(6165, "ErrTickWide")
+
+    code = 6165
+    name = "ErrTickWide"
+    msg = "ErrTickWide"
+
+
+class OORemainingEvents(ProgramError):
+    def __init__(self) -> None:
+        super().__init__(6166, "Open orders has remaining events")
+
+    code = 6166
+    name = "OORemainingEvents"
+    msg = "Open orders has remaining events"
+
+
+class CannotForceCancelTriggerOrder(ProgramError):
+    def __init__(self) -> None:
+        super().__init__(6167, "Cannot force cancel trigger order")
+
+    code = 6167
+    name = "CannotForceCancelTriggerOrder"
+    msg = "Cannot force cancel trigger order"
+
+
+class InvalidPricingAdmin(ProgramError):
+    def __init__(self) -> None:
+        super().__init__(6168, "Invalid pricing admin")
+
+    code = 6168
+    name = "InvalidPricingAdmin"
+    msg = "Invalid pricing admin"
+
+
+class InvalidOracleUpdate(ProgramError):
+    def __init__(self) -> None:
+        super().__init__(6169, "Invalid oracle update")
+
+    code = 6169
+    name = "InvalidOracleUpdate"
+    msg = "Invalid oracle update"
+
+
+class OrderPriceTooFarFromMarkPrice(ProgramError):
+    def __init__(self) -> None:
+        super().__init__(6170, "Order price too far from mark price")
+
+    code = 6170
+    name = "OrderPriceTooFarFromMarkPrice"
+    msg = "Order price too far from mark price"
+
+
+class AirdropCommunityAlreadySet(ProgramError):
+    def __init__(self) -> None:
+        super().__init__(6171, "Airdrop community already set, cannot set again")
+
+    code = 6171
+    name = "AirdropCommunityAlreadySet"
+    msg = "Airdrop community already set, cannot set again"
+
+
 CustomError = typing.Union[
     DepositOverflow,
     Unreachable,
@@ -1619,6 +1727,18 @@ CustomError = typing.Union[
     InvalidLiquidatorAuthority,
     IOCInvalidTakerFillSize,
     IncorrectLotSize,
+    InvalidReferrerIDLength,
+    InvalidReferrerIDOwner,
+    CannotReferSelf,
+    InvalidMATypeAdminSigner,
+    PostOnlyForMulti,
+    ErrTickWide,
+    OORemainingEvents,
+    CannotForceCancelTriggerOrder,
+    InvalidPricingAdmin,
+    InvalidOracleUpdate,
+    OrderPriceTooFarFromMarkPrice,
+    AirdropCommunityAlreadySet,
 ]
 CUSTOM_ERROR_MAP: dict[int, CustomError] = {
     6000: DepositOverflow(),
@@ -1781,6 +1901,18 @@ CUSTOM_ERROR_MAP: dict[int, CustomError] = {
     6157: InvalidLiquidatorAuthority(),
     6158: IOCInvalidTakerFillSize(),
     6159: IncorrectLotSize(),
+    6160: InvalidReferrerIDLength(),
+    6161: InvalidReferrerIDOwner(),
+    6162: CannotReferSelf(),
+    6163: InvalidMATypeAdminSigner(),
+    6164: PostOnlyForMulti(),
+    6165: ErrTickWide(),
+    6166: OORemainingEvents(),
+    6167: CannotForceCancelTriggerOrder(),
+    6168: InvalidPricingAdmin(),
+    6169: InvalidOracleUpdate(),
+    6170: OrderPriceTooFarFromMarkPrice(),
+    6171: AirdropCommunityAlreadySet(),
 }
 
 

@@ -109,3 +109,13 @@ def get_underlying_mint_address(asset: Asset, network: Network) -> Pubkey:
     if asset in FLEXIBLE_MINTS[network]:
         return FLEXIBLE_MINTS[network][asset]
     raise Exception("Underlying mint does not exist!")
+
+
+def get_referrer_id_account(program_id: Pubkey, id: str) -> Pubkey:
+    def remove_trailing_nulls(s):
+        return s.rstrip("\x00")
+
+    return Pubkey.find_program_address(
+        [b"referrer-id-account", bytes(remove_trailing_nulls(id).encode())],
+        program_id,
+    )[0]

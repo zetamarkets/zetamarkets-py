@@ -9,40 +9,38 @@ from solders.pubkey import Pubkey
 from ..program_id import PROGRAM_ID
 
 
-class CloseCrossMarginAccountArgs(typing.TypedDict):
-    subaccount_index: int
+class ChooseAirdropCommunityArgs(typing.TypedDict):
+    community: int
 
 
-layout = borsh.CStruct("subaccount_index" / borsh.U8)
+layout = borsh.CStruct("community" / borsh.U8)
 
 
-class CloseCrossMarginAccountAccounts(typing.TypedDict):
-    cross_margin_account: Pubkey
+class ChooseAirdropCommunityAccounts(typing.TypedDict):
     cross_margin_account_manager: Pubkey
     authority: Pubkey
 
 
-def close_cross_margin_account(
-    args: CloseCrossMarginAccountArgs,
-    accounts: CloseCrossMarginAccountAccounts,
+def choose_airdrop_community(
+    args: ChooseAirdropCommunityArgs,
+    accounts: ChooseAirdropCommunityAccounts,
     program_id: Pubkey = PROGRAM_ID,
     remaining_accounts: typing.Optional[typing.List[AccountMeta]] = None,
 ) -> Instruction:
     keys: list[AccountMeta] = [
-        AccountMeta(pubkey=accounts["cross_margin_account"], is_signer=False, is_writable=True),
         AccountMeta(
             pubkey=accounts["cross_margin_account_manager"],
             is_signer=False,
             is_writable=True,
         ),
-        AccountMeta(pubkey=accounts["authority"], is_signer=False, is_writable=True),
+        AccountMeta(pubkey=accounts["authority"], is_signer=True, is_writable=False),
     ]
     if remaining_accounts is not None:
         keys += remaining_accounts
-    identifier = b"\xcb\xc4\xbb<\r\xaa\xbeE"
+    identifier = b"t\x9c\xc0R\xf8)s\xba"
     encoded_args = layout.build(
         {
-            "subaccount_index": args["subaccount_index"],
+            "community": args["community"],
         }
     )
     data = identifier + encoded_args

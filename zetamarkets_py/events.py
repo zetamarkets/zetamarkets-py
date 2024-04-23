@@ -6,7 +6,7 @@ from construct import Container
 from solders.pubkey import Pubkey
 
 from zetamarkets_py import utils
-from zetamarkets_py.types import Asset, OrderCompleteType, Side, MultiOrderArgs
+from zetamarkets_py.types import Asset, MultiOrderArgs, OrderCompleteType, Side
 
 
 # PlaceOrderEvent but we add the args from the PlaceOrder instruction itself, as well as the tx slot and signature
