@@ -26,16 +26,13 @@ class StateJSON(typing.TypedDict):
     pricing_frequency_seconds: int
     liquidator_liquidation_percentage: int
     insurance_vault_liquidation_percentage: int
-    native_d1_trade_fee_percentage: int
-    native_d1_underlying_fee_percentage: int
-    native_whitelist_underlying_fee_percentage: int
+    deprecated_fee_values: list[int]
     native_deposit_limit: int
     expiration_threshold_seconds: int
     position_movement_fee_bps: int
     margin_concession_percentage: int
     treasury_wallet_nonce: int
-    native_option_trade_fee_percentage: int
-    native_option_underlying_fee_percentage: int
+    deprecated_option_fee_values: list[int]
     referrals_admin: str
     referrals_rewards_wallet_nonce: int
     max_perp_delta_age: int
@@ -53,7 +50,11 @@ class StateJSON(typing.TypedDict):
     min_lot_sizes_padding: list[int]
     tick_sizes: list[int]
     tick_sizes_padding: list[int]
-    native_maker_trade_fee_percentage: int
+    deprecated_maker_fee_value: int
+    native_take_trigger_order_fee_percentage: int
+    native_maker_rebate_percentage: int
+    ma_type_admin: str
+    pricing_admin: str
     padding: list[int]
 
 
@@ -72,16 +73,13 @@ class State:
         "pricing_frequency_seconds" / borsh.U32,
         "liquidator_liquidation_percentage" / borsh.U32,
         "insurance_vault_liquidation_percentage" / borsh.U32,
-        "native_d1_trade_fee_percentage" / borsh.U64,
-        "native_d1_underlying_fee_percentage" / borsh.U64,
-        "native_whitelist_underlying_fee_percentage" / borsh.U64,
+        "deprecated_fee_values" / borsh.U64[3],
         "native_deposit_limit" / borsh.U64,
         "expiration_threshold_seconds" / borsh.U32,
         "position_movement_fee_bps" / borsh.U8,
         "margin_concession_percentage" / borsh.U8,
         "treasury_wallet_nonce" / borsh.U8,
-        "native_option_trade_fee_percentage" / borsh.U64,
-        "native_option_underlying_fee_percentage" / borsh.U64,
+        "deprecated_option_fee_values" / borsh.U64[2],
         "referrals_admin" / BorshPubkey,
         "referrals_rewards_wallet_nonce" / borsh.U8,
         "max_perp_delta_age" / borsh.U16,
@@ -92,15 +90,19 @@ class State:
         "native_withdraw_limit" / borsh.U64,
         "withdraw_limit_epoch_seconds" / borsh.U32,
         "native_open_interest_limit" / borsh.U64,
-        "halt_states" / types.halt_state_v2.HaltStateV2.layout[14],
-        "halt_states_padding" / types.halt_state_v2.HaltStateV2.layout[11],
+        "halt_states" / types.halt_state_v2.HaltStateV2.layout[15],
+        "halt_states_padding" / types.halt_state_v2.HaltStateV2.layout[10],
         "trigger_admin" / BorshPubkey,
-        "min_lot_sizes" / borsh.U32[14],
-        "min_lot_sizes_padding" / borsh.U32[11],
-        "tick_sizes" / borsh.U32[14],
-        "tick_sizes_padding" / borsh.U32[11],
-        "native_maker_trade_fee_percentage" / borsh.U64,
-        "padding" / borsh.U8[98],
+        "min_lot_sizes" / borsh.U32[15],
+        "min_lot_sizes_padding" / borsh.U32[10],
+        "tick_sizes" / borsh.U32[15],
+        "tick_sizes_padding" / borsh.U32[10],
+        "deprecated_maker_fee_value" / borsh.U64,
+        "native_take_trigger_order_fee_percentage" / borsh.U64,
+        "native_maker_rebate_percentage" / borsh.U64,
+        "ma_type_admin" / BorshPubkey,
+        "pricing_admin" / BorshPubkey,
+        "padding" / borsh.U8[18],
     )
     admin: Pubkey
     state_nonce: int
@@ -113,16 +115,13 @@ class State:
     pricing_frequency_seconds: int
     liquidator_liquidation_percentage: int
     insurance_vault_liquidation_percentage: int
-    native_d1_trade_fee_percentage: int
-    native_d1_underlying_fee_percentage: int
-    native_whitelist_underlying_fee_percentage: int
+    deprecated_fee_values: list[int]
     native_deposit_limit: int
     expiration_threshold_seconds: int
     position_movement_fee_bps: int
     margin_concession_percentage: int
     treasury_wallet_nonce: int
-    native_option_trade_fee_percentage: int
-    native_option_underlying_fee_percentage: int
+    deprecated_option_fee_values: list[int]
     referrals_admin: Pubkey
     referrals_rewards_wallet_nonce: int
     max_perp_delta_age: int
@@ -140,7 +139,11 @@ class State:
     min_lot_sizes_padding: list[int]
     tick_sizes: list[int]
     tick_sizes_padding: list[int]
-    native_maker_trade_fee_percentage: int
+    deprecated_maker_fee_value: int
+    native_take_trigger_order_fee_percentage: int
+    native_maker_rebate_percentage: int
+    ma_type_admin: Pubkey
+    pricing_admin: Pubkey
     padding: list[int]
 
     @classmethod
@@ -196,16 +199,13 @@ class State:
             pricing_frequency_seconds=dec.pricing_frequency_seconds,
             liquidator_liquidation_percentage=dec.liquidator_liquidation_percentage,
             insurance_vault_liquidation_percentage=dec.insurance_vault_liquidation_percentage,
-            native_d1_trade_fee_percentage=dec.native_d1_trade_fee_percentage,
-            native_d1_underlying_fee_percentage=dec.native_d1_underlying_fee_percentage,
-            native_whitelist_underlying_fee_percentage=dec.native_whitelist_underlying_fee_percentage,
+            deprecated_fee_values=dec.deprecated_fee_values,
             native_deposit_limit=dec.native_deposit_limit,
             expiration_threshold_seconds=dec.expiration_threshold_seconds,
             position_movement_fee_bps=dec.position_movement_fee_bps,
             margin_concession_percentage=dec.margin_concession_percentage,
             treasury_wallet_nonce=dec.treasury_wallet_nonce,
-            native_option_trade_fee_percentage=dec.native_option_trade_fee_percentage,
-            native_option_underlying_fee_percentage=dec.native_option_underlying_fee_percentage,
+            deprecated_option_fee_values=dec.deprecated_option_fee_values,
             referrals_admin=dec.referrals_admin,
             referrals_rewards_wallet_nonce=dec.referrals_rewards_wallet_nonce,
             max_perp_delta_age=dec.max_perp_delta_age,
@@ -233,7 +233,11 @@ class State:
             min_lot_sizes_padding=dec.min_lot_sizes_padding,
             tick_sizes=dec.tick_sizes,
             tick_sizes_padding=dec.tick_sizes_padding,
-            native_maker_trade_fee_percentage=dec.native_maker_trade_fee_percentage,
+            deprecated_maker_fee_value=dec.deprecated_maker_fee_value,
+            native_take_trigger_order_fee_percentage=dec.native_take_trigger_order_fee_percentage,
+            native_maker_rebate_percentage=dec.native_maker_rebate_percentage,
+            ma_type_admin=dec.ma_type_admin,
+            pricing_admin=dec.pricing_admin,
             padding=dec.padding,
         )
 
@@ -250,16 +254,13 @@ class State:
             "pricing_frequency_seconds": self.pricing_frequency_seconds,
             "liquidator_liquidation_percentage": self.liquidator_liquidation_percentage,
             "insurance_vault_liquidation_percentage": self.insurance_vault_liquidation_percentage,
-            "native_d1_trade_fee_percentage": self.native_d1_trade_fee_percentage,
-            "native_d1_underlying_fee_percentage": self.native_d1_underlying_fee_percentage,
-            "native_whitelist_underlying_fee_percentage": self.native_whitelist_underlying_fee_percentage,
+            "deprecated_fee_values": self.deprecated_fee_values,
             "native_deposit_limit": self.native_deposit_limit,
             "expiration_threshold_seconds": self.expiration_threshold_seconds,
             "position_movement_fee_bps": self.position_movement_fee_bps,
             "margin_concession_percentage": self.margin_concession_percentage,
             "treasury_wallet_nonce": self.treasury_wallet_nonce,
-            "native_option_trade_fee_percentage": self.native_option_trade_fee_percentage,
-            "native_option_underlying_fee_percentage": self.native_option_underlying_fee_percentage,
+            "deprecated_option_fee_values": self.deprecated_option_fee_values,
             "referrals_admin": str(self.referrals_admin),
             "referrals_rewards_wallet_nonce": self.referrals_rewards_wallet_nonce,
             "max_perp_delta_age": self.max_perp_delta_age,
@@ -277,7 +278,11 @@ class State:
             "min_lot_sizes_padding": self.min_lot_sizes_padding,
             "tick_sizes": self.tick_sizes,
             "tick_sizes_padding": self.tick_sizes_padding,
-            "native_maker_trade_fee_percentage": self.native_maker_trade_fee_percentage,
+            "deprecated_maker_fee_value": self.deprecated_maker_fee_value,
+            "native_take_trigger_order_fee_percentage": self.native_take_trigger_order_fee_percentage,
+            "native_maker_rebate_percentage": self.native_maker_rebate_percentage,
+            "ma_type_admin": str(self.ma_type_admin),
+            "pricing_admin": str(self.pricing_admin),
             "padding": self.padding,
         }
 
@@ -295,16 +300,13 @@ class State:
             pricing_frequency_seconds=obj["pricing_frequency_seconds"],
             liquidator_liquidation_percentage=obj["liquidator_liquidation_percentage"],
             insurance_vault_liquidation_percentage=obj["insurance_vault_liquidation_percentage"],
-            native_d1_trade_fee_percentage=obj["native_d1_trade_fee_percentage"],
-            native_d1_underlying_fee_percentage=obj["native_d1_underlying_fee_percentage"],
-            native_whitelist_underlying_fee_percentage=obj["native_whitelist_underlying_fee_percentage"],
+            deprecated_fee_values=obj["deprecated_fee_values"],
             native_deposit_limit=obj["native_deposit_limit"],
             expiration_threshold_seconds=obj["expiration_threshold_seconds"],
             position_movement_fee_bps=obj["position_movement_fee_bps"],
             margin_concession_percentage=obj["margin_concession_percentage"],
             treasury_wallet_nonce=obj["treasury_wallet_nonce"],
-            native_option_trade_fee_percentage=obj["native_option_trade_fee_percentage"],
-            native_option_underlying_fee_percentage=obj["native_option_underlying_fee_percentage"],
+            deprecated_option_fee_values=obj["deprecated_option_fee_values"],
             referrals_admin=Pubkey.from_string(obj["referrals_admin"]),
             referrals_rewards_wallet_nonce=obj["referrals_rewards_wallet_nonce"],
             max_perp_delta_age=obj["max_perp_delta_age"],
@@ -332,6 +334,10 @@ class State:
             min_lot_sizes_padding=obj["min_lot_sizes_padding"],
             tick_sizes=obj["tick_sizes"],
             tick_sizes_padding=obj["tick_sizes_padding"],
-            native_maker_trade_fee_percentage=obj["native_maker_trade_fee_percentage"],
+            deprecated_maker_fee_value=obj["deprecated_maker_fee_value"],
+            native_take_trigger_order_fee_percentage=obj["native_take_trigger_order_fee_percentage"],
+            native_maker_rebate_percentage=obj["native_maker_rebate_percentage"],
+            ma_type_admin=Pubkey.from_string(obj["ma_type_admin"]),
+            pricing_admin=Pubkey.from_string(obj["pricing_admin"]),
             padding=obj["padding"],
         )

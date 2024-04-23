@@ -15,9 +15,8 @@ from .market_node import MarketNode, MarketNodeJSON
 from .open_orders_map import OpenOrdersMap, OpenOrdersMapJSON
 from .perp_sync_queue import PerpSyncQueue, PerpSyncQueueJSON
 from .pricing import Pricing, PricingJSON
-from .referral_account import ReferralAccount, ReferralAccountJSON
-from .referrer_account import ReferrerAccount, ReferrerAccountJSON
-from .referrer_alias import ReferrerAlias, ReferrerAliasJSON
+from .referrer_id_account import ReferrerIdAccount, ReferrerIdAccountJSON
+from .referrer_pubkey_account import ReferrerPubkeyAccount, ReferrerPubkeyAccountJSON
 from .settlement_account import SettlementAccount, SettlementAccountJSON
 from .socialized_loss_account import SocializedLossAccount, SocializedLossAccountJSON
 from .spread_account import SpreadAccount, SpreadAccountJSON

@@ -50,7 +50,7 @@ def edit_trigger_order_v2(
         AccountMeta(pubkey=accounts["owner"], is_signer=True, is_writable=False),
         AccountMeta(pubkey=accounts["trigger_order"], is_signer=False, is_writable=True),
         AccountMeta(pubkey=accounts["state"], is_signer=False, is_writable=False),
-        AccountMeta(pubkey=accounts["margin_account"], is_signer=False, is_writable=False),
+        AccountMeta(pubkey=accounts["margin_account"], is_signer=False, is_writable=True),
     ]
     if remaining_accounts is not None:
         keys += remaining_accounts

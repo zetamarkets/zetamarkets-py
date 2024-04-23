@@ -12,11 +12,6 @@ class UpdateStateArgsJSON(typing.TypedDict):
     pricing_frequency_seconds: int
     liquidator_liquidation_percentage: int
     insurance_vault_liquidation_percentage: int
-    native_d1_trade_fee_percentage: int
-    native_d1_underlying_fee_percentage: int
-    native_option_trade_fee_percentage: int
-    native_option_underlying_fee_percentage: int
-    native_whitelist_underlying_fee_percentage: int
     native_deposit_limit: int
     expiration_threshold_seconds: int
     position_movement_fee_bps: int
@@ -34,11 +29,6 @@ class UpdateStateArgs:
         "pricing_frequency_seconds" / borsh.U32,
         "liquidator_liquidation_percentage" / borsh.U32,
         "insurance_vault_liquidation_percentage" / borsh.U32,
-        "native_d1_trade_fee_percentage" / borsh.U64,
-        "native_d1_underlying_fee_percentage" / borsh.U64,
-        "native_option_trade_fee_percentage" / borsh.U64,
-        "native_option_underlying_fee_percentage" / borsh.U64,
-        "native_whitelist_underlying_fee_percentage" / borsh.U64,
         "native_deposit_limit" / borsh.U64,
         "expiration_threshold_seconds" / borsh.U32,
         "position_movement_fee_bps" / borsh.U8,
@@ -52,11 +42,6 @@ class UpdateStateArgs:
     pricing_frequency_seconds: int
     liquidator_liquidation_percentage: int
     insurance_vault_liquidation_percentage: int
-    native_d1_trade_fee_percentage: int
-    native_d1_underlying_fee_percentage: int
-    native_option_trade_fee_percentage: int
-    native_option_underlying_fee_percentage: int
-    native_whitelist_underlying_fee_percentage: int
     native_deposit_limit: int
     expiration_threshold_seconds: int
     position_movement_fee_bps: int
@@ -73,11 +58,6 @@ class UpdateStateArgs:
             pricing_frequency_seconds=obj.pricing_frequency_seconds,
             liquidator_liquidation_percentage=obj.liquidator_liquidation_percentage,
             insurance_vault_liquidation_percentage=obj.insurance_vault_liquidation_percentage,
-            native_d1_trade_fee_percentage=obj.native_d1_trade_fee_percentage,
-            native_d1_underlying_fee_percentage=obj.native_d1_underlying_fee_percentage,
-            native_option_trade_fee_percentage=obj.native_option_trade_fee_percentage,
-            native_option_underlying_fee_percentage=obj.native_option_underlying_fee_percentage,
-            native_whitelist_underlying_fee_percentage=obj.native_whitelist_underlying_fee_percentage,
             native_deposit_limit=obj.native_deposit_limit,
             expiration_threshold_seconds=obj.expiration_threshold_seconds,
             position_movement_fee_bps=obj.position_movement_fee_bps,
@@ -94,11 +74,6 @@ class UpdateStateArgs:
             "pricing_frequency_seconds": self.pricing_frequency_seconds,
             "liquidator_liquidation_percentage": self.liquidator_liquidation_percentage,
             "insurance_vault_liquidation_percentage": self.insurance_vault_liquidation_percentage,
-            "native_d1_trade_fee_percentage": self.native_d1_trade_fee_percentage,
-            "native_d1_underlying_fee_percentage": self.native_d1_underlying_fee_percentage,
-            "native_option_trade_fee_percentage": self.native_option_trade_fee_percentage,
-            "native_option_underlying_fee_percentage": self.native_option_underlying_fee_percentage,
-            "native_whitelist_underlying_fee_percentage": self.native_whitelist_underlying_fee_percentage,
             "native_deposit_limit": self.native_deposit_limit,
             "expiration_threshold_seconds": self.expiration_threshold_seconds,
             "position_movement_fee_bps": self.position_movement_fee_bps,
@@ -115,11 +90,6 @@ class UpdateStateArgs:
             "pricing_frequency_seconds": self.pricing_frequency_seconds,
             "liquidator_liquidation_percentage": self.liquidator_liquidation_percentage,
             "insurance_vault_liquidation_percentage": self.insurance_vault_liquidation_percentage,
-            "native_d1_trade_fee_percentage": self.native_d1_trade_fee_percentage,
-            "native_d1_underlying_fee_percentage": self.native_d1_underlying_fee_percentage,
-            "native_option_trade_fee_percentage": self.native_option_trade_fee_percentage,
-            "native_option_underlying_fee_percentage": self.native_option_underlying_fee_percentage,
-            "native_whitelist_underlying_fee_percentage": self.native_whitelist_underlying_fee_percentage,
             "native_deposit_limit": self.native_deposit_limit,
             "expiration_threshold_seconds": self.expiration_threshold_seconds,
             "position_movement_fee_bps": self.position_movement_fee_bps,
@@ -137,11 +107,6 @@ class UpdateStateArgs:
             pricing_frequency_seconds=obj["pricing_frequency_seconds"],
             liquidator_liquidation_percentage=obj["liquidator_liquidation_percentage"],
             insurance_vault_liquidation_percentage=obj["insurance_vault_liquidation_percentage"],
-            native_d1_trade_fee_percentage=obj["native_d1_trade_fee_percentage"],
-            native_d1_underlying_fee_percentage=obj["native_d1_underlying_fee_percentage"],
-            native_option_trade_fee_percentage=obj["native_option_trade_fee_percentage"],
-            native_option_underlying_fee_percentage=obj["native_option_underlying_fee_percentage"],
-            native_whitelist_underlying_fee_percentage=obj["native_whitelist_underlying_fee_percentage"],
             native_deposit_limit=obj["native_deposit_limit"],
             expiration_threshold_seconds=obj["expiration_threshold_seconds"],
             position_movement_fee_bps=obj["position_movement_fee_bps"],

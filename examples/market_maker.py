@@ -15,7 +15,6 @@ from solana.rpc.types import TxOpts
 
 from zetamarkets_py import utils
 from zetamarkets_py.client import Client
-from zetamarkets_py.constants import MIN_NATIVE_MIN_LOT_SIZE, POSITION_PRECISION
 from zetamarkets_py.types import (
     Asset,
     Network,

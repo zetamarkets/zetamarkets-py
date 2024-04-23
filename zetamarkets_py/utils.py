@@ -2,7 +2,7 @@ import json
 import logging
 import re
 from statistics import median
-from typing import Optional
+from typing import List, Optional
 
 import colorlog
 from httpx import post
@@ -177,12 +177,12 @@ Args:
 """
 
 
-def get_recent_prio_fees(url: str, accounts: [str], lookback_slots: int = 20, use_max: bool = False) -> int:
+def get_recent_prio_fees(url: str, accounts: List[str], lookback_slots: int = 20, use_max: bool = False) -> int:
     data = {"jsonrpc": "2.0", "id": 1, "method": "getRecentPrioritizationFees", "params": [accounts]}
     headers = {"Content-Type": "application/json"}
 
     # List of {prioritizationFee, slot}
-    response = post(url=url, data=json.dumps(data), headers=headers).json()
+    response = post(url=url, data=json.dumps(data), headers=headers).json()  # type: ignore
 
     # Sort by slot, descending. Grab the first 20 slots only
     response_sorted = sorted(response["result"], key=lambda x: x["slot"], reverse=True)[:lookback_slots]

@@ -8,27 +8,25 @@ from solders.pubkey import Pubkey
 from ..program_id import PROGRAM_ID
 
 
-class CloseCrossMarginAccountManagerAccounts(typing.TypedDict):
-    cross_margin_account_manager: Pubkey
-    authority: Pubkey
+class UpdatePricingAdminAccounts(typing.TypedDict):
+    state: Pubkey
+    admin: Pubkey
+    new_admin: Pubkey
 
 
-def close_cross_margin_account_manager(
-    accounts: CloseCrossMarginAccountManagerAccounts,
+def update_pricing_admin(
+    accounts: UpdatePricingAdminAccounts,
     program_id: Pubkey = PROGRAM_ID,
     remaining_accounts: typing.Optional[typing.List[AccountMeta]] = None,
 ) -> Instruction:
     keys: list[AccountMeta] = [
-        AccountMeta(
-            pubkey=accounts["cross_margin_account_manager"],
-            is_signer=False,
-            is_writable=True,
-        ),
-        AccountMeta(pubkey=accounts["authority"], is_signer=False, is_writable=True),
+        AccountMeta(pubkey=accounts["state"], is_signer=False, is_writable=True),
+        AccountMeta(pubkey=accounts["admin"], is_signer=True, is_writable=False),
+        AccountMeta(pubkey=accounts["new_admin"], is_signer=False, is_writable=False),
     ]
     if remaining_accounts is not None:
         keys += remaining_accounts
-    identifier = b"\xe8\xb6\xb6\x89VXv\xfc"
+    identifier = b"I\x18\x9c\x1cnX{\xaf"
     encoded_args = b""
     data = identifier + encoded_args
     return Instruction(program_id, data, keys)
