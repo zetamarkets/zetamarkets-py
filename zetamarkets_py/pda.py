@@ -119,3 +119,10 @@ def get_referrer_id_account(program_id: Pubkey, id: str) -> Pubkey:
         [b"referrer-id-account", bytes(remove_trailing_nulls(id).encode())],
         program_id,
     )[0]
+
+
+def get_referrer_pubkey_account(program_id: Pubkey, authority: Pubkey) -> Pubkey:
+    return Pubkey.find_program_address(
+        [b"referrer-pubkey-account", bytes(authority)],
+        program_id,
+    )[0]
