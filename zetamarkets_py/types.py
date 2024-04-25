@@ -25,7 +25,7 @@ class Asset(Enum):
     JUP = "JUP"
     DYM = "DYM"
     STRK = "STRK"
-    W = "W"
+    WIF = "WIF"
 
     def to_index(self):
         """Converts the asset to its corresponding index."""

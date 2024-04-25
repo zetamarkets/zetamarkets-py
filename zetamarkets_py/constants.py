@@ -42,7 +42,7 @@ FLEXIBLE_MINTS = {
         Asset.JUP: Pubkey.from_string("7uP5h7kxRaSbd2dz5e6gZp8yhqazyMvaXVoNZ4HsgZ2n"),
         Asset.DYM: Pubkey.from_string("FxxBzHfSZc794sRw6aLs7KuaG9iBy1hSLLFV8LLQYAiL"),
         Asset.STRK: Pubkey.from_string("C42HXAXQiV6EqxzTvmwff6FgCPNw7r2MgvJ9uv8UNdce"),
-        Asset.W: Pubkey.from_string("7jCmRqJaJq5iojCwGqq5DdwUBYPhrpvJcgNZsFLM4Pd5"),
+        Asset.WIF: Pubkey.from_string("7jCmRqJaJq5iojCwGqq5DdwUBYPhrpvJcgNZsFLM4Pd5"),
     },
 }
 
@@ -405,6 +405,7 @@ ZETA_LUT = {
             Pubkey.from_string("HHvs3T3rcFnZFiTdKn5eXwg1w9ADGB98CpyprHW7jYMB"),
             Pubkey.from_string("GpvkM2TeZXqQzFtBBgqoJYfc3BPScEHaSk41dwMrsKiW"),
             Pubkey.from_string("H3j7orNNo7pzzHJZ1WFsrpJAxWCiE8QW3aatbGufu2PC"),
+            Pubkey.from_string("6ABgrEZk8urs6kJ1JNdC1sspH5zKXRqxy8sg3ZG2cQps"),
         ],
     ),
 }
