@@ -65,11 +65,6 @@ class STRKJSON(typing.TypedDict):
 class WIFJSON(typing.TypedDict):
     kind: typing.Literal["WIF"]
 
-
-class WJSON(typing.TypedDict):
-    kind: typing.Literal["W"]
-
-
 class UNDEFINEDJSON(typing.TypedDict):
     kind: typing.Literal["UNDEFINED"]
 
