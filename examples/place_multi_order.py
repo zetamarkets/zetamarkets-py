@@ -4,7 +4,7 @@ import os
 import anchorpy
 
 from zetamarkets_py.client import Client
-from zetamarkets_py.types import Asset, OrderArgs, OrderOptions, Side, MultiOrderArgs, OrderType
+from zetamarkets_py.types import Asset, MultiOrderArgs, OrderType
 
 from solders.compute_budget import set_compute_unit_limit
 async def main():
