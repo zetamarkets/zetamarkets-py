@@ -36,10 +36,10 @@ from zetamarkets_py.events import (
     EventMeta,
     LiquidationEvent,
     OrderCompleteEvent,
-    PlaceOrderEvent,
-    PlaceOrderEventWithArgs,
     PlaceMultiOrdersEvent,
     PlaceMultiOrdersEventWithArgs,
+    PlaceOrderEvent,
+    PlaceOrderEventWithArgs,
     TradeEvent,
     ZetaEnrichedEvent,
     ZetaEvent,
@@ -68,7 +68,7 @@ from zetamarkets_py.zeta_client.instructions import (
     cancel_order_by_client_order_id,
     deposit_v2,
     initialize_cross_margin_account,
-    initialize_cross_margin_account_manager,
+    initialize_cross_margin_account_manager_v2,
     initialize_open_orders_v3,
     place_multi_orders,
     place_perp_order_v4,
@@ -96,7 +96,7 @@ class Client:
     """Main provider to use for primary tx sending and fetching"""
     provider: Provider
     """Extra list of providers to use to 'double-down' for orders, sending the same transaction down multiple RPCs"""
-    double_down_providers: [Provider]
+    double_down_providers: List[Provider]
 
     """The network and wallet context to send transactions paid for and signed by the provider."""
     network: Network
@@ -475,17 +475,19 @@ class Client:
         Yields:
             AsyncIterator[Tuple[List[ZetaEvent], int]]: An async iterator that yields tuples of event data and slot.
         """
-        if ignore_third_party_events and self._margin_account_address is None:
-            raise Exception("Margin account not loaded, cannot subscribe to events")
+        if ignore_third_party_events:
+            if self._margin_account_address is None:
+                raise Exception("Margin account not loaded, cannot subscribe to events")
+            pubkey = self._margin_account_address
+        else:
+            pubkey = self.exchange.program_id
         commitment = commitment or self.connection.commitment
         async for ws in connect(self.ws_endpoint):
             try:
                 # Subscribe to logs that mention the margin account
                 await ws.logs_subscribe(  # type: ignore
                     commitment=commitment,
-                    filter_=RpcTransactionLogsFilterMentions(
-                        self._margin_account_address if ignore_third_party_events else self.exchange.program_id
-                    ),
+                    filter_=RpcTransactionLogsFilterMentions(pubkey),
                 )
                 first_resp = await ws.recv()
                 subscription_id = cast(int, first_resp[0].result)  # type: ignore
@@ -812,7 +814,8 @@ class Client:
         """
         if self._margin_account_manager_address is None:
             raise Exception("Margin account manager address not loaded, cannot deposit")
-        return initialize_cross_margin_account_manager(
+        return initialize_cross_margin_account_manager_v2(
+            {"referrer": constants.MAINTAINER_REFERRAL},
             {
                 "cross_margin_account_manager": self._margin_account_manager_address,
                 "authority": self.provider.wallet.public_key,
@@ -1494,7 +1497,7 @@ class Client:
                     tasks.append(provider.send(tx, opts))
                 signature = await asyncio.gather(*tasks)
             else:
-                signature = await self.provider.send(tx, opts)
+                signature = [await self.provider.send(tx, opts)]
         except RPCException as exc:
             # This won't work on zDEX errors
             # TODO: add ZDEX error parsing

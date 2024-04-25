@@ -11,9 +11,10 @@ from ..program_id import PROGRAM_ID
 
 class ForceCancelTriggerOrderArgs(typing.TypedDict):
     trigger_order_bit: int
+    enforce_tpsl_conditions: bool
 
 
-layout = borsh.CStruct("trigger_order_bit" / borsh.U8)
+layout = borsh.CStruct("trigger_order_bit" / borsh.U8, "enforce_tpsl_conditions" / borsh.Bool)
 
 
 class ForceCancelTriggerOrderAccounts(typing.TypedDict):
@@ -41,6 +42,7 @@ def force_cancel_trigger_order(
     encoded_args = layout.build(
         {
             "trigger_order_bit": args["trigger_order_bit"],
+            "enforce_tpsl_conditions": args["enforce_tpsl_conditions"],
         }
     )
     data = identifier + encoded_args

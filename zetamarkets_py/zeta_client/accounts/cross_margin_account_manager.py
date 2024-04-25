@@ -18,6 +18,9 @@ class CrossMarginAccountManagerJSON(typing.TypedDict):
     nonce: int
     authority: str
     accounts: list[types.cross_margin_account_info.CrossMarginAccountInfoJSON]
+    referrer: str
+    airdrop_community: int
+    padding: list[int]
 
 
 @dataclass
@@ -26,11 +29,17 @@ class CrossMarginAccountManager:
     layout: typing.ClassVar = borsh.CStruct(
         "nonce" / borsh.U8,
         "authority" / BorshPubkey,
-        "accounts" / types.cross_margin_account_info.CrossMarginAccountInfo.layout[25],
+        "accounts" / types.cross_margin_account_info.CrossMarginAccountInfo.layout[20],
+        "referrer" / BorshPubkey,
+        "airdrop_community" / borsh.U8,
+        "padding" / borsh.U8[22],
     )
     nonce: int
     authority: Pubkey
     accounts: list[types.cross_margin_account_info.CrossMarginAccountInfo]
+    referrer: Pubkey
+    airdrop_community: int
+    padding: list[int]
 
     @classmethod
     async def fetch(
@@ -82,6 +91,9 @@ class CrossMarginAccountManager:
                     dec.accounts,
                 )
             ),
+            referrer=dec.referrer,
+            airdrop_community=dec.airdrop_community,
+            padding=dec.padding,
         )
 
     def to_json(self) -> CrossMarginAccountManagerJSON:
@@ -89,6 +101,9 @@ class CrossMarginAccountManager:
             "nonce": self.nonce,
             "authority": str(self.authority),
             "accounts": list(map(lambda item: item.to_json(), self.accounts)),
+            "referrer": str(self.referrer),
+            "airdrop_community": self.airdrop_community,
+            "padding": self.padding,
         }
 
     @classmethod
@@ -102,4 +117,7 @@ class CrossMarginAccountManager:
                     obj["accounts"],
                 )
             ),
+            referrer=Pubkey.from_string(obj["referrer"]),
+            airdrop_community=obj["airdrop_community"],
+            padding=obj["padding"],
         )

@@ -409,3 +409,5 @@ ZETA_LUT = {
         ],
     ),
 }
+
+MAINTAINER_REFERRAL = Pubkey.from_string("DsuAVWxrAv7b5kVJLLDTxMREdG7pasJWgAF2461dmocR")  # xoxo <3

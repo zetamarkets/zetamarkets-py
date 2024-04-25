@@ -30,6 +30,7 @@ class MarginAccountJSON(typing.TypedDict):
     account_type: types.margin_account_type.MarginAccountTypeJSON
     last_funding_delta: types.anchor_decimal.AnchorDecimalJSON
     delegated_pubkey: str
+    rebate_rebalance_amount: int
     padding: list[int]
 
 
@@ -52,7 +53,8 @@ class MarginAccount:
         "account_type" / types.margin_account_type.layout,
         "last_funding_delta" / types.anchor_decimal.AnchorDecimal.layout,
         "delegated_pubkey" / BorshPubkey,
-        "padding" / borsh.U8[338],
+        "rebate_rebalance_amount" / borsh.U64,
+        "padding" / borsh.U8[330],
     )
     authority: Pubkey
     nonce: int
@@ -69,6 +71,7 @@ class MarginAccount:
     account_type: types.margin_account_type.MarginAccountTypeKind
     last_funding_delta: types.anchor_decimal.AnchorDecimal
     delegated_pubkey: Pubkey
+    rebate_rebalance_amount: int
     padding: list[int]
 
     @classmethod
@@ -138,6 +141,7 @@ class MarginAccount:
             account_type=types.margin_account_type.from_decoded(dec.account_type),
             last_funding_delta=types.anchor_decimal.AnchorDecimal.from_decoded(dec.last_funding_delta),
             delegated_pubkey=dec.delegated_pubkey,
+            rebate_rebalance_amount=dec.rebate_rebalance_amount,
             padding=dec.padding,
         )
 
@@ -158,6 +162,7 @@ class MarginAccount:
             "account_type": self.account_type.to_json(),
             "last_funding_delta": self.last_funding_delta.to_json(),
             "delegated_pubkey": str(self.delegated_pubkey),
+            "rebate_rebalance_amount": self.rebate_rebalance_amount,
             "padding": self.padding,
         }
 
@@ -189,5 +194,6 @@ class MarginAccount:
             account_type=types.margin_account_type.from_json(obj["account_type"]),
             last_funding_delta=types.anchor_decimal.AnchorDecimal.from_json(obj["last_funding_delta"]),
             delegated_pubkey=Pubkey.from_string(obj["delegated_pubkey"]),
+            rebate_rebalance_amount=obj["rebate_rebalance_amount"],
             padding=obj["padding"],
         )

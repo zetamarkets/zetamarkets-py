@@ -29,7 +29,12 @@ class OrderArgs:
 
     @classmethod
     def from_decoded(cls, obj: Container) -> "OrderArgs":
-        return cls(price=obj.price, size=obj.size, client_order_id=obj.client_order_id, tif_offset=obj.tif_offset)
+        return cls(
+            price=obj.price,
+            size=obj.size,
+            client_order_id=obj.client_order_id,
+            tif_offset=obj.tif_offset,
+        )
 
     def to_encodable(self) -> dict[str, typing.Any]:
         return {
@@ -50,5 +55,8 @@ class OrderArgs:
     @classmethod
     def from_json(cls, obj: OrderArgsJSON) -> "OrderArgs":
         return cls(
-            price=obj["price"], size=obj["size"], client_order_id=obj["client_order_id"], tif_offset=obj["tif_offset"]
+            price=obj["price"],
+            size=obj["size"],
+            client_order_id=obj["client_order_id"],
+            tif_offset=obj["tif_offset"],
         )

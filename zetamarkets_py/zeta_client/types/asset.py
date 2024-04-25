@@ -66,6 +66,10 @@ class WIFJSON(typing.TypedDict):
     kind: typing.Literal["WIF"]
 
 
+class WJSON(typing.TypedDict):
+    kind: typing.Literal["W"]
+
+
 class UNDEFINEDJSON(typing.TypedDict):
     kind: typing.Literal["UNDEFINED"]
 
@@ -357,7 +361,24 @@ class UNDEFINED:
         }
 
 
-AssetKind = typing.Union[SOL, BTC, ETH, APT, ARB, BNB, PYTH, TIA, JTO, ONEMBONK, SEI, JUP, DYM, STRK, WIF, UNDEFINED]
+AssetKind = typing.Union[
+    SOL,
+    BTC,
+    ETH,
+    APT,
+    ARB,
+    BNB,
+    PYTH,
+    TIA,
+    JTO,
+    ONEMBONK,
+    SEI,
+    JUP,
+    DYM,
+    STRK,
+    WIF,
+    UNDEFINED,
+]
 AssetJSON = typing.Union[
     SOLJSON,
     BTCJSON,

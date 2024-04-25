@@ -30,6 +30,9 @@ class CrossMarginAccountJSON(typing.TypedDict):
     product_ledgers: list[types.product_ledger.ProductLedgerJSON]
     product_ledgers_padding: list[types.product_ledger.ProductLedgerJSON]
     trigger_order_bits: int
+    rebate_rebalance_amount: int
+    potential_order_loss: list[int]
+    potential_order_loss_padding: list[int]
     padding: list[int]
 
 
@@ -52,7 +55,10 @@ class CrossMarginAccount:
         "product_ledgers" / types.product_ledger.ProductLedger.layout[15],
         "product_ledgers_padding" / types.product_ledger.ProductLedger.layout[10],
         "trigger_order_bits" / borsh.U128,
-        "padding" / borsh.U8[1984],
+        "rebate_rebalance_amount" / borsh.U64,
+        "potential_order_loss" / borsh.U64[15],
+        "potential_order_loss_padding" / borsh.U64[10],
+        "padding" / borsh.U8[1776],
     )
     authority: Pubkey
     delegated_pubkey: Pubkey
@@ -69,6 +75,9 @@ class CrossMarginAccount:
     product_ledgers: list[types.product_ledger.ProductLedger]
     product_ledgers_padding: list[types.product_ledger.ProductLedger]
     trigger_order_bits: int
+    rebate_rebalance_amount: int
+    potential_order_loss: list[int]
+    potential_order_loss_padding: list[int]
     padding: list[int]
 
     @classmethod
@@ -148,6 +157,9 @@ class CrossMarginAccount:
                 )
             ),
             trigger_order_bits=dec.trigger_order_bits,
+            rebate_rebalance_amount=dec.rebate_rebalance_amount,
+            potential_order_loss=dec.potential_order_loss,
+            potential_order_loss_padding=dec.potential_order_loss_padding,
             padding=dec.padding,
         )
 
@@ -168,6 +180,9 @@ class CrossMarginAccount:
             "product_ledgers": list(map(lambda item: item.to_json(), self.product_ledgers)),
             "product_ledgers_padding": list(map(lambda item: item.to_json(), self.product_ledgers_padding)),
             "trigger_order_bits": self.trigger_order_bits,
+            "rebate_rebalance_amount": self.rebate_rebalance_amount,
+            "potential_order_loss": self.potential_order_loss,
+            "potential_order_loss_padding": self.potential_order_loss_padding,
             "padding": self.padding,
         }
 
@@ -209,5 +224,8 @@ class CrossMarginAccount:
                 )
             ),
             trigger_order_bits=obj["trigger_order_bits"],
+            rebate_rebalance_amount=obj["rebate_rebalance_amount"],
+            potential_order_loss=obj["potential_order_loss"],
+            potential_order_loss_padding=obj["potential_order_loss_padding"],
             padding=obj["padding"],
         )
