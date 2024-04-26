@@ -62,10 +62,8 @@ class DYMJSON(typing.TypedDict):
 class STRKJSON(typing.TypedDict):
     kind: typing.Literal["STRK"]
 
-
-class WJSON(typing.TypedDict):
-    kind: typing.Literal["W"]
-
+class WIFJSON(typing.TypedDict):
+    kind: typing.Literal["WIF"]
 
 class UNDEFINEDJSON(typing.TypedDict):
     kind: typing.Literal["UNDEFINED"]
@@ -321,23 +319,22 @@ class STRK:
         return {
             "STRK": {},
         }
-
-
+    
 @dataclass
-class W:
+class WIF:
     discriminator: typing.ClassVar = 14
-    kind: typing.ClassVar = "W"
+    kind: typing.ClassVar = "WIF"
 
     @classmethod
-    def to_json(cls) -> WJSON:
-        return WJSON(
-            kind="W",
+    def to_json(cls) -> WIFJSON:
+        return WIFJSON(
+            kind="WIF",
         )
 
     @classmethod
     def to_encodable(cls) -> dict:
         return {
-            "W": {},
+            "WIF": {},
         }
 
 
@@ -374,7 +371,7 @@ AssetKind = typing.Union[
     JUP,
     DYM,
     STRK,
-    W,
+    WIF,
     UNDEFINED,
 ]
 AssetJSON = typing.Union[
@@ -392,7 +389,7 @@ AssetJSON = typing.Union[
     JUPJSON,
     DYMJSON,
     STRKJSON,
-    WJSON,
+    WIFJSON,
     UNDEFINEDJSON,
 ]
 
@@ -428,8 +425,8 @@ def from_decoded(obj: dict) -> AssetKind:
         return DYM()
     if "STRK" in obj:
         return STRK()
-    if "W" in obj:
-        return W()
+    if "WIF" in obj:
+        return WIF()
     if "UNDEFINED" in obj:
         return UNDEFINED()
     raise ValueError("Invalid enum object")
@@ -464,8 +461,8 @@ def from_json(obj: AssetJSON) -> AssetKind:
         return DYM()
     if obj["kind"] == "STRK":
         return STRK()
-    if obj["kind"] == "W":
-        return W()
+    if obj["kind"] == "WIF":
+        return WIF()
     if obj["kind"] == "UNDEFINED":
         return UNDEFINED()
     kind = obj["kind"]
@@ -487,6 +484,6 @@ layout = EnumForCodegen(
     "JUP" / borsh.CStruct(),
     "DYM" / borsh.CStruct(),
     "STRK" / borsh.CStruct(),
-    "W" / borsh.CStruct(),
+    "WIF" / borsh.CStruct(),
     "UNDEFINED" / borsh.CStruct(),
 )
