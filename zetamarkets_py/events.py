@@ -211,6 +211,7 @@ class TradeEvent:
     sequence_number: int
     fee: float
     pnl: float
+    rebate: float
 
     @classmethod
     def from_event(cls, event: Event):
@@ -229,6 +230,7 @@ class TradeEvent:
             sequence_number=event.data.sequence_number,
             fee=utils.convert_fixed_int_to_decimal(event.data.fee),
             pnl=utils.convert_fixed_int_to_decimal(event.data.pnl),
+            rebate=utils.convert_fixed_int_to_decimal(event.data.rebate),
         )
 
 
