@@ -1467,8 +1467,26 @@ class Client:
         """
         raise NotImplementedError
 
-    async def send_jito_tx(self, tx: VersionedTransaction):
+    async def send_jito_tx(self, tx: VersionedTransaction, blockhash):
         client = await get_async_searcher_client("mainnet.block-engine.jito.wtf", self.provider.wallet.payer)
+
+        # The tx to Jito and to RPC needs to be the same exact tx, so we simply add a 2nd tx for the Jito tip to the bundle
+        # Note: Jito ignores any compute unit budget (prio fee) instructions, so we keep them in there
+        msg = MessageV0.try_compile(
+            self.provider.wallet.public_key,
+            [
+                transfer(
+                    TransferParams(
+                        from_pubkey=self.provider.wallet.public_key,
+                        to_pubkey=Pubkey.from_string("DttWaMuVvTiduZRnguLF7jNxTgiMBZ1hyAumKUiL2KRL"),
+                        lamports=self.jito_tip,
+                    )
+                )
+            ],
+            [constants.ZETA_LUT[self.network]],
+            blockhash,
+        )
+        tx_tip = VersionedTransaction(msg, [self.provider.wallet.payer])
 
         jito_response = await client.SendBundle(
             SendBundleRequest(
@@ -1478,7 +1496,11 @@ class Client:
                         Packet(
                             data=bytes(tx),
                             meta=Meta(size=len(bytes(tx)), addr="0.0.0.0", port=0, flags=None, sender_stake=0),
-                        )
+                        ),
+                        Packet(
+                            data=bytes(tx_tip),
+                            meta=Meta(size=len(bytes(tx_tip)), addr="0.0.0.0", port=0, flags=None, sender_stake=0),
+                        ),
                     ],
                 )
             )
@@ -1512,29 +1534,10 @@ class Client:
             last_valid_block_height = blockhash_resp.value.last_valid_block_height
             self._logger.debug(f"Blockhash cache not enabled, fetched from RPC: {recent_blockhash}")
 
-        if self.double_down_jito:
-            ixs_jito = []
-            for ix in ixs:
-                if "ComputeBudget111111111111111111111111111111" not in ix.__str__():
-                    ixs_jito.append(ix)
-            ixs_jito.append(
-                transfer(
-                    TransferParams(
-                        from_pubkey=self.provider.wallet.public_key,
-                        to_pubkey=Pubkey.from_string("DttWaMuVvTiduZRnguLF7jNxTgiMBZ1hyAumKUiL2KRL"),
-                        lamports=self.jito_tip,
-                    )
-                )
-            )
-            msg_jito = MessageV0.try_compile(
-                self.provider.wallet.public_key, ixs_jito, [constants.ZETA_LUT[self.network]], recent_blockhash
-            )
         msg = MessageV0.try_compile(
             self.provider.wallet.public_key, ixs, [constants.ZETA_LUT[self.network]], recent_blockhash
         )
         tx = VersionedTransaction(msg, [self.provider.wallet.payer])
-        if self.double_down_jito:
-            tx_jito = VersionedTransaction(msg_jito, [self.provider.wallet.payer])
 
         try:
             opts = self.provider.opts._replace(last_valid_block_height=last_valid_block_height)
@@ -1543,7 +1546,7 @@ class Client:
                 for provider in self.double_down_providers:
                     tasks.append(provider.send(tx, opts))
                 if self.double_down_jito:
-                    tasks.append(self.send_jito_tx(tx_jito))
+                    tasks.append(self.send_jito_tx(tx, recent_blockhash))
                 signature = await asyncio.gather(*tasks)
             else:
                 signature = [await self.provider.send(tx, opts)]
