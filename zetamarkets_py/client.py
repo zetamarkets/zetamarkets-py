@@ -1488,24 +1488,28 @@ class Client:
         )
         tx_tip = VersionedTransaction(msg, [self.provider.wallet.payer])
 
-        jito_response = await client.SendBundle(
-            SendBundleRequest(
-                bundle=Bundle(
-                    header=None,
-                    packets=[
-                        Packet(
-                            data=bytes(tx),
-                            meta=Meta(size=len(bytes(tx)), addr="0.0.0.0", port=0, flags=None, sender_stake=0),
-                        ),
-                        Packet(
-                            data=bytes(tx_tip),
-                            meta=Meta(size=len(bytes(tx_tip)), addr="0.0.0.0", port=0, flags=None, sender_stake=0),
-                        ),
-                    ],
+        try:
+            jito_response = await client.SendBundle(
+                SendBundleRequest(
+                    bundle=Bundle(
+                        header=None,
+                        packets=[
+                            Packet(
+                                data=bytes(tx),
+                                meta=Meta(size=len(bytes(tx)), addr="0.0.0.0", port=0, flags=None, sender_stake=0),
+                            ),
+                            Packet(
+                                data=bytes(tx_tip),
+                                meta=Meta(size=len(bytes(tx_tip)), addr="0.0.0.0", port=0, flags=None, sender_stake=0),
+                            ),
+                        ],
+                    )
                 )
             )
-        )
-        self._logger.debug(f"Jito response: {jito_response}")
+            print("sent jito")
+            self._logger.debug(f"Jito response: {jito_response}")
+        except Exception as e:
+            print(f"Jito error: {e}")
 
     async def _send_versioned_transaction(self, ixs: list[Instruction]):
         """
@@ -1543,10 +1547,10 @@ class Client:
             opts = self.provider.opts._replace(last_valid_block_height=last_valid_block_height)
             if len(self.double_down_providers) > 0:
                 tasks = []
-                for provider in self.double_down_providers:
-                    tasks.append(provider.send(tx, opts))
                 if self.double_down_jito:
                     tasks.append(self.send_jito_tx(tx, recent_blockhash))
+                for provider in self.double_down_providers:
+                    tasks.append(provider.send(tx, opts))
                 signature = await asyncio.gather(*tasks)
             else:
                 signature = [await self.provider.send(tx, opts)]
