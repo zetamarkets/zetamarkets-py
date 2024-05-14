@@ -65,6 +65,9 @@ class STRKJSON(typing.TypedDict):
 class WIFJSON(typing.TypedDict):
     kind: typing.Literal["WIF"]
 
+class RNDRJSON(typing.TypedDict):
+    kind: typing.Literal["RNDR"]
+
 class UNDEFINEDJSON(typing.TypedDict):
     kind: typing.Literal["UNDEFINED"]
 
@@ -336,11 +339,28 @@ class WIF:
         return {
             "WIF": {},
         }
+    
+@dataclass
+class RNDR:
+    discriminator: typing.ClassVar = 15
+    kind: typing.ClassVar = "RNDR"
+
+    @classmethod
+    def to_json(cls) -> RNDRJSON:
+        return RNDRJSON(
+            kind="RNDR",
+        )
+
+    @classmethod
+    def to_encodable(cls) -> dict:
+        return {
+            "RNDR": {},
+        }
 
 
 @dataclass
 class UNDEFINED:
-    discriminator: typing.ClassVar = 15
+    discriminator: typing.ClassVar = 16
     kind: typing.ClassVar = "UNDEFINED"
 
     @classmethod
@@ -372,6 +392,7 @@ AssetKind = typing.Union[
     DYM,
     STRK,
     WIF,
+    RNDR,
     UNDEFINED,
 ]
 AssetJSON = typing.Union[
@@ -390,6 +411,7 @@ AssetJSON = typing.Union[
     DYMJSON,
     STRKJSON,
     WIFJSON,
+    RNDRJSON,
     UNDEFINEDJSON,
 ]
 
@@ -427,6 +449,8 @@ def from_decoded(obj: dict) -> AssetKind:
         return STRK()
     if "WIF" in obj:
         return WIF()
+    if "RNDR" in obj:
+        return RNDR()
     if "UNDEFINED" in obj:
         return UNDEFINED()
     raise ValueError("Invalid enum object")
@@ -463,6 +487,8 @@ def from_json(obj: AssetJSON) -> AssetKind:
         return STRK()
     if obj["kind"] == "WIF":
         return WIF()
+    if obj["kind"] == "RNDR":
+        return RNDR()
     if obj["kind"] == "UNDEFINED":
         return UNDEFINED()
     kind = obj["kind"]
@@ -485,5 +511,6 @@ layout = EnumForCodegen(
     "DYM" / borsh.CStruct(),
     "STRK" / borsh.CStruct(),
     "WIF" / borsh.CStruct(),
+    "RNDR" / borsh.CStruct(),
     "UNDEFINED" / borsh.CStruct(),
 )

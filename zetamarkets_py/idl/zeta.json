@@ -1599,6 +1599,132 @@
       ]
     },
     {
+      "name": "initializeMarketPda",
+      "accounts": [
+        {
+          "name": "state",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "marketIndexes",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "pricing",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "admin",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "market",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "asset",
+          "type": {
+            "defined": "Asset"
+          }
+        }
+      ]
+    },
+    {
+      "name": "initializeZetaSpecificMarketVaults",
+      "accounts": [
+        {
+          "name": "state",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "marketIndexes",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "pricing",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "admin",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "market",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "baseMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "quoteMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "zetaBaseVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "zetaQuoteVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "serumAuthority",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "asset",
+          "type": {
+            "defined": "Asset"
+          }
+        }
+      ]
+    },
+    {
       "name": "initializeZetaMarket",
       "accounts": [
         {
@@ -1653,16 +1779,6 @@
         },
         {
           "name": "quoteMint",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "zetaBaseVault",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "zetaQuoteVault",
           "isMut": true,
           "isSigner": false
         },
@@ -6327,7 +6443,9 @@
     },
     {
       "name": "crankEventQueue",
-      "docs": ["The only events that need to be cranked are maker fills."],
+      "docs": [
+        "The only events that need to be cranked are maker fills."
+      ],
       "accounts": [
         {
           "name": "state",
@@ -6957,25 +7075,37 @@
           {
             "name": "markPrices",
             "type": {
-              "array": ["u64", 15]
+              "array": [
+                "u64",
+                16
+              ]
             }
           },
           {
             "name": "markPricesPadding",
             "type": {
-              "array": ["u64", 10]
+              "array": [
+                "u64",
+                9
+              ]
             }
           },
           {
             "name": "updateTimestamps",
             "type": {
-              "array": ["u64", 15]
+              "array": [
+                "u64",
+                16
+              ]
             }
           },
           {
             "name": "updateTimestampsPadding",
             "type": {
-              "array": ["u64", 10]
+              "array": [
+                "u64",
+                9
+              ]
             }
           },
           {
@@ -6985,7 +7115,7 @@
                 {
                   "defined": "AnchorDecimal"
                 },
-                15
+                16
               ]
             }
           },
@@ -6996,7 +7126,7 @@
                 {
                   "defined": "AnchorDecimal"
                 },
-                10
+                9
               ]
             }
           },
@@ -7007,7 +7137,7 @@
                 {
                   "defined": "AnchorDecimal"
                 },
-                15
+                16
               ]
             }
           },
@@ -7018,68 +7148,98 @@
                 {
                   "defined": "AnchorDecimal"
                 },
-                10
+                9
               ]
             }
           },
           {
             "name": "latestMidpoints",
             "type": {
-              "array": ["u64", 15]
+              "array": [
+                "u64",
+                16
+              ]
             }
           },
           {
             "name": "latestMidpointsPadding",
             "type": {
-              "array": ["u64", 10]
+              "array": [
+                "u64",
+                9
+              ]
             }
           },
           {
             "name": "oracles",
             "type": {
-              "array": ["publicKey", 15]
+              "array": [
+                "publicKey",
+                16
+              ]
             }
           },
           {
             "name": "oraclesPadding",
             "type": {
-              "array": ["publicKey", 10]
+              "array": [
+                "publicKey",
+                9
+              ]
             }
           },
           {
             "name": "oracleBackupFeeds",
             "type": {
-              "array": ["publicKey", 15]
+              "array": [
+                "publicKey",
+                16
+              ]
             }
           },
           {
             "name": "oracleBackupFeedsPadding",
             "type": {
-              "array": ["publicKey", 10]
+              "array": [
+                "publicKey",
+                9
+              ]
             }
           },
           {
             "name": "markets",
             "type": {
-              "array": ["publicKey", 15]
+              "array": [
+                "publicKey",
+                16
+              ]
             }
           },
           {
             "name": "marketsPadding",
             "type": {
-              "array": ["publicKey", 10]
+              "array": [
+                "publicKey",
+                9
+              ]
             }
           },
           {
             "name": "perpSyncQueues",
             "type": {
-              "array": ["publicKey", 15]
+              "array": [
+                "publicKey",
+                16
+              ]
             }
           },
           {
             "name": "perpSyncQueuesPadding",
             "type": {
-              "array": ["publicKey", 10]
+              "array": [
+                "publicKey",
+                9
+              ]
             }
           },
           {
@@ -7089,7 +7249,7 @@
                 {
                   "defined": "PerpParameters"
                 },
-                15
+                16
               ]
             }
           },
@@ -7100,7 +7260,7 @@
                 {
                   "defined": "PerpParameters"
                 },
-                10
+                9
               ]
             }
           },
@@ -7111,7 +7271,7 @@
                 {
                   "defined": "MarginParameters"
                 },
-                15
+                16
               ]
             }
           },
@@ -7122,7 +7282,7 @@
                 {
                   "defined": "MarginParameters"
                 },
-                10
+                9
               ]
             }
           },
@@ -7133,7 +7293,7 @@
                 {
                   "defined": "Product"
                 },
-                15
+                16
               ]
             }
           },
@@ -7144,20 +7304,26 @@
                 {
                   "defined": "Product"
                 },
-                10
+                9
               ]
             }
           },
           {
             "name": "zetaGroupKeys",
             "type": {
-              "array": ["publicKey", 15]
+              "array": [
+                "publicKey",
+                16
+              ]
             }
           },
           {
             "name": "zetaGroupKeysPadding",
             "type": {
-              "array": ["publicKey", 10]
+              "array": [
+                "publicKey",
+                9
+              ]
             }
           },
           {
@@ -7175,19 +7341,28 @@
           {
             "name": "haltForcePricing",
             "type": {
-              "array": ["bool", 15]
+              "array": [
+                "bool",
+                16
+              ]
             }
           },
           {
             "name": "haltForcePricingPadding",
             "type": {
-              "array": ["bool", 10]
+              "array": [
+                "bool",
+                9
+              ]
             }
           },
           {
             "name": "padding",
             "type": {
-              "array": ["u8", 2707]
+              "array": [
+                "u8",
+                2707
+              ]
             }
           }
         ]
@@ -7205,13 +7380,19 @@
           {
             "name": "markPrices",
             "type": {
-              "array": ["u64", 46]
+              "array": [
+                "u64",
+                46
+              ]
             }
           },
           {
             "name": "markPricesPadding",
             "type": {
-              "array": ["u64", 91]
+              "array": [
+                "u64",
+                91
+              ]
             }
           },
           {
@@ -7243,67 +7424,100 @@
           {
             "name": "updateTimestamp",
             "type": {
-              "array": ["u64", 2]
+              "array": [
+                "u64",
+                2
+              ]
             }
           },
           {
             "name": "updateTimestampPadding",
             "type": {
-              "array": ["u64", 4]
+              "array": [
+                "u64",
+                4
+              ]
             }
           },
           {
             "name": "retreatExpirationTimestamp",
             "type": {
-              "array": ["u64", 2]
+              "array": [
+                "u64",
+                2
+              ]
             }
           },
           {
             "name": "retreatExpirationTimestampPadding",
             "type": {
-              "array": ["u64", 4]
+              "array": [
+                "u64",
+                4
+              ]
             }
           },
           {
             "name": "interestRate",
             "type": {
-              "array": ["i64", 2]
+              "array": [
+                "i64",
+                2
+              ]
             }
           },
           {
             "name": "interestRatePadding",
             "type": {
-              "array": ["i64", 4]
+              "array": [
+                "i64",
+                4
+              ]
             }
           },
           {
             "name": "nodes",
             "type": {
-              "array": ["u64", 5]
+              "array": [
+                "u64",
+                5
+              ]
             }
           },
           {
             "name": "volatility",
             "type": {
-              "array": ["u64", 10]
+              "array": [
+                "u64",
+                10
+              ]
             }
           },
           {
             "name": "volatilityPadding",
             "type": {
-              "array": ["u64", 20]
+              "array": [
+                "u64",
+                20
+              ]
             }
           },
           {
             "name": "nodeKeys",
             "type": {
-              "array": ["publicKey", 138]
+              "array": [
+                "publicKey",
+                138
+              ]
             }
           },
           {
             "name": "haltForcePricing",
             "type": {
-              "array": ["bool", 6]
+              "array": [
+                "bool",
+                6
+              ]
             }
           },
           {
@@ -7329,7 +7543,10 @@
           {
             "name": "padding",
             "type": {
-              "array": ["u8", 1593]
+              "array": [
+                "u8",
+                1593
+              ]
             }
           }
         ]
@@ -7351,7 +7568,10 @@
           {
             "name": "indexes",
             "type": {
-              "array": ["u8", 138]
+              "array": [
+                "u8",
+                138
+              ]
             }
           }
         ]
@@ -7417,7 +7637,10 @@
           {
             "name": "null",
             "type": {
-              "array": ["u8", 7]
+              "array": [
+                "u8",
+                7
+              ]
             }
           },
           {
@@ -7439,7 +7662,10 @@
           {
             "name": "deprecatedFeeValues",
             "type": {
-              "array": ["u64", 3]
+              "array": [
+                "u64",
+                3
+              ]
             }
           },
           {
@@ -7465,7 +7691,10 @@
           {
             "name": "deprecatedOptionFeeValues",
             "type": {
-              "array": ["u64", 2]
+              "array": [
+                "u64",
+                2
+              ]
             }
           },
           {
@@ -7515,7 +7744,7 @@
                 {
                   "defined": "HaltStateV2"
                 },
-                15
+                16
               ]
             }
           },
@@ -7526,7 +7755,7 @@
                 {
                   "defined": "HaltStateV2"
                 },
-                10
+                9
               ]
             }
           },
@@ -7537,25 +7766,37 @@
           {
             "name": "minLotSizes",
             "type": {
-              "array": ["u32", 15]
+              "array": [
+                "u32",
+                16
+              ]
             }
           },
           {
             "name": "minLotSizesPadding",
             "type": {
-              "array": ["u32", 10]
+              "array": [
+                "u32",
+                9
+              ]
             }
           },
           {
             "name": "tickSizes",
             "type": {
-              "array": ["u32", 15]
+              "array": [
+                "u32",
+                16
+              ]
             }
           },
           {
             "name": "tickSizesPadding",
             "type": {
-              "array": ["u32", 10]
+              "array": [
+                "u32",
+                9
+              ]
             }
           },
           {
@@ -7581,7 +7822,10 @@
           {
             "name": "padding",
             "type": {
-              "array": ["u8", 18]
+              "array": [
+                "u8",
+                18
+              ]
             }
           }
         ]
@@ -7611,7 +7855,10 @@
           {
             "name": "strikes",
             "type": {
-              "array": ["u64", 23]
+              "array": [
+                "u64",
+                23
+              ]
             }
           }
         ]
@@ -7660,7 +7907,10 @@
           {
             "name": "noncePadding",
             "type": {
-              "array": ["u8", 2]
+              "array": [
+                "u8",
+                2
+              ]
             }
           },
           {
@@ -7700,7 +7950,10 @@
           {
             "name": "marginParametersPadding",
             "type": {
-              "array": ["u8", 104]
+              "array": [
+                "u8",
+                104
+              ]
             }
           },
           {
@@ -7756,7 +8009,10 @@
           {
             "name": "deprecatedPadding",
             "type": {
-              "array": ["u8", 8]
+              "array": [
+                "u8",
+                8
+              ]
             }
           },
           {
@@ -7798,7 +8054,10 @@
           {
             "name": "padding",
             "type": {
-              "array": ["u8", 964]
+              "array": [
+                "u8",
+                964
+              ]
             }
           }
         ]
@@ -7820,7 +8079,10 @@
           {
             "name": "nodeUpdates",
             "type": {
-              "array": ["i64", 5]
+              "array": [
+                "i64",
+                5
+              ]
             }
           },
           {
@@ -7850,7 +8112,10 @@
           {
             "name": "seriesExpiry",
             "type": {
-              "array": ["u64", 5]
+              "array": [
+                "u64",
+                5
+              ]
             }
           },
           {
@@ -7888,7 +8153,10 @@
           {
             "name": "padding",
             "type": {
-              "array": ["u8", 262]
+              "array": [
+                "u8",
+                262
+              ]
             }
           }
         ]
@@ -7929,7 +8197,10 @@
           {
             "name": "padding",
             "type": {
-              "array": ["u8", 22]
+              "array": [
+                "u8",
+                22
+              ]
             }
           }
         ]
@@ -7973,13 +8244,19 @@
           {
             "name": "openOrdersNonces",
             "type": {
-              "array": ["u8", 15]
+              "array": [
+                "u8",
+                16
+              ]
             }
           },
           {
             "name": "openOrdersNoncesPadding",
             "type": {
-              "array": ["u8", 10]
+              "array": [
+                "u8",
+                9
+              ]
             }
           },
           {
@@ -7993,7 +8270,7 @@
                 {
                   "defined": "AnchorDecimal"
                 },
-                15
+                16
               ]
             }
           },
@@ -8004,7 +8281,7 @@
                 {
                   "defined": "AnchorDecimal"
                 },
-                10
+                9
               ]
             }
           },
@@ -8015,7 +8292,7 @@
                 {
                   "defined": "ProductLedger"
                 },
-                15
+                16
               ]
             }
           },
@@ -8026,7 +8303,7 @@
                 {
                   "defined": "ProductLedger"
                 },
-                10
+                9
               ]
             }
           },
@@ -8041,19 +8318,28 @@
           {
             "name": "potentialOrderLoss",
             "type": {
-              "array": ["u64", 15]
+              "array": [
+                "u64",
+                16
+              ]
             }
           },
           {
             "name": "potentialOrderLossPadding",
             "type": {
-              "array": ["u64", 10]
+              "array": [
+                "u64",
+                9
+              ]
             }
           },
           {
             "name": "padding",
             "type": {
-              "array": ["u8", 1776]
+              "array": [
+                "u8",
+                1776
+              ]
             }
           }
         ]
@@ -8083,13 +8369,19 @@
           {
             "name": "openOrdersNonce",
             "type": {
-              "array": ["u8", 138]
+              "array": [
+                "u8",
+                138
+              ]
             }
           },
           {
             "name": "seriesExpiry",
             "type": {
-              "array": ["u64", 5]
+              "array": [
+                "u64",
+                5
+              ]
             }
           },
           {
@@ -8157,7 +8449,10 @@
           {
             "name": "padding",
             "type": {
-              "array": ["u8", 330]
+              "array": [
+                "u8",
+                330
+              ]
             }
           }
         ]
@@ -8329,7 +8624,10 @@
           {
             "name": "referrerId",
             "type": {
-              "array": ["u8", 6]
+              "array": [
+                "u8",
+                6
+              ]
             }
           },
           {
@@ -8347,7 +8645,10 @@
           {
             "name": "referrerId",
             "type": {
-              "array": ["u8", 6]
+              "array": [
+                "u8",
+                6
+              ]
             }
           }
         ]
@@ -8447,13 +8748,19 @@
           {
             "name": "markPricesSet",
             "type": {
-              "array": ["bool", 2]
+              "array": [
+                "bool",
+                2
+              ]
             }
           },
           {
             "name": "markPricesSetPadding",
             "type": {
-              "array": ["bool", 3]
+              "array": [
+                "bool",
+                3
+              ]
             }
           },
           {
@@ -8463,25 +8770,37 @@
           {
             "name": "marketNodesCleaned",
             "type": {
-              "array": ["bool", 2]
+              "array": [
+                "bool",
+                2
+              ]
             }
           },
           {
             "name": "marketNodesCleanedPadding",
             "type": {
-              "array": ["bool", 4]
+              "array": [
+                "bool",
+                4
+              ]
             }
           },
           {
             "name": "marketCleaned",
             "type": {
-              "array": ["bool", 46]
+              "array": [
+                "bool",
+                46
+              ]
             }
           },
           {
             "name": "marketCleanedPadding",
             "type": {
-              "array": ["bool", 91]
+              "array": [
+                "bool",
+                91
+              ]
             }
           },
           {
@@ -8603,7 +8922,10 @@
           {
             "name": "padding",
             "type": {
-              "array": ["u8", 15]
+              "array": [
+                "u8",
+                15
+              ]
             }
           }
         ]
@@ -8681,7 +9003,10 @@
           {
             "name": "openingOrders",
             "type": {
-              "array": ["u64", 2]
+              "array": [
+                "u64",
+                2
+              ]
             }
           }
         ]
@@ -8719,7 +9044,10 @@
           {
             "name": "name",
             "type": {
-              "array": ["u8", 10]
+              "array": [
+                "u8",
+                10
+              ]
             }
           }
         ]
@@ -8783,7 +9111,10 @@
           {
             "name": "spotPrices",
             "type": {
-              "array": ["u64", 15]
+              "array": [
+                "u64",
+                16
+              ]
             }
           },
           {
@@ -8805,7 +9136,10 @@
           {
             "name": "volatility",
             "type": {
-              "array": ["u64", 5]
+              "array": [
+                "u64",
+                5
+              ]
             }
           }
         ]
@@ -8853,34 +9187,6 @@
             "type": {
               "defined": "Asset"
             }
-          },
-          {
-            "name": "marketNonce",
-            "type": "u8"
-          },
-          {
-            "name": "baseMintNonce",
-            "type": "u8"
-          },
-          {
-            "name": "quoteMintNonce",
-            "type": "u8"
-          },
-          {
-            "name": "zetaBaseVaultNonce",
-            "type": "u8"
-          },
-          {
-            "name": "zetaQuoteVaultNonce",
-            "type": "u8"
-          },
-          {
-            "name": "dexBaseVaultNonce",
-            "type": "u8"
-          },
-          {
-            "name": "dexQuoteVaultNonce",
-            "type": "u8"
           },
           {
             "name": "vaultSignerNonce",
@@ -9189,7 +9495,10 @@
           {
             "name": "volatility",
             "type": {
-              "array": ["u64", 5]
+              "array": [
+                "u64",
+                5
+              ]
             }
           },
           {
@@ -9336,10 +9645,6 @@
           },
           {
             "name": "oracle",
-            "type": "publicKey"
-          },
-          {
-            "name": "oracleBackupFeed",
             "type": "publicKey"
           },
           {
@@ -9544,6 +9849,9 @@
           },
           {
             "name": "WIF"
+          },
+          {
+            "name": "RNDR"
           },
           {
             "name": "UNDEFINED"
