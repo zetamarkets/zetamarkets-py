@@ -16,7 +16,8 @@ from anchorpy import Event, Provider, Wallet
 from anchorpy.provider import DEFAULT_OPTIONS
 from construct import Container
 from jsonrpcclient import request
-from solana.blockhash import BlockhashCache
+
+from zetamarkets_py.blockhash_cache import BlockhashCache
 from solana.rpc.async_api import AsyncClient
 from solana.rpc.commitment import Commitment, Confirmed
 from solana.rpc.core import RPCException
@@ -27,7 +28,9 @@ from solders.instruction import Instruction
 from solders.message import MessageV0
 from solders.pubkey import Pubkey
 from solders.rpc.config import RpcTransactionLogsFilterMentions
-from solders.transaction import VersionedTransaction
+from solders.transaction import VersionedTransaction, Transaction
+from solders.signature import Signature
+from solders.rpc.responses import SendTransactionResp
 
 from zetamarkets_py import constants, pda, utils
 from zetamarkets_py.events import (
@@ -200,6 +203,8 @@ class Client:
             wallet,
             tx_opts,
         )
+        if blockhash_cache is True:
+            blockhash_cache = BlockhashCache()
         double_down_providers = []
         if double_down_endpoints:
             for endpoint in double_down_endpoints:
@@ -1456,6 +1461,85 @@ class Client:
             NotImplementedError: This method is not implemented yet.
         """
         raise NotImplementedError
+    
+    @staticmethod
+    async def _post_send_with_confirm(
+        connection: AsyncClient,
+        resp: SendTransactionResp,
+        conf_comm: Commitment,
+        last_valid_block_height: Optional[int],
+    ) -> SendTransactionResp:
+        resp = connection._post_send(resp)
+        sig = resp.value
+        connection._provider.logger.info("Transaction sent to %s. Signature %s: ", connection._provider.endpoint_uri, sig)
+        await connection.confirm_transaction(sig, conf_comm, last_valid_block_height=last_valid_block_height)
+        return resp
+
+    @staticmethod
+    async def send_raw_transaction_retry_loop(
+        connection: AsyncClient,
+        txn: bytes,
+        opts: Optional[TxOpts] = None,
+        max_retries: int = 0,
+        sleep_seconds: int = 2,
+    ) -> SendTransactionResp:
+        opts_to_use = opts or TxOpts(preflight_commitment=connection._commitment)
+        opts_to_use = opts_to_use._replace(max_retries=0)  # Disable RPC retries
+        body = connection._send_raw_transaction_body(txn, opts_to_use)
+        resp = None
+        for _ in range(max_retries):
+            resp = await connection._provider.make_request(body, SendTransactionResp)
+            await asyncio.sleep(sleep_seconds)
+        return resp
+
+    async def send_raw_transaction_with_retry(
+        self,
+        connection: AsyncClient,
+        txn: bytes,
+        opts: Optional[TxOpts] = None,
+        max_retries: int = 0,
+        sleep_seconds: int = 2,
+    ) -> SendTransactionResp:
+        opts_to_use = opts or TxOpts(preflight_commitment=connection._commitment)
+        opts_to_use = opts_to_use._replace(max_retries=0)  # Disable RPC retries
+        body = connection._send_raw_transaction_body(txn, opts_to_use)
+
+        resp = await connection._provider.make_request(body, SendTransactionResp)
+        if opts_to_use.skip_confirmation:
+            return connection._post_send(resp)
+
+        post_send_args = connection._send_raw_transaction_post_send_args(resp, opts_to_use)
+        confirmation_coro = self._post_send_with_confirm(connection, *post_send_args)
+        retry_coro = self.send_raw_transaction_retry_loop(connection, txn, opts, max_retries, sleep_seconds)
+        retry_task = asyncio.create_task(retry_coro)  # Run retry_coro in the background
+        result = await confirmation_coro  # Wait only for the confirmation coroutine and return its result
+        retry_task.cancel()  # Cancel the retry task if confirmation_coro completes
+        return result
+
+    async def send_with_retry(
+        self,
+        provider: Provider,
+        tx: Union[Transaction, VersionedTransaction],
+        opts: Optional[TxOpts] = None,
+        max_retries: int = 0,
+        sleep_seconds: int = 2,
+    ) -> Signature:
+        """Send the given transaction, paid for and signed by the provider's wallet.
+
+        Args:
+            tx: The transaction to send.
+            signers: The set of signers in addition to the provider wallet that will
+                sign the transaction.
+            opts: Transaction confirmation options.
+
+        Returns:
+            The transaction signature from the RPC server.
+        """
+        if opts is None:
+            opts = provider.opts
+        raw = tx.serialize() if isinstance(tx, Transaction) else bytes(tx)
+        resp = await self.send_raw_transaction_with_retry(provider.connection, raw, opts=opts)
+        return resp.value
 
     async def _send_versioned_transaction(self, ixs: list[Instruction]):
         """
@@ -1470,8 +1554,7 @@ class Client:
         # Prefetch blockhash, using cache if available
         if self.connection.blockhash_cache:
             try:
-                recent_blockhash = self.connection.blockhash_cache.get()
-                last_valid_block_height = None
+                recent_blockhash, last_valid_block_height = self.connection.blockhash_cache.get()
                 self._logger.debug(f"Blockhash cache hit, using cached blockhash: {recent_blockhash}")
             except ValueError:
                 blockhash_resp = await self.connection.get_latest_blockhash(self.connection.commitment)
@@ -1491,13 +1574,16 @@ class Client:
 
         try:
             opts = self.provider.opts._replace(last_valid_block_height=last_valid_block_height)
-            if len(self.double_down_providers) > 0:
-                tasks = []
-                for provider in self.double_down_providers:
-                    tasks.append(provider.send(tx, opts))
-                signature = await asyncio.gather(*tasks)
+            send_coros = []
+            for provider in [self.provider] + self.double_down_providers:
+                # send_coro = provider.send(tx, opts) # original send tx
+                send_coro = self.send_with_retry(provider, tx, opts, max_retries=1, sleep_seconds=2) # custom send tx with retries
+                send_coros.append(send_coro)
+            done, pending = await asyncio.wait(send_coros, return_when=asyncio.FIRST_COMPLETED)
+            if len(done) > 0:
+                signature = done.pop().result()
             else:
-                signature = [await self.provider.send(tx, opts)]
+                raise Exception("No providers could send the transaction")
         except RPCException as exc:
             # This won't work on zDEX errors
             # TODO: add ZDEX error parsing

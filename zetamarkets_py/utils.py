@@ -147,7 +147,7 @@ def create_logger(name: str, log_level: int = logging.CRITICAL, file_name: Optio
     """
     logger = logging.getLogger(name)
     logger.setLevel(log_level)
-    formatter = colorlog.ColoredFormatter("%(log_color)s%(levelname)s:%(name)s:%(message)s")
+    formatter = colorlog.ColoredFormatter("[%(asctime)s] %(log_color)s%(levelname)s:%(name)s:%(message)s")
 
     # Create console handler and set level to same as the logger
     ch = logging.StreamHandler()
