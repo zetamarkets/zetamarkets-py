@@ -203,10 +203,10 @@ class Client:
         double_down_providers = []
         if double_down_endpoints:
             for endpoint in double_down_endpoints:
-                connection = AsyncClient(endpoint=endpoint, commitment=commitment, blockhash_cache=blockhash_cache)
+                double_down_conn = AsyncClient(endpoint=endpoint, commitment=commitment, blockhash_cache=blockhash_cache)
                 double_down_providers.append(
                     Provider(
-                        connection,
+                        double_down_conn,
                         wallet,
                         tx_opts,
                     )
