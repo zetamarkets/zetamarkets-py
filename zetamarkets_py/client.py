@@ -16,7 +16,6 @@ from anchorpy import Event, Provider, Wallet
 from anchorpy.provider import DEFAULT_OPTIONS
 from construct import Container
 from jsonrpcclient import request
-from solana.blockhash import BlockhashCache
 from solana.rpc.async_api import AsyncClient
 from solana.rpc.commitment import Commitment, Confirmed
 from solana.rpc.core import RPCException
@@ -115,6 +114,8 @@ class Client:
     """The websocket RPC endpoint."""
     exchange: Exchange
     """The Zeta Exchange object."""
+    blockhash_cache: Optional[utils.BlockhashCache]
+    """The blockhash cache, used when sending transactions"""
 
     margin_account: Optional[CrossMarginAccount]
     """The margin account of the Zeta program."""
@@ -144,7 +145,7 @@ class Client:
         tx_opts: TxOpts = DEFAULT_OPTIONS,
         network: Network = Network.MAINNET,
         log_level: int = logging.WARNING,
-        blockhash_cache: Union[BlockhashCache, bool] = False,
+        blockhash_cache: Union[utils.BlockhashCache, bool] = None,
         delegator_pubkey: Optional[Pubkey] = None,
     ):
         """
@@ -173,7 +174,7 @@ class Client:
             endpoint = utils.cluster_endpoint(network)
         if ws_endpoint is None:
             ws_endpoint = utils.http_to_ws(endpoint)
-        connection = AsyncClient(endpoint=endpoint, commitment=commitment, blockhash_cache=blockhash_cache)
+        connection = AsyncClient(endpoint=endpoint, commitment=commitment)
         exchange = await Exchange.load(
             network=network,
             connection=connection,
@@ -213,7 +214,7 @@ class Client:
         double_down_providers = []
         if double_down_endpoints:
             for endpoint in double_down_endpoints:
-                double_down_conn = AsyncClient(endpoint=endpoint, commitment=commitment, blockhash_cache=blockhash_cache)
+                double_down_conn = AsyncClient(endpoint=endpoint, commitment=commitment)
                 double_down_providers.append(
                     Provider(
                         double_down_conn,
@@ -234,6 +235,7 @@ class Client:
             endpoint,
             ws_endpoint,
             exchange,
+            blockhash_cache,
             margin_account,
             _margin_account_address,
             _open_orders_addresses,
@@ -1506,7 +1508,6 @@ class Client:
                     )
                 )
             )
-            print("sent jito")
             self._logger.debug(f"Jito response: {jito_response}")
         except Exception as e:
             print(f"Jito error: {e}")
@@ -1522,9 +1523,9 @@ class Client:
             str: The signature(s) of the transaction(s).
         """
         # Prefetch blockhash, using cache if available
-        if self.connection.blockhash_cache:
+        if self.blockhash_cache:
             try:
-                recent_blockhash = self.connection.blockhash_cache.get()
+                recent_blockhash = self.blockhash_cache.get()
                 last_valid_block_height = None
                 self._logger.debug(f"Blockhash cache hit, using cached blockhash: {recent_blockhash}")
             except ValueError:

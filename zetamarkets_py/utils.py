@@ -1,6 +1,7 @@
 import json
 import logging
 import re
+import collections
 from statistics import median
 from typing import List, Optional
 
@@ -11,6 +12,8 @@ from solana.utils.cluster import cluster_api_url
 from zetamarkets_py import constants
 from zetamarkets_py.types import Asset, Network
 from zetamarkets_py.zeta_client.accounts.state import State
+
+from solders.hash import Hash
 
 
 def get_fixed_min_lot_size(state: State, asset: Asset) -> int:
@@ -189,3 +192,54 @@ def get_recent_prio_fees(url: str, accounts: List[str], lookback_slots: int = 20
 
     fees = [value["prioritizationFee"] for value in response_sorted]
     return int(max(fees) if use_max is True else median(fees))
+
+
+class BlockhashCache:
+    """
+    A recent blockhash cache that expires after a given number of seconds.
+    We grab the oldest cached blockhash in get(), without popping it
+
+    Args:
+        ttl: Slots until cached blockhash expires.
+    """
+
+    def __init__(self, ttl: int = 60) -> None:
+        """Instantiate the cache (you only need to do this once)."""
+        self.ttl_slots = 60
+        self.blockhashes = collections.deque(maxlen=ttl * 10)
+
+    def set(self, blockhash: Hash, slot: int, used_immediately: bool = False) -> None:
+        """
+        Update the cache.
+
+        Args:
+            blockhash: new blockhash value.
+            slot: the slot which the blockhash came from.
+            (unused) used_immediately: unused param, exists in the solana BlockhashCache and just guarantees syntax compatibility
+
+        """
+        self.blockhashes.append({"slot": slot, "blockhash": blockhash})
+
+        # Keep only N slots of blockhashes
+        pops = 0
+        for item in self.blockhashes:
+            if item["slot"] < slot - self.ttl_slots:
+                pops += 1
+            else:
+                break
+
+        for i in range(pops):
+            self.blockhashes.popleft()
+
+    def get(self) -> Hash:
+        """
+        Get the oldest cached blockhash without popping
+
+        Returns:
+            cached blockhash.
+
+        """
+        if len(self.blockhashes) > 0:
+            return self.blockhashes[0]["blockhash"]
+        else:
+            raise ValueError
