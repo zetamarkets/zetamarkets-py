@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "zetamarkets_py"
-version = "0.2.54"
+version = "0.2.55"
 description = "Python SDK for Zeta Markets"
 license = "apache-2.0"
 authors = ["Tristan0x <tristan@sierra.team>"]
@@ -11,13 +11,14 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.9"
-solana = "^0.30.2"
-solders = "^0.18.1"
-anchorpy = "^0.18.0"
+python = ">=3.10,<3.13"
+solana = "^0.34.0"
+solders = "^0.21.0"
+anchorpy = "^0.20.1"
 colorlog = "^6.7.0"
 deprecated = "^1.2.14"
 jsonrpcclient = "^4.0.3"
+jito_searcher_client = "^0.1.4"
 
 [tool.poetry.group.dev]
 optional = true
@@ -28,7 +29,7 @@ ruff = "^0.0.284"
 isort = "^5.12.0"
 black = "^22.3.0"
 mypy = "^1.5.1"
-anchorpy = {version = "^0.18.0", extras = ["cli"]}
+anchorpy = {version = "^0.20.1", extras = ["cli"]}
 
 [tool.poetry.group.examples]
 optional = true

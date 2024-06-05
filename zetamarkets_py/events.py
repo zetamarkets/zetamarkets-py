@@ -96,6 +96,14 @@ class PlaceMultiOrdersEventWithArgs:
     @classmethod
     def from_event_and_args(cls, event: Event, args: Container):
         assert event.name.startswith("PlaceMultiOrdersEvent")
+
+        for order in args.bid_orders:
+            order.price = utils.convert_fixed_int_to_decimal(order.price)
+            order.size = utils.convert_fixed_lot_to_decimal(order.size)
+        for order in args.ask_orders:
+            order.price = utils.convert_fixed_int_to_decimal(order.price)
+            order.size = utils.convert_fixed_lot_to_decimal(order.size)
+
         return cls(
             bid_orders=args.bid_orders,
             ask_orders=args.ask_orders,

@@ -16,7 +16,6 @@ from anchorpy import Event, Provider, Wallet
 from anchorpy.provider import DEFAULT_OPTIONS
 from construct import Container
 from jsonrpcclient import request
-from solana.blockhash import BlockhashCache
 from solana.rpc.async_api import AsyncClient
 from solana.rpc.commitment import Commitment, Confirmed
 from solana.rpc.core import RPCException
@@ -28,6 +27,12 @@ from solders.message import MessageV0
 from solders.pubkey import Pubkey
 from solders.rpc.config import RpcTransactionLogsFilterMentions
 from solders.transaction import VersionedTransaction
+from solders.system_program import TransferParams, transfer
+
+from jito_searcher_client import get_async_searcher_client
+from jito_searcher_client.generated.searcher_pb2 import SendBundleRequest
+from jito_searcher_client.generated.bundle_pb2 import Bundle
+from jito_searcher_client.generated.packet_pb2 import Packet, Meta
 
 from zetamarkets_py import constants, pda, utils
 from zetamarkets_py.events import (
@@ -109,6 +114,8 @@ class Client:
     """The websocket RPC endpoint."""
     exchange: Exchange
     """The Zeta Exchange object."""
+    blockhash_cache: Optional[utils.BlockhashCache]
+    """The blockhash cache, used when sending transactions"""
 
     margin_account: Optional[CrossMarginAccount]
     """The margin account of the Zeta program."""
@@ -122,6 +129,10 @@ class Client:
     _logger: logging.Logger
     _account_exists_cache: dict[Pubkey, bool] = field(default_factory=dict)
 
+    """Whether to also send your tx via Jito"""
+    double_down_jito: bool = False
+    jito_tip: int = 10000
+
     @classmethod
     async def load(
         cls,
@@ -134,7 +145,7 @@ class Client:
         tx_opts: TxOpts = DEFAULT_OPTIONS,
         network: Network = Network.MAINNET,
         log_level: int = logging.WARNING,
-        blockhash_cache: Union[BlockhashCache, bool] = False,
+        blockhash_cache: Union[utils.BlockhashCache, bool] = None,
         delegator_pubkey: Optional[Pubkey] = None,
     ):
         """
@@ -163,7 +174,7 @@ class Client:
             endpoint = utils.cluster_endpoint(network)
         if ws_endpoint is None:
             ws_endpoint = utils.http_to_ws(endpoint)
-        connection = AsyncClient(endpoint=endpoint, commitment=commitment, blockhash_cache=blockhash_cache)
+        connection = AsyncClient(endpoint=endpoint, commitment=commitment)
         exchange = await Exchange.load(
             network=network,
             connection=connection,
@@ -203,7 +214,7 @@ class Client:
         double_down_providers = []
         if double_down_endpoints:
             for endpoint in double_down_endpoints:
-                double_down_conn = AsyncClient(endpoint=endpoint, commitment=commitment, blockhash_cache=blockhash_cache)
+                double_down_conn = AsyncClient(endpoint=endpoint, commitment=commitment)
                 double_down_providers.append(
                     Provider(
                         double_down_conn,
@@ -224,6 +235,7 @@ class Client:
             endpoint,
             ws_endpoint,
             exchange,
+            blockhash_cache,
             margin_account,
             _margin_account_address,
             _open_orders_addresses,
@@ -1457,6 +1469,49 @@ class Client:
         """
         raise NotImplementedError
 
+    async def send_jito_tx(self, tx: VersionedTransaction, blockhash):
+        client = await get_async_searcher_client("mainnet.block-engine.jito.wtf", self.provider.wallet.payer)
+
+        # The tx to Jito and to RPC needs to be the same exact tx, so we simply add a 2nd tx for the Jito tip to the bundle
+        # Note: Jito ignores any compute unit budget (prio fee) instructions, so we keep them in there
+        msg = MessageV0.try_compile(
+            self.provider.wallet.public_key,
+            [
+                transfer(
+                    TransferParams(
+                        from_pubkey=self.provider.wallet.public_key,
+                        to_pubkey=Pubkey.from_string("DttWaMuVvTiduZRnguLF7jNxTgiMBZ1hyAumKUiL2KRL"),
+                        lamports=self.jito_tip,
+                    )
+                )
+            ],
+            [constants.ZETA_LUT[self.network]],
+            blockhash,
+        )
+        tx_tip = VersionedTransaction(msg, [self.provider.wallet.payer])
+
+        try:
+            jito_response = await client.SendBundle(
+                SendBundleRequest(
+                    bundle=Bundle(
+                        header=None,
+                        packets=[
+                            Packet(
+                                data=bytes(tx),
+                                meta=Meta(size=len(bytes(tx)), addr="0.0.0.0", port=0, flags=None, sender_stake=0),
+                            ),
+                            Packet(
+                                data=bytes(tx_tip),
+                                meta=Meta(size=len(bytes(tx_tip)), addr="0.0.0.0", port=0, flags=None, sender_stake=0),
+                            ),
+                        ],
+                    )
+                )
+            )
+            self._logger.debug(f"Jito response: {jito_response}")
+        except Exception as e:
+            print(f"Jito error: {e}")
+
     async def _send_versioned_transaction(self, ixs: list[Instruction]):
         """
         Send a versioned transaction.
@@ -1468,9 +1523,9 @@ class Client:
             str: The signature(s) of the transaction(s).
         """
         # Prefetch blockhash, using cache if available
-        if self.connection.blockhash_cache:
+        if self.blockhash_cache:
             try:
-                recent_blockhash = self.connection.blockhash_cache.get()
+                recent_blockhash = self.blockhash_cache.get()
                 last_valid_block_height = None
                 self._logger.debug(f"Blockhash cache hit, using cached blockhash: {recent_blockhash}")
             except ValueError:
@@ -1493,6 +1548,8 @@ class Client:
             opts = self.provider.opts._replace(last_valid_block_height=last_valid_block_height)
             if len(self.double_down_providers) > 0:
                 tasks = []
+                if self.double_down_jito:
+                    tasks.append(self.send_jito_tx(tx, recent_blockhash))
                 for provider in self.double_down_providers:
                     tasks.append(provider.send(tx, opts))
                 signature = await asyncio.gather(*tasks)
