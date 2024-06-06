@@ -62,11 +62,18 @@ class DYMJSON(typing.TypedDict):
 class STRKJSON(typing.TypedDict):
     kind: typing.Literal["STRK"]
 
+
 class WIFJSON(typing.TypedDict):
     kind: typing.Literal["WIF"]
 
+
 class RNDRJSON(typing.TypedDict):
     kind: typing.Literal["RNDR"]
+
+
+class TNSRJSON(typing.TypedDict):
+    kind: typing.Literal["TNSR"]
+
 
 class UNDEFINEDJSON(typing.TypedDict):
     kind: typing.Literal["UNDEFINED"]
@@ -322,7 +329,8 @@ class STRK:
         return {
             "STRK": {},
         }
-    
+
+
 @dataclass
 class WIF:
     discriminator: typing.ClassVar = 14
@@ -339,7 +347,8 @@ class WIF:
         return {
             "WIF": {},
         }
-    
+
+
 @dataclass
 class RNDR:
     discriminator: typing.ClassVar = 15
@@ -359,8 +368,26 @@ class RNDR:
 
 
 @dataclass
-class UNDEFINED:
+class TNSR:
     discriminator: typing.ClassVar = 16
+    kind: typing.ClassVar = "TNSR"
+
+    @classmethod
+    def to_json(cls) -> TNSRJSON:
+        return TNSRJSON(
+            kind="TNSR",
+        )
+
+    @classmethod
+    def to_encodable(cls) -> dict:
+        return {
+            "TNSR": {},
+        }
+
+
+@dataclass
+class UNDEFINED:
+    discriminator: typing.ClassVar = 17
     kind: typing.ClassVar = "UNDEFINED"
 
     @classmethod
@@ -393,6 +420,7 @@ AssetKind = typing.Union[
     STRK,
     WIF,
     RNDR,
+    TNSR,
     UNDEFINED,
 ]
 AssetJSON = typing.Union[
@@ -412,6 +440,7 @@ AssetJSON = typing.Union[
     STRKJSON,
     WIFJSON,
     RNDRJSON,
+    TNSRJSON,
     UNDEFINEDJSON,
 ]
 
@@ -451,6 +480,8 @@ def from_decoded(obj: dict) -> AssetKind:
         return WIF()
     if "RNDR" in obj:
         return RNDR()
+    if "TNSR" in obj:
+        return TNSR()
     if "UNDEFINED" in obj:
         return UNDEFINED()
     raise ValueError("Invalid enum object")
@@ -489,6 +520,8 @@ def from_json(obj: AssetJSON) -> AssetKind:
         return WIF()
     if obj["kind"] == "RNDR":
         return RNDR()
+    if obj["kind"] == "TNSR":
+        return TNSR()
     if obj["kind"] == "UNDEFINED":
         return UNDEFINED()
     kind = obj["kind"]
@@ -512,5 +545,6 @@ layout = EnumForCodegen(
     "STRK" / borsh.CStruct(),
     "WIF" / borsh.CStruct(),
     "RNDR" / borsh.CStruct(),
+    "TNSR" / borsh.CStruct(),
     "UNDEFINED" / borsh.CStruct(),
 )

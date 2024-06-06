@@ -27,6 +27,7 @@ class Asset(Enum):
     STRK = "STRK"
     WIF = "WIF"
     RNDR = "RNDR"
+    TNSR = "TNSR"
 
     def to_index(self):
         """Converts the asset to its corresponding index."""
