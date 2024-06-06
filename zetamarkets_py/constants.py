@@ -48,6 +48,38 @@ FLEXIBLE_MINTS = {
     },
 }
 
+PYTH_PRICE_FEEDS = {
+    Network.DEVNET: {
+        Asset.SOL: Pubkey.from_string("J83w4HKfqxwcq3BEMMkPFSppX3gqekLyLJBexebFVkix"),
+        Asset.BTC: Pubkey.from_string("HovQMDrbAgAYPCmHVSrezcSmkMtXSSUsLDFANExrZh2J"),
+        Asset.ETH: Pubkey.from_string("EdVCmQ9FSPcVe5YySXDPCRmc8aDQLKJ9xvYBMZPie1Vw"),
+        Asset.APT: Pubkey.from_string("5d2QJ6u2NveZufmJ4noHja5EHs3Bv1DUMPLG5xfasSVs"),
+        Asset.ARB: Pubkey.from_string("4mRGHzjGerQNWKXyQAmr9kWqb9saPPHKqo1xziXGQ5Dh"),
+        Asset.BNB: Pubkey.from_string("GwzBgrXb4PG59zjce24SF2b9JXbLEjJJTBkmytuEZj1b"),
+        Asset.PYTH: Pubkey.from_string("ELF78ZhSr8u4SCixA7YSpjdZHZoSNrAhcyysbavpC2kA"),
+        Asset.TIA: Pubkey.from_string("4GiL1Y6u6JkPb7ckakzJgc414h6P7qoYnEKFcd1YtSB9"),
+    },
+    Network.MAINNET: {
+        Asset.SOL: Pubkey.from_string("H6ARHf6YXhGYeQfUzQNGk6rDNnLBQKrenN712K4AQJEG"),
+        Asset.BTC: Pubkey.from_string("GVXRSBjFk6e6J3NbVPXohDJetcTjaeeuykUpbQF8UoMU"),
+        Asset.ETH: Pubkey.from_string("JBu1AL4obBcCMqKBBxhpWCNUt136ijcuMZLFvTP7iWdB"),
+        Asset.APT: Pubkey.from_string("FNNvb1AFDnDVPkocEri8mWbJ1952HQZtFLuwPiUjSJQ"),
+        Asset.ARB: Pubkey.from_string("5HRrdmghsnU3i2u5StaKaydS7eq3vnKVKwXMzCNKsc4C"),
+        Asset.BNB: Pubkey.from_string("4CkQJBxhU8EZ2UjhigbtdaPbpTe6mqf811fipYBFbSYN"),
+        Asset.PYTH: Pubkey.from_string("nrYkQQQur7z8rYTST3G9GqATviK5SxTDkrqd21MW6Ue"),
+        Asset.TIA: Pubkey.from_string("funeUsHgi2QKkLdUPASRLuYkaK8JaazCEz3HikbkhVt"),
+        Asset.JTO: Pubkey.from_string("D8UUgr8a3aR3yUeHLu7v8FWK7E8Y5sSU7qrYBXUJXBQ5"),
+        Asset.ONEMBONK: Pubkey.from_string("8ihFLu5FimgTQ1Unh4dVyEHUGodJ5gJQCrQf4KUVB9bN"),
+        Asset.SEI: Pubkey.from_string("6cUuAyAX3eXoiWkjFF77RQBEUF15AAMQ7d1hm4EPd3tv"),
+        Asset.JUP: Pubkey.from_string("g6eRCbboSwK4tSWngn773RCMexr1APQr4uA9bGZBYfo"),
+        Asset.DYM: Pubkey.from_string("CSRRrhXa6DYu1W5jf89A7unCATdug2Z33tYyV2NXZZxa"),
+        Asset.STRK: Pubkey.from_string("899ZkaKUTFZprwCAY3xnSAdWs3Ma6oDW3YqX8zpis1No"),
+        Asset.WIF: Pubkey.from_string("6ABgrEZk8urs6kJ1JNdC1sspH5zKXRqxy8sg3ZG2cQps"),
+        Asset.RNDR: Pubkey.from_string("CYGfrBJB9HgLf9iZyN4aH5HvUAi2htQ4MjPxeXMf4Egn"),
+        Asset.TNSR: Pubkey.from_string("9TSGDwcPQX4JpAvZbu2Wp5b68wSYkQvHCvfeBjYcCyC"),
+    },
+}
+
 USDC_MINT = {
     #   Network.LOCALNET: Pubkey.from_string("6PEh8n3p7BbCTykufbq1nSJYAZvUp6gSwEANAs1ZhsCX"),
     Network.DEVNET: Pubkey.from_string("6PEh8n3p7BbCTykufbq1nSJYAZvUp6gSwEANAs1ZhsCX"),

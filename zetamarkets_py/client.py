@@ -1182,7 +1182,7 @@ class Client:
                 "market_quote_vault": self.exchange.markets[asset]._market_state.quote_vault,
                 "zeta_base_vault": self.exchange.markets[asset]._base_zeta_vault_address,
                 "zeta_quote_vault": self.exchange.markets[asset]._quote_zeta_vault_address,
-                "oracle": self.exchange.pricing.oracles[asset.to_index()],
+                "oracle": constants.PYTH_PRICE_FEEDS[self.network][asset],
                 "oracle_backup_feed": self.exchange.pricing.oracle_backup_feeds[asset.to_index()],
                 "oracle_backup_program": constants.CHAINLINK_PID,
                 "market_base_mint": self.exchange.markets[asset]._market_state.base_mint,
