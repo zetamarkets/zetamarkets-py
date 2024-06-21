@@ -1073,7 +1073,7 @@ class Client:
                         "coin_wallet": self.exchange.markets[asset]._base_zeta_vault_address,
                         "pc_wallet": self.exchange.markets[asset]._quote_zeta_vault_address,
                     },
-                    "oracle": self.exchange.pricing.oracles[asset.to_index()],
+                    "oracle": constants.PYTH_PRICE_FEEDS[self.network][asset],
                     "oracle_backup_feed": self.exchange.pricing.oracle_backup_feeds[asset.to_index()],
                     "oracle_backup_program": constants.CHAINLINK_PID,
                     "market_mint": (
