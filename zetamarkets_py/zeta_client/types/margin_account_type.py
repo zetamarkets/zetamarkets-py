@@ -91,6 +91,10 @@ class NormalT9JSON(typing.TypedDict):
     kind: typing.Literal["NormalT9"]
 
 
+class WithdrawOnlyJSON(typing.TypedDict):
+    kind: typing.Literal["WithdrawOnly"]
+
+
 @dataclass
 class Normal:
     discriminator: typing.ClassVar = 0
@@ -469,6 +473,24 @@ class NormalT9:
         }
 
 
+@dataclass
+class WithdrawOnly:
+    discriminator: typing.ClassVar = 100
+    kind: typing.ClassVar = "WithdrawOnly"
+
+    @classmethod
+    def to_json(cls) -> WithdrawOnlyJSON:
+        return WithdrawOnlyJSON(
+            kind="WithdrawOnly",
+        )
+
+    @classmethod
+    def to_encodable(cls) -> dict:
+        return {
+            "WithdrawOnly": {},
+        }
+
+
 MarginAccountTypeKind = typing.Union[
     Normal,
     MarketMaker,
@@ -491,6 +513,7 @@ MarginAccountTypeKind = typing.Union[
     NormalT7,
     NormalT8,
     NormalT9,
+    WithdrawOnly,
 ]
 MarginAccountTypeJSON = typing.Union[
     NormalJSON,
@@ -514,6 +537,7 @@ MarginAccountTypeJSON = typing.Union[
     NormalT7JSON,
     NormalT8JSON,
     NormalT9JSON,
+    WithdrawOnlyJSON,
 ]
 
 
@@ -562,6 +586,8 @@ def from_decoded(obj: dict) -> MarginAccountTypeKind:
         return NormalT8()
     if "NormalT9" in obj:
         return NormalT9()
+    if "WithdrawOnly" in obj:
+        return WithdrawOnly()
     raise ValueError("Invalid enum object")
 
 
@@ -608,6 +634,8 @@ def from_json(obj: MarginAccountTypeJSON) -> MarginAccountTypeKind:
         return NormalT8()
     if obj["kind"] == "NormalT9":
         return NormalT9()
+    if obj["kind"] == "WithdrawOnly":
+        return WithdrawOnly()
     kind = obj["kind"]
     raise ValueError(f"Unrecognized enum kind: {kind}")
 
@@ -634,4 +662,5 @@ layout = EnumForCodegen(
     "NormalT7" / borsh.CStruct(),
     "NormalT8" / borsh.CStruct(),
     "NormalT9" / borsh.CStruct(),
+    "WithdrawOnly" / borsh.CStruct(),
 )
