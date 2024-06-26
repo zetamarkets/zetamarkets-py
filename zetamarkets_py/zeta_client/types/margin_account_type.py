@@ -475,7 +475,7 @@ class NormalT9:
 
 @dataclass
 class WithdrawOnly:
-    discriminator: typing.ClassVar = 100
+    discriminator: typing.ClassVar = 21
     kind: typing.ClassVar = "WithdrawOnly"
 
     @classmethod
