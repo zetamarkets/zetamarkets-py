@@ -5,7 +5,7 @@ from typing import Optional
 from solders.hash import Hash
 from solders.pubkey import Pubkey
 
-from zetamarkets_py.zeta_client.types import asset, order_type, side
+from zetamarkets_py.zeta_client.types import asset, order_type, side, self_trade_behavior_zeta
 
 
 class Asset(Enum):
@@ -98,7 +98,7 @@ class SelfTradeBehaviorZeta(IntEnum):
 
     def to_program_type(self):
         """Converts the order type to its corresponding program type."""
-        return order_type.from_decoded({self.name: self.value})
+        return self_trade_behavior_zeta.from_decoded({self.name: self.value})
 
     @classmethod
     def from_index(cls, index: int):

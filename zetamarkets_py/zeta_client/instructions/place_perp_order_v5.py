@@ -19,9 +19,7 @@ class PlacePerpOrderV5Args(typing.TypedDict):
     tag: typing.Optional[str]
     tif_offset: typing.Optional[int]
     asset: types.asset.AssetKind
-    self_trade_behavior: typing.Optional[
-        types.self_trade_behavior_zeta.SelfTradeBehaviorZetaKind
-    ]
+    self_trade_behavior: typing.Optional[types.self_trade_behavior_zeta.SelfTradeBehaviorZetaKind]
 
 
 layout = borsh.CStruct(
@@ -138,9 +136,7 @@ def place_perp_order_v5(
             is_writable=True,
         ),
         AccountMeta(
-            pubkey=accounts["place_order_accounts"]["market_accounts"][
-                "order_payer_token_account"
-            ],
+            pubkey=accounts["place_order_accounts"]["market_accounts"]["order_payer_token_account"],
             is_signer=False,
             is_writable=True,
         ),
@@ -210,9 +206,7 @@ def place_perp_order_v5(
             "tif_offset": args["tif_offset"],
             "asset": args["asset"].to_encodable(),
             "self_trade_behavior": (
-                None
-                if args["self_trade_behavior"] is None
-                else args["self_trade_behavior"].to_encodable()
+                None if args["self_trade_behavior"] is None else args["self_trade_behavior"].to_encodable()
             ),
         }
     )
