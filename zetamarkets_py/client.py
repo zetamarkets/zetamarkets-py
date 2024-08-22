@@ -76,7 +76,7 @@ from zetamarkets_py.zeta_client.instructions import (
     initialize_cross_margin_account_manager_v2,
     initialize_open_orders_v3,
     place_multi_orders,
-    place_perp_order_v4,
+    place_perp_order_v5,
     withdraw_v2,
 )
 from zetamarkets_py.zeta_client.types import OrderArgs as ProgramOrderArgs
@@ -1032,7 +1032,7 @@ class Client:
         if self._open_orders_addresses is None:
             raise Exception("Open orders addresses not loaded, cannot place order")
 
-        return place_perp_order_v4(
+        return place_perp_order_v5(
             {
                 "price": utils.convert_decimal_to_fixed_int(
                     price, utils.get_fixed_tick_size(self.exchange.state, asset)
@@ -1047,6 +1047,7 @@ class Client:
                 "tif_offset": tif_offset,
                 "tag": order_opts.tag,
                 "asset": asset.to_program_type(),
+                "self_trade_behavior": order_opts.self_trade_behavior,
             },
             {
                 "authority": self.provider.wallet.public_key,

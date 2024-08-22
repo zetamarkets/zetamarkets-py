@@ -90,6 +90,27 @@ class OrderType(IntEnum):
         return self.name
 
 
+class SelfTradeBehaviorZeta(IntEnum):
+    """Enum class for different types of orders."""
+
+    CancelProvide = (0,)
+    AbortTransaction = (1,)
+
+    def to_program_type(self):
+        """Converts the order type to its corresponding program type."""
+        return order_type.from_decoded({self.name: self.value})
+
+    @classmethod
+    def from_index(cls, index: int):
+        """Returns the order type corresponding to the given index."""
+        members = list(SelfTradeBehaviorZeta)
+        return members[index]
+
+    def __str__(self) -> str:
+        """Returns the name of the order type."""
+        return self.name
+
+
 class Side(Enum):
     """Enum class for different sides of the orderbook to trade."""
 
@@ -159,6 +180,7 @@ class OrderOptions:
     blockhash: Optional[Hash] = None
     order_type: OrderType = OrderType.Limit
     tag: str = "SDK"
+    self_trade_behavior: Optional[SelfTradeBehaviorZeta] = None
 
 
 @dataclass
