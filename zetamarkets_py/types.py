@@ -93,8 +93,8 @@ class OrderType(IntEnum):
 class SelfTradeBehaviorZeta(IntEnum):
     """Enum class for different types of orders."""
 
-    CancelProvide = (0,)
-    AbortTransaction = (1,)
+    CancelProvide = 0
+    AbortTransaction = 1
 
     def to_program_type(self):
         """Converts the order type to its corresponding program type."""

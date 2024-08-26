@@ -98,6 +98,7 @@ from .pricing_parameters import PricingParameters, PricingParametersJSON
 from .product import Product, ProductJSON
 from .product_greeks import ProductGreeks, ProductGreeksJSON
 from .product_ledger import ProductLedger, ProductLedgerJSON
+from .self_trade_behavior_zeta import SelfTradeBehaviorZetaJSON, SelfTradeBehaviorZetaKind
 from .side import SideJSON, SideKind
 from .strike import Strike, StrikeJSON
 from .trait_type import TraitTypeJSON, TraitTypeKind

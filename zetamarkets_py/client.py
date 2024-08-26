@@ -1047,7 +1047,7 @@ class Client:
                 "tif_offset": tif_offset,
                 "tag": order_opts.tag,
                 "asset": asset.to_program_type(),
-                "self_trade_behavior": order_opts.self_trade_behavior,
+                "self_trade_behavior": order_opts.self_trade_behavior.to_program_type(),
             },
             {
                 "authority": self.provider.wallet.public_key,
