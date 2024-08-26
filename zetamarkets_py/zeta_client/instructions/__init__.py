@@ -346,6 +346,11 @@ from .place_perp_order_v4 import (
     PlacePerpOrderV4Args,
     place_perp_order_v4,
 )
+from .place_perp_order_v5 import (
+    PlacePerpOrderV5Accounts,
+    PlacePerpOrderV5Args,
+    place_perp_order_v5,
+)
 from .place_trigger_order import (
     PlaceTriggerOrderAccounts,
     PlaceTriggerOrderArgs,
