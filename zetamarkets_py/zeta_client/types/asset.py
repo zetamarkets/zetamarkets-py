@@ -75,6 +75,10 @@ class TNSRJSON(typing.TypedDict):
     kind: typing.Literal["TNSR"]
 
 
+class GMCJSON(typing.TypedDict):
+    kind: typing.Literal["GMC"]
+
+
 class UNDEFINEDJSON(typing.TypedDict):
     kind: typing.Literal["UNDEFINED"]
 
@@ -386,8 +390,26 @@ class TNSR:
 
 
 @dataclass
-class UNDEFINED:
+class GMC:
     discriminator: typing.ClassVar = 17
+    kind: typing.ClassVar = "GMC"
+
+    @classmethod
+    def to_json(cls) -> GMCJSON:
+        return GMCJSON(
+            kind="GMC",
+        )
+
+    @classmethod
+    def to_encodable(cls) -> dict:
+        return {
+            "GMC": {},
+        }
+
+
+@dataclass
+class UNDEFINED:
+    discriminator: typing.ClassVar = 18
     kind: typing.ClassVar = "UNDEFINED"
 
     @classmethod
@@ -421,6 +443,7 @@ AssetKind = typing.Union[
     WIF,
     RNDR,
     TNSR,
+    GMC,
     UNDEFINED,
 ]
 AssetJSON = typing.Union[
@@ -441,6 +464,7 @@ AssetJSON = typing.Union[
     WIFJSON,
     RNDRJSON,
     TNSRJSON,
+    GMCJSON,
     UNDEFINEDJSON,
 ]
 
@@ -482,6 +506,8 @@ def from_decoded(obj: dict) -> AssetKind:
         return RNDR()
     if "TNSR" in obj:
         return TNSR()
+    if "GMC" in obj:
+        return GMC()
     if "UNDEFINED" in obj:
         return UNDEFINED()
     raise ValueError("Invalid enum object")
@@ -522,6 +548,8 @@ def from_json(obj: AssetJSON) -> AssetKind:
         return RNDR()
     if obj["kind"] == "TNSR":
         return TNSR()
+    if obj["kind"] == "GMC":
+        return GMC()
     if obj["kind"] == "UNDEFINED":
         return UNDEFINED()
     kind = obj["kind"]
@@ -546,5 +574,6 @@ layout = EnumForCodegen(
     "WIF" / borsh.CStruct(),
     "RNDR" / borsh.CStruct(),
     "TNSR" / borsh.CStruct(),
+    "GMC" / borsh.CStruct(),
     "UNDEFINED" / borsh.CStruct(),
 )

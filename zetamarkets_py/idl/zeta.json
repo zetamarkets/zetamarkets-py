@@ -2937,6 +2937,74 @@
       ]
     },
     {
+      "name": "adminResetDexOpenOrders",
+      "accounts": [
+        {
+          "name": "state",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "dexProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "openOrders",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "crossMarginAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "pricingAdmin",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "authority",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "market",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "bids",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "asks",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "serumAuthority",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "eventQueue",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "asset",
+          "type": {
+            "defined": "Asset"
+          }
+        }
+      ]
+    },
+    {
       "name": "initializeWhitelistDepositAccount",
       "accounts": [
         {
@@ -4608,6 +4676,204 @@
           "name": "asset",
           "type": {
             "defined": "Asset"
+          }
+        }
+      ]
+    },
+    {
+      "name": "placePerpOrderV5",
+      "accounts": [
+        {
+          "name": "authority",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "placeOrderAccounts",
+          "accounts": [
+            {
+              "name": "state",
+              "isMut": false,
+              "isSigner": false
+            },
+            {
+              "name": "pricing",
+              "isMut": false,
+              "isSigner": false
+            },
+            {
+              "name": "marginAccount",
+              "isMut": true,
+              "isSigner": false
+            },
+            {
+              "name": "dexProgram",
+              "isMut": false,
+              "isSigner": false
+            },
+            {
+              "name": "tokenProgram",
+              "isMut": false,
+              "isSigner": false
+            },
+            {
+              "name": "serumAuthority",
+              "isMut": false,
+              "isSigner": false
+            },
+            {
+              "name": "openOrders",
+              "isMut": true,
+              "isSigner": false
+            },
+            {
+              "name": "rent",
+              "isMut": false,
+              "isSigner": false
+            },
+            {
+              "name": "marketAccounts",
+              "accounts": [
+                {
+                  "name": "market",
+                  "isMut": true,
+                  "isSigner": false
+                },
+                {
+                  "name": "requestQueue",
+                  "isMut": true,
+                  "isSigner": false
+                },
+                {
+                  "name": "eventQueue",
+                  "isMut": true,
+                  "isSigner": false
+                },
+                {
+                  "name": "bids",
+                  "isMut": true,
+                  "isSigner": false
+                },
+                {
+                  "name": "asks",
+                  "isMut": true,
+                  "isSigner": false
+                },
+                {
+                  "name": "orderPayerTokenAccount",
+                  "isMut": true,
+                  "isSigner": false
+                },
+                {
+                  "name": "coinVault",
+                  "isMut": true,
+                  "isSigner": false
+                },
+                {
+                  "name": "pcVault",
+                  "isMut": true,
+                  "isSigner": false
+                },
+                {
+                  "name": "coinWallet",
+                  "isMut": true,
+                  "isSigner": false
+                },
+                {
+                  "name": "pcWallet",
+                  "isMut": true,
+                  "isSigner": false
+                }
+              ]
+            },
+            {
+              "name": "oracle",
+              "isMut": false,
+              "isSigner": false
+            },
+            {
+              "name": "oracleBackupFeed",
+              "isMut": false,
+              "isSigner": false
+            },
+            {
+              "name": "oracleBackupProgram",
+              "isMut": false,
+              "isSigner": false
+            },
+            {
+              "name": "marketMint",
+              "isMut": true,
+              "isSigner": false
+            },
+            {
+              "name": "mintAuthority",
+              "isMut": false,
+              "isSigner": false
+            },
+            {
+              "name": "perpSyncQueue",
+              "isMut": true,
+              "isSigner": false
+            }
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "price",
+          "type": "u64"
+        },
+        {
+          "name": "size",
+          "type": "u64"
+        },
+        {
+          "name": "side",
+          "type": {
+            "defined": "Side"
+          }
+        },
+        {
+          "name": "orderType",
+          "type": {
+            "defined": "OrderType"
+          }
+        },
+        {
+          "name": "reduceOnly",
+          "type": "bool"
+        },
+        {
+          "name": "clientOrderId",
+          "type": {
+            "option": "u64"
+          }
+        },
+        {
+          "name": "tag",
+          "type": {
+            "option": "string"
+          }
+        },
+        {
+          "name": "tifOffset",
+          "type": {
+            "option": "u16"
+          }
+        },
+        {
+          "name": "asset",
+          "type": {
+            "defined": "Asset"
+          }
+        },
+        {
+          "name": "selfTradeBehavior",
+          "type": {
+            "option": {
+              "defined": "SelfTradeBehaviorZeta"
+            }
           }
         }
       ]
@@ -7259,7 +7525,7 @@
             "type": {
               "array": [
                 "u64",
-                17
+                18
               ]
             }
           },
@@ -7268,7 +7534,7 @@
             "type": {
               "array": [
                 "u64",
-                8
+                7
               ]
             }
           },
@@ -7277,7 +7543,7 @@
             "type": {
               "array": [
                 "u64",
-                17
+                18
               ]
             }
           },
@@ -7286,7 +7552,7 @@
             "type": {
               "array": [
                 "u64",
-                8
+                7
               ]
             }
           },
@@ -7297,7 +7563,7 @@
                 {
                   "defined": "AnchorDecimal"
                 },
-                17
+                18
               ]
             }
           },
@@ -7308,7 +7574,7 @@
                 {
                   "defined": "AnchorDecimal"
                 },
-                8
+                7
               ]
             }
           },
@@ -7319,7 +7585,7 @@
                 {
                   "defined": "AnchorDecimal"
                 },
-                17
+                18
               ]
             }
           },
@@ -7330,7 +7596,7 @@
                 {
                   "defined": "AnchorDecimal"
                 },
-                8
+                7
               ]
             }
           },
@@ -7339,7 +7605,7 @@
             "type": {
               "array": [
                 "u64",
-                17
+                18
               ]
             }
           },
@@ -7348,7 +7614,7 @@
             "type": {
               "array": [
                 "u64",
-                8
+                7
               ]
             }
           },
@@ -7357,7 +7623,7 @@
             "type": {
               "array": [
                 "publicKey",
-                17
+                18
               ]
             }
           },
@@ -7366,7 +7632,7 @@
             "type": {
               "array": [
                 "publicKey",
-                8
+                7
               ]
             }
           },
@@ -7375,7 +7641,7 @@
             "type": {
               "array": [
                 "publicKey",
-                17
+                18
               ]
             }
           },
@@ -7384,7 +7650,7 @@
             "type": {
               "array": [
                 "publicKey",
-                8
+                7
               ]
             }
           },
@@ -7393,7 +7659,7 @@
             "type": {
               "array": [
                 "publicKey",
-                17
+                18
               ]
             }
           },
@@ -7402,7 +7668,7 @@
             "type": {
               "array": [
                 "publicKey",
-                8
+                7
               ]
             }
           },
@@ -7411,7 +7677,7 @@
             "type": {
               "array": [
                 "publicKey",
-                17
+                18
               ]
             }
           },
@@ -7420,7 +7686,7 @@
             "type": {
               "array": [
                 "publicKey",
-                8
+                7
               ]
             }
           },
@@ -7431,7 +7697,7 @@
                 {
                   "defined": "PerpParameters"
                 },
-                17
+                18
               ]
             }
           },
@@ -7442,7 +7708,7 @@
                 {
                   "defined": "PerpParameters"
                 },
-                8
+                7
               ]
             }
           },
@@ -7453,7 +7719,7 @@
                 {
                   "defined": "MarginParameters"
                 },
-                17
+                18
               ]
             }
           },
@@ -7464,7 +7730,7 @@
                 {
                   "defined": "MarginParameters"
                 },
-                8
+                7
               ]
             }
           },
@@ -7475,7 +7741,7 @@
                 {
                   "defined": "Product"
                 },
-                17
+                18
               ]
             }
           },
@@ -7486,7 +7752,7 @@
                 {
                   "defined": "Product"
                 },
-                8
+                7
               ]
             }
           },
@@ -7495,7 +7761,7 @@
             "type": {
               "array": [
                 "publicKey",
-                17
+                18
               ]
             }
           },
@@ -7504,7 +7770,7 @@
             "type": {
               "array": [
                 "publicKey",
-                8
+                7
               ]
             }
           },
@@ -7525,7 +7791,7 @@
             "type": {
               "array": [
                 "bool",
-                17
+                18
               ]
             }
           },
@@ -7534,7 +7800,7 @@
             "type": {
               "array": [
                 "bool",
-                8
+                7
               ]
             }
           },
@@ -7926,7 +8192,7 @@
                 {
                   "defined": "HaltStateV2"
                 },
-                17
+                18
               ]
             }
           },
@@ -7937,7 +8203,7 @@
                 {
                   "defined": "HaltStateV2"
                 },
-                8
+                7
               ]
             }
           },
@@ -7950,7 +8216,7 @@
             "type": {
               "array": [
                 "u32",
-                17
+                18
               ]
             }
           },
@@ -7959,7 +8225,7 @@
             "type": {
               "array": [
                 "u32",
-                8
+                7
               ]
             }
           },
@@ -7968,7 +8234,7 @@
             "type": {
               "array": [
                 "u32",
-                17
+                18
               ]
             }
           },
@@ -7977,7 +8243,7 @@
             "type": {
               "array": [
                 "u32",
-                8
+                7
               ]
             }
           },
@@ -8432,7 +8698,7 @@
             "type": {
               "array": [
                 "u8",
-                17
+                18
               ]
             }
           },
@@ -8441,7 +8707,7 @@
             "type": {
               "array": [
                 "u8",
-                8
+                7
               ]
             }
           },
@@ -8456,7 +8722,7 @@
                 {
                   "defined": "AnchorDecimal"
                 },
-                17
+                18
               ]
             }
           },
@@ -8467,7 +8733,7 @@
                 {
                   "defined": "AnchorDecimal"
                 },
-                8
+                7
               ]
             }
           },
@@ -8478,7 +8744,7 @@
                 {
                   "defined": "ProductLedger"
                 },
-                17
+                18
               ]
             }
           },
@@ -8489,7 +8755,7 @@
                 {
                   "defined": "ProductLedger"
                 },
-                8
+                7
               ]
             }
           },
@@ -8506,7 +8772,7 @@
             "type": {
               "array": [
                 "u64",
-                17
+                18
               ]
             }
           },
@@ -8515,7 +8781,7 @@
             "type": {
               "array": [
                 "u64",
-                8
+                7
               ]
             }
           },
@@ -9299,7 +9565,7 @@
             "type": {
               "array": [
                 "u64",
-                17
+                18
               ]
             }
           },
@@ -10043,6 +10309,9 @@
             "name": "TNSR"
           },
           {
+            "name": "GMC"
+          },
+          {
             "name": "UNDEFINED"
           }
         ]
@@ -10243,6 +10512,20 @@
           },
           {
             "name": "CrossMarginAccount"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SelfTradeBehaviorZeta",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "CancelProvide"
+          },
+          {
+            "name": "AbortTransaction"
           }
         ]
       }

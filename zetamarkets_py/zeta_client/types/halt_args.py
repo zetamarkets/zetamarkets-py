@@ -14,7 +14,7 @@ class HaltArgsJSON(typing.TypedDict):
 
 @dataclass
 class HaltArgs:
-    layout: typing.ClassVar = borsh.CStruct("spot_prices" / borsh.U64[17], "timestamp" / borsh.U64)
+    layout: typing.ClassVar = borsh.CStruct("spot_prices" / borsh.U64[18], "timestamp" / borsh.U64)
     spot_prices: list[int]
     timestamp: int
 
