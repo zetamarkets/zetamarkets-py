@@ -1,19 +1,18 @@
+import collections
 import json
 import logging
 import re
-import collections
 from statistics import median
 from typing import List, Optional
 
 import colorlog
 from httpx import post
 from solana.utils.cluster import cluster_api_url
+from solders.hash import Hash
 
 from zetamarkets_py import constants
 from zetamarkets_py.types import Asset, Network
 from zetamarkets_py.zeta_client.accounts.state import State
-
-from solders.hash import Hash
 
 
 def get_fixed_min_lot_size(state: State, asset: Asset) -> int:
@@ -206,7 +205,7 @@ class BlockhashCache:
     def __init__(self, ttl: int = 60) -> None:
         """Instantiate the cache (you only need to do this once)."""
         self.ttl_slots = 60
-        self.blockhashes = collections.deque(maxlen=ttl * 10)
+        self.blockhashes: collections.deque = collections.deque(maxlen=ttl * 10)
 
     def set(self, blockhash: Hash, slot: int, used_immediately: bool = False) -> None:
         """

@@ -5,7 +5,12 @@ from typing import Optional
 from solders.hash import Hash
 from solders.pubkey import Pubkey
 
-from zetamarkets_py.zeta_client.types import asset, order_type, side, self_trade_behavior_zeta
+from zetamarkets_py.zeta_client.types import (
+    asset,
+    order_type,
+    self_trade_behavior_zeta,
+    side,
+)
 
 
 class Asset(Enum):
@@ -268,7 +273,6 @@ class Decimal:
         return (self._flags & self.SIGN_MASK) == 0
 
     def to_float(self):
-
         scale = self.scale()
         if scale == 0:
             raise ValueError("Scale 0 is not handled.")
