@@ -46,6 +46,7 @@ FLEXIBLE_MINTS = {
         Asset.RNDR: Pubkey.from_string("GSF4GTjWxacrQoVbf8PUcvCvMvZUzwXFEmb2Jso6XU5H"),
         Asset.TNSR: Pubkey.from_string("3bTWLSNoD95dP2SHq4diRz3ZTeDXmybTsjPUQzRpTCHR"),
         Asset.POPCAT: Pubkey.from_string("CoGwjBS8stc4HCwpa6xh55LmGRTPxPkNXDVc1qBjwa5"),
+        Asset.EIGEN: Pubkey.from_string("F7pcDmpVokQJgToqN9DU7cmkWNgwUCd7qs3jZURMvL3L"),
     },
 }
 
@@ -79,6 +80,7 @@ PYTH_PRICE_FEEDS = {
         Asset.RNDR: Pubkey.from_string("GbgH1oen3Ne1RY4LwDgh8kEeA1KywHvs5x8zsx6uNV5M"),
         Asset.TNSR: Pubkey.from_string("9TSGDwcPQX4JpAvZbu2Wp5b68wSYkQvHCvfeBjYcCyC"),
         Asset.POPCAT: Pubkey.from_string("6UxPR2nXJNNM1nESVWGAf8NXMVu3SGgYf3ZfUFoGB9cs"),
+        Asset.EIGEN: Pubkey.from_string("64x2TaUVMrmxGDCcWYntWR8TPrXA3uaC8TfX9997Kam"),
     },
 }
 
@@ -102,7 +104,7 @@ MAX_ZETA_GROUPS = 20
 MAX_MARGIN_AND_SPREAD_ACCOUNTS = 20
 MAX_SET_REFERRALS_REWARDS_ACCOUNTS = 12
 MAX_INITIALIZE_MARKET_TIF_EPOCH_CYCLE_IXS_PER_TX = 15
-MARKET_INDEX_LIMIT = 18
+MARKET_INDEX_LIMIT = 19
 MARKET_LOAD_LIMIT = 12
 MAX_MARKETS_TO_FETCH = 50
 
