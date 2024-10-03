@@ -15,6 +15,12 @@ import websockets.legacy.client  # force eager imports
 from anchorpy import Event, Provider, Wallet
 from anchorpy.provider import DEFAULT_OPTIONS
 from construct import Container
+from jito_searcher_client import get_async_searcher_client  # type: ignore
+from jito_searcher_client.generated.bundle_pb2 import Bundle  # type: ignore
+from jito_searcher_client.generated.packet_pb2 import Meta, Packet  # type: ignore
+from jito_searcher_client.generated.searcher_pb2 import (
+    SendBundleRequest,  # type: ignore
+)
 from jsonrpcclient import request
 from solana.rpc.async_api import AsyncClient
 from solana.rpc.commitment import Commitment, Confirmed
@@ -26,13 +32,8 @@ from solders.instruction import Instruction
 from solders.message import MessageV0
 from solders.pubkey import Pubkey
 from solders.rpc.config import RpcTransactionLogsFilterMentions
-from solders.transaction import VersionedTransaction
 from solders.system_program import TransferParams, transfer
-
-from jito_searcher_client import get_async_searcher_client
-from jito_searcher_client.generated.searcher_pb2 import SendBundleRequest
-from jito_searcher_client.generated.bundle_pb2 import Bundle
-from jito_searcher_client.generated.packet_pb2 import Packet, Meta
+from solders.transaction import VersionedTransaction
 
 from zetamarkets_py import constants, pda, utils
 from zetamarkets_py.events import (
@@ -145,7 +146,7 @@ class Client:
         tx_opts: TxOpts = DEFAULT_OPTIONS,
         network: Network = Network.MAINNET,
         log_level: int = logging.WARNING,
-        blockhash_cache: Union[utils.BlockhashCache, bool] = None,
+        blockhash_cache: Optional[utils.BlockhashCache] = None,
         delegator_pubkey: Optional[Pubkey] = None,
     ):
         """
@@ -474,7 +475,6 @@ class Client:
             clock = Clock.decode(account_bytes)
             yield clock, slot
 
-    # TODO: maybe at some point support subscribing to all exchange events, not just margin account
     async def subscribe_events(
         self, commitment: Optional[Commitment] = None, ignore_third_party_events: bool = True
     ) -> AsyncIterator[Tuple[List[ZetaEvent], EventMeta]]:
@@ -525,12 +525,13 @@ class Client:
             msg: The message received from the websocket.
 
         Returns:
-            Tuple[List[ZetaEvent], int]: A tuple containing a list of ZetaEvents and the slot number.
+            Tuple[List[ZetaEvent], EventMeta]: A tuple containing a list of ZetaEvents and event metadata.
         """
         slot = int(msg[0].result.context.slot)
         logs = cast(list[str], msg[0].result.value.logs)  # type: ignore
         error = msg[0].result.value.err
-        meta = EventMeta(slot, error)
+        signature = msg[0].result.value.signature
+        meta = EventMeta(slot, error, signature)
         if error is not None:
             return [], meta
 
@@ -588,7 +589,7 @@ class Client:
                 Defaults to False.
 
         Yields:
-            List[ZetaEvent]: A list of ZetaEvents that are yielded as they are received.
+            Tuple[List[ZetaEnrichedEvent], EventMeta]: A tuple containing a list of ZetaEnrichedEvents and event metadata.
 
         Warning:
             This method is experimental and requires a Triton RPC node.
@@ -662,7 +663,7 @@ class Client:
             ignore_third_party_transactions: Bool to ignore transactions from other users, filtering by margin account address
 
         Returns:
-            Tuple[List[ZetaEvent], int]: A tuple containing a list of ZetaEnrichedEvent and the slot number.
+            Tuple[List[ZetaEnrichedEvent], EventMeta]: A tuple containing a list of ZetaEnrichedEvent and event metadata.
         """
         json_msg = json.loads(msg)
         slot = int(json_msg["params"]["result"]["context"]["slot"])
@@ -670,7 +671,8 @@ class Client:
         log_messages = tx_value["meta"]["logMessages"]
         message = tx_value["transaction"]["message"]
         error = tx_value["meta"]["err"]
-        meta = EventMeta(slot, error)
+        signature = str(based58.b58encode(bytes(tx_value["signature"])), encoding="utf-8")
+        meta = EventMeta(slot, error, signature)
         if error is not None:
             return [], meta
 
@@ -1047,7 +1049,11 @@ class Client:
                 "tif_offset": tif_offset,
                 "tag": order_opts.tag,
                 "asset": asset.to_program_type(),
-                "self_trade_behavior": order_opts.self_trade_behavior.to_program_type(),
+                "self_trade_behavior": (
+                    order_opts.self_trade_behavior.to_program_type()
+                    if order_opts.self_trade_behavior is not None
+                    else None
+                ),
             },
             {
                 "authority": self.provider.wallet.public_key,
@@ -1531,7 +1537,7 @@ class Client:
                 self._logger.debug(f"Blockhash cache hit, using cached blockhash: {recent_blockhash}")
             except ValueError:
                 blockhash_resp = await self.connection.get_latest_blockhash(self.connection.commitment)
-                recent_blockhash = self.connection._process_blockhash_resp(blockhash_resp, used_immediately=True)
+                recent_blockhash = self.connection.parse_recent_blockhash(blockhash_resp)
                 last_valid_block_height = blockhash_resp.value.last_valid_block_height
                 self._logger.debug(f"Blockhash cache miss, fetched from RPC: {recent_blockhash}")
         else:

@@ -329,6 +329,7 @@ ZetaEnrichedEvent = Union[
 class EventMeta:
     slot: int
     error: Optional[Any]
+    signature: str
 
     @property
     def is_successful(self) -> bool:
