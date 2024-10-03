@@ -4,20 +4,20 @@ import os
 import anchorpy
 
 from zetamarkets_py.client import Client
-from zetamarkets_py.types import Asset, OrderArgs, OrderOptions, Side, SelfTradeBehaviorZeta
+from zetamarkets_py.types import Asset, OrderArgs, OrderOptions, Side
 
 
 async def main():
     # get local filesystem keypair wallet, defaults to ~/.config/solana/id.json
     wallet = anchorpy.Wallet.local()
     asset = Asset.SOL
-    endpoint = os.getenv("ENDPOINT", "https://zeta-zeta-61e4.mainnet.rpcpool.com/269b8dcb-fea0-4b60-a317-2a7281381fdb")
+    endpoint = os.getenv("ENDPOINT", "https://api.mainnet-beta.solana.com")
 
     # load in client with just solana market, by default loads in all markets
     client = await Client.load(endpoint=endpoint, wallet=wallet, assets=[asset])
 
     # deposit 0.1 USDC into margin account
-    # print("Depositing 0.1 USDC into margin account")
+    print("Depositing 0.1 USDC into margin account")
     # await client.deposit(0.1)
 
     # check balance on-chain
@@ -26,11 +26,11 @@ async def main():
 
     # (optional) order options
     # here you can specify TIF order expiry, client order id, order type (limit, post-only, ...) etc.
-    order_opts = OrderOptions(client_order_id=1337, self_trade_behavior=SelfTradeBehaviorZeta.AbortTransaction)
+    order_opts = OrderOptions(client_order_id=1337)
 
     # place order
     side = Side.Bid
-    order = OrderArgs(price=130, size=0.1, side=side, order_opts=order_opts)
+    order = OrderArgs(price=0.1, size=0.1, side=side, order_opts=order_opts)
     print(f"Placing {order.side} order: {order.size}x {str(asset)}-PERP @ ${order.price}")
     await client.place_orders_for_market(asset=asset, orders=[order], priority_fee=10)
 
