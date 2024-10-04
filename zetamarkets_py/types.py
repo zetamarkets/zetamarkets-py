@@ -34,6 +34,7 @@ class Asset(Enum):
     RNDR = "RNDR"
     TNSR = "TNSR"
     POPCAT = "POPCAT"
+    EIGEN = "EIGEN"
 
     def to_index(self):
         """Converts the asset to its corresponding index."""

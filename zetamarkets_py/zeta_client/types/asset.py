@@ -79,6 +79,10 @@ class POPCATJSON(typing.TypedDict):
     kind: typing.Literal["POPCAT"]
 
 
+class EIGENJSON(typing.TypedDict):
+    kind: typing.Literal["EIGEN"]
+
+
 class UNDEFINEDJSON(typing.TypedDict):
     kind: typing.Literal["UNDEFINED"]
 
@@ -408,8 +412,26 @@ class POPCAT:
 
 
 @dataclass
-class UNDEFINED:
+class EIGEN:
     discriminator: typing.ClassVar = 18
+    kind: typing.ClassVar = "EIGEN"
+
+    @classmethod
+    def to_json(cls) -> EIGENJSON:
+        return EIGENJSON(
+            kind="EIGEN",
+        )
+
+    @classmethod
+    def to_encodable(cls) -> dict:
+        return {
+            "EIGEN": {},
+        }
+
+
+@dataclass
+class UNDEFINED:
+    discriminator: typing.ClassVar = 19
     kind: typing.ClassVar = "UNDEFINED"
 
     @classmethod
@@ -444,6 +466,7 @@ AssetKind = typing.Union[
     RNDR,
     TNSR,
     POPCAT,
+    EIGEN,
     UNDEFINED,
 ]
 AssetJSON = typing.Union[
@@ -465,6 +488,7 @@ AssetJSON = typing.Union[
     RNDRJSON,
     TNSRJSON,
     POPCATJSON,
+    EIGENJSON,
     UNDEFINEDJSON,
 ]
 
@@ -508,6 +532,8 @@ def from_decoded(obj: dict) -> AssetKind:
         return TNSR()
     if "POPCAT" in obj:
         return POPCAT()
+    if "EIGEN" in obj:
+        return EIGEN()
     if "UNDEFINED" in obj:
         return UNDEFINED()
     raise ValueError("Invalid enum object")
@@ -550,6 +576,8 @@ def from_json(obj: AssetJSON) -> AssetKind:
         return TNSR()
     if obj["kind"] == "POPCAT":
         return POPCAT()
+    if obj["kind"] == "EIGEN":
+        return EIGEN()
     if obj["kind"] == "UNDEFINED":
         return UNDEFINED()
     kind = obj["kind"]
@@ -575,5 +603,6 @@ layout = EnumForCodegen(
     "RNDR" / borsh.CStruct(),
     "TNSR" / borsh.CStruct(),
     "POPCAT" / borsh.CStruct(),
+    "EIGEN" / borsh.CStruct(),
     "UNDEFINED" / borsh.CStruct(),
 )
