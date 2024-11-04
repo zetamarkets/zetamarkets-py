@@ -1492,7 +1492,7 @@ class Client:
                     )
                 )
             ],
-            [constants.ZETA_LUT[self.network]],
+            constants.ZETA_LUT[self.network],
             blockhash,
         )
         tx_tip = VersionedTransaction(msg, [self.provider.wallet.payer])
