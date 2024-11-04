@@ -1492,7 +1492,7 @@ class Client:
                     )
                 )
             ],
-            [constants.ZETA_LUT[self.network]],
+            constants.ZETA_LUT[self.network],
             blockhash,
         )
         tx_tip = VersionedTransaction(msg, [self.provider.wallet.payer])
@@ -1547,7 +1547,7 @@ class Client:
             self._logger.debug(f"Blockhash cache not enabled, fetched from RPC: {recent_blockhash}")
 
         msg = MessageV0.try_compile(
-            self.provider.wallet.public_key, ixs, [constants.ZETA_LUT[self.network]], recent_blockhash
+            self.provider.wallet.public_key, ixs, constants.ZETA_LUT[self.network], recent_blockhash
         )
         tx = VersionedTransaction(msg, [self.provider.wallet.payer])
 

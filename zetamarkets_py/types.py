@@ -36,6 +36,7 @@ class Asset(Enum):
     POPCAT = "POPCAT"
     EIGEN = "EIGEN"
     DBR = "DBR"
+    GOAT = "GOAT"
 
     def to_index(self):
         """Converts the asset to its corresponding index."""
