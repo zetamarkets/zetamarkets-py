@@ -37,6 +37,7 @@ class Asset(Enum):
     EIGEN = "EIGEN"
     DBR = "DBR"
     GOAT = "GOAT"
+    DRIFT = "DRIFT"
 
     def to_index(self):
         """Converts the asset to its corresponding index."""
