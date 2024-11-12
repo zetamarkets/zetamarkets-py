@@ -247,7 +247,7 @@ ZETA_LUT = {
         )
     ],
     Network.MAINNET: [
-        AddressLookupTableAccount( # Every asset before GOAT
+        AddressLookupTableAccount(  # Every asset before GOAT
             key=Pubkey.from_string("6JCasgqNjup9pDuoHL7ymHFaGUHrWbF3VFggHaHuGyes"),
             addresses=[
                 Pubkey.from_string("8eExPiLp47xbSDYkbuem4qnLUpbLTfZBeFuEJoh6EUr2"),
@@ -498,8 +498,8 @@ ZETA_LUT = {
                 Pubkey.from_string("AeAYpusnB1TUxy8tajh6wZo6PedRm3CYsRdhEtUxUgZe"),
             ],
         ),
-        AddressLookupTableAccount( # GOAT and DRIFT assets only
-            key=Pubkey.from_string("6cJ34VXwfMTr48XcPAPFQFkiEFB5N3bP5gvj6JbKQRMW"),
+        AddressLookupTableAccount(  # GOAT and DRIFT assets only
+            key=Pubkey.from_string("DHqBV5oWK8NgKRkBtn8wYg8vrCePjPEB9EEkX9Q2d5Ee"),
             addresses=[
                 Pubkey.from_string("8eExPiLp47xbSDYkbuem4qnLUpbLTfZBeFuEJoh6EUr2"),
                 Pubkey.from_string("BbKFezrmKD83PeVh74958MzgFAue1pZptipSNLz5ccpk"),
