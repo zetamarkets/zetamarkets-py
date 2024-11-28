@@ -94,6 +94,9 @@ class GOATJSON(typing.TypedDict):
 class DRIFTJSON(typing.TypedDict):
     kind: typing.Literal["DRIFT"]
 
+class PNUTJSON(typing.TypedDict):
+    kind: typing.Literal["PNUT"]
+
 
 class UNDEFINEDJSON(typing.TypedDict):
     kind: typing.Literal["UNDEFINED"]
@@ -492,10 +495,27 @@ class DRIFT:
         return {
             "DRIFT": {},
         }
+    
+@dataclass
+class PNUT:
+    discriminator: typing.ClassVar = 22 
+    kind: typing.ClassVar = "PNUT"
+
+    @classmethod
+    def to_json(cls) -> PNUTJSON:
+        return PNUTJSON(
+            kind="PNUT",
+        )
+
+    @classmethod
+    def to_encodable(cls) -> dict:
+        return {
+            "PNUT": {},
+        }   
 
 @dataclass
 class UNDEFINED:
-    discriminator: typing.ClassVar = 22
+    discriminator: typing.ClassVar = 23
     kind: typing.ClassVar = "UNDEFINED"
 
     @classmethod
@@ -534,6 +554,7 @@ AssetKind = typing.Union[
     DBR,
     GOAT,
     DRIFT,
+    PNUT,
     UNDEFINED,
 ]
 AssetJSON = typing.Union[
@@ -559,6 +580,7 @@ AssetJSON = typing.Union[
     DBRJSON,
     GOATJSON,
     DRIFTJSON,
+    PNUTJSON,
     UNDEFINEDJSON,
 ]
 
@@ -610,6 +632,8 @@ def from_decoded(obj: dict) -> AssetKind:
         return GOAT()
     if "DRIFT" in obj:
         return DRIFT()
+    if "PNUT" in obj:
+        return PNUT()
     if "UNDEFINED" in obj:
         return UNDEFINED()
     raise ValueError("Invalid enum object")
@@ -662,6 +686,8 @@ def from_json(obj: AssetJSON) -> AssetKind:
         return GOAT()
     if obj["kind"] == "DRIFT":
         return DRIFT()
+    if obj["kind"] == "PNUT":
+        return PNUT()
     kind = obj["kind"]
     raise ValueError(f"Unrecognized enum kind: {kind}")
 
@@ -689,5 +715,6 @@ layout = EnumForCodegen(
     "DBR" / borsh.CStruct(),
     "GOAT" / borsh.CStruct(),
     "DRIFT" / borsh.CStruct(),
+    "PNUT" / borsh.CStruct(),
     "UNDEFINED" / borsh.CStruct(),
 )
