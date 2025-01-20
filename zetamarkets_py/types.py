@@ -40,6 +40,7 @@ class Asset(Enum):
     DRIFT = "DRIFT"
     PNUT = "PNUT"
     PENGU = "PENGU"
+    TRUMP = "TRUMP"
 
     def to_index(self):
         """Converts the asset to its corresponding index."""
