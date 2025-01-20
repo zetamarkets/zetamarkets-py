@@ -100,6 +100,9 @@ class PNUTJSON(typing.TypedDict):
 class PENGUJSON(typing.TypedDict):
     kind: typing.Literal["PENGU"]
 
+class TRUMPJSON(typing.TypedDict):
+    kind: typing.Literal["TRUMP"]
+
 class UNDEFINEDJSON(typing.TypedDict):
     kind: typing.Literal["UNDEFINED"]
 
@@ -531,10 +534,27 @@ class PENGU:
         return {
             "PENGU": {},
         }
+    
+@dataclass
+class TRUMP:
+    discriminator: typing.ClassVar = 24
+    kind: typing.ClassVar = "TRUMP"
+
+    @classmethod
+    def to_json(cls) -> TRUMPJSON:
+        return TRUMPJSON(
+            kind="TRUMP",
+        )
+
+    @classmethod
+    def to_encodable(cls) -> dict:
+        return {
+            "TRUMP": {},
+        }
 
 @dataclass
 class UNDEFINED:
-    discriminator: typing.ClassVar = 24
+    discriminator: typing.ClassVar = 25
     kind: typing.ClassVar = "UNDEFINED"
 
     @classmethod
@@ -575,6 +595,7 @@ AssetKind = typing.Union[
     DRIFT,
     PNUT,
     PENGU,
+    TRUMP,
     UNDEFINED,
 ]
 AssetJSON = typing.Union[
@@ -602,6 +623,7 @@ AssetJSON = typing.Union[
     DRIFTJSON,
     PNUTJSON,
     PENGUJSON,
+    TRUMPJSON,
     UNDEFINEDJSON,
 ]
 
@@ -657,6 +679,8 @@ def from_decoded(obj: dict) -> AssetKind:
         return PNUT()
     if "PENGU" in obj:
         return PENGU()
+    if "TRUMP" in obj:
+        return TRUMP()
     if "UNDEFINED" in obj:
         return UNDEFINED()
     raise ValueError("Invalid enum object")
@@ -713,6 +737,8 @@ def from_json(obj: AssetJSON) -> AssetKind:
         return PNUT()
     if obj["kind"] == "PENGU":
         return PENGU()
+    if obj["kind"] == "TRUMP":
+        return TRUMP()
     kind = obj["kind"]
     raise ValueError(f"Unrecognized enum kind: {kind}")
 
@@ -742,5 +768,6 @@ layout = EnumForCodegen(
     "DRIFT" / borsh.CStruct(),
     "PNUT" / borsh.CStruct(),
     "PENGU" / borsh.CStruct(),
+    "TRUMP" / borsh.CStruct(),
     "UNDEFINED" / borsh.CStruct(),
 )
