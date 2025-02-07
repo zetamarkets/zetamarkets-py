@@ -27,8 +27,8 @@ class ARBJSON(typing.TypedDict):
     kind: typing.Literal["ARB"]
 
 
-class BNBJSON(typing.TypedDict):
-    kind: typing.Literal["BNB"]
+class BERAJSON(typing.TypedDict):
+    kind: typing.Literal["BERA"]
 
 
 class PYTHJSON(typing.TypedDict):
@@ -198,20 +198,20 @@ class ARB:
 
 
 @dataclass
-class BNB:
+class BERA:
     discriminator: typing.ClassVar = 5
-    kind: typing.ClassVar = "BNB"
+    kind: typing.ClassVar = "BERA"
 
     @classmethod
-    def to_json(cls) -> BNBJSON:
-        return BNBJSON(
-            kind="BNB",
+    def to_json(cls) -> BERAJSON:
+        return BERAJSON(
+            kind="BERA",
         )
 
     @classmethod
     def to_encodable(cls) -> dict:
         return {
-            "BNB": {},
+            "BERA": {},
         }
 
 
@@ -576,7 +576,7 @@ AssetKind = typing.Union[
     ETH,
     APT,
     ARB,
-    BNB,
+    BERA,
     PYTH,
     TIA,
     JTO,
@@ -604,7 +604,7 @@ AssetJSON = typing.Union[
     ETHJSON,
     APTJSON,
     ARBJSON,
-    BNBJSON,
+    BERAJSON,
     PYTHJSON,
     TIAJSON,
     JTOJSON,
@@ -641,8 +641,8 @@ def from_decoded(obj: dict) -> AssetKind:
         return APT()
     if "ARB" in obj:
         return ARB()
-    if "BNB" in obj:
-        return BNB()
+    if "BERA" in obj:
+        return BERA()
     if "PYTH" in obj:
         return PYTH()
     if "TIA" in obj:
@@ -697,8 +697,8 @@ def from_json(obj: AssetJSON) -> AssetKind:
         return APT()
     if obj["kind"] == "ARB":
         return ARB()
-    if obj["kind"] == "BNB":
-        return BNB()
+    if obj["kind"] == "BERA":
+        return BERA()
     if obj["kind"] == "PYTH":
         return PYTH()
     if obj["kind"] == "TIA":
@@ -749,7 +749,7 @@ layout = EnumForCodegen(
     "ETH" / borsh.CStruct(),
     "APT" / borsh.CStruct(),
     "ARB" / borsh.CStruct(),
-    "BNB" / borsh.CStruct(),
+    "BERA" / borsh.CStruct(),
     "PYTH" / borsh.CStruct(),
     "TIA" / borsh.CStruct(),
     "JTO" / borsh.CStruct(),

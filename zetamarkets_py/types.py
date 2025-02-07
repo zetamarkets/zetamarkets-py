@@ -21,7 +21,7 @@ class Asset(Enum):
     ETH = "ETH"
     APT = "APT"
     ARB = "ARB"
-    BNB = "BNB"
+    BERA = "BERA"
     PYTH = "PYTH"
     TIA = "TIA"
     JTO = "JTO"

@@ -20,7 +20,7 @@ MINTS = {
     Asset.SOL: Pubkey.from_string("So11111111111111111111111111111111111111112"),
     Asset.BTC: Pubkey.from_string("qfnqNqs3nCAHjnyCgLRDbBtq4p2MtHZxw8YjSyYhPoL"),
     Asset.ETH: Pubkey.from_string("FeGn77dhg1KXRRFeSwwMiykZnZPw5JXW6naf2aQgZDQf"),
-    Asset.BNB: Pubkey.from_string("9gP2kCy3wA1ctvYWQk75guqXuHfrEomqydHLtcTCqiLa"),
+    Asset.BERA: Pubkey.from_string("9gP2kCy3wA1ctvYWQk75guqXuHfrEomqydHLtcTCqiLa"),
 }
 
 # These are generated flexible PDAs and aren't reflective of an spl token mint.
@@ -63,7 +63,7 @@ PYTH_PRICE_FEEDS = {
         Asset.ETH: Pubkey.from_string("EdVCmQ9FSPcVe5YySXDPCRmc8aDQLKJ9xvYBMZPie1Vw"),
         Asset.APT: Pubkey.from_string("5d2QJ6u2NveZufmJ4noHja5EHs3Bv1DUMPLG5xfasSVs"),
         Asset.ARB: Pubkey.from_string("4mRGHzjGerQNWKXyQAmr9kWqb9saPPHKqo1xziXGQ5Dh"),
-        Asset.BNB: Pubkey.from_string("GwzBgrXb4PG59zjce24SF2b9JXbLEjJJTBkmytuEZj1b"),
+        Asset.BERA: Pubkey.from_string("GwzBgrXb4PG59zjce24SF2b9JXbLEjJJTBkmytuEZj1b"),
         Asset.PYTH: Pubkey.from_string("ELF78ZhSr8u4SCixA7YSpjdZHZoSNrAhcyysbavpC2kA"),
         Asset.TIA: Pubkey.from_string("4GiL1Y6u6JkPb7ckakzJgc414h6P7qoYnEKFcd1YtSB9"),
     },
@@ -73,7 +73,7 @@ PYTH_PRICE_FEEDS = {
         Asset.ETH: Pubkey.from_string("42amVS4KgzR9rA28tkVYqVXjq9Qa8dcZQMbH5EYFX6XC"),
         Asset.APT: Pubkey.from_string("9oR3Uh2zsp1CxLdsuFrg3QhY2eZ2e5eLjDgDfZ6oG2ev"),
         Asset.ARB: Pubkey.from_string("36XiLSLUq1trLrK5ApwWs6LvozCjyTVgpr2uSAF3trF1"),
-        Asset.BNB: Pubkey.from_string("A3qp5QG9xGeJR1gexbW9b9eMMsMDLzx3rhud9SnNhwb4"),
+        Asset.BERA: Pubkey.from_string("A3qp5QG9xGeJR1gexbW9b9eMMsMDLzx3rhud9SnNhwb4"),
         Asset.PYTH: Pubkey.from_string("8vjchtMuJNY4oFQdTi8yCe6mhCaNBFaUbktT482TpLPS"),
         Asset.TIA: Pubkey.from_string("6HpM5WSg4PCS4iAD13iSbcG4RbFErLS3pyC5qgtjqxqF"),
         Asset.JTO: Pubkey.from_string("7ajR2zA4MGMMTqRAVjghTKqPPn4kbrj3pYkAVRVwTGzP"),
